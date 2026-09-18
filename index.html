@@ -815,12 +815,12 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 const CONFIG = {
   // Firebase console → Project settings → General → "Your apps" → SDK config
   firebase: {
-    apiKey: "PASTE_YOUR_FIREBASE_API_KEY",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "000000000000",
-    appId: "1:000000000000:web:xxxxxxxxxxxxxxxx"
+    apiKey: "AIzaSyD7wQqO__8gx7mPtfoBXw9AX5I8Tt2yf9s",
+    authDomain: "pika-store-604d2.firebaseapp.com",
+    projectId: "pika-store-604d2",
+    storageBucket: "pika-store-604d2.firebasestorage.app",
+    messagingSenderId: "393448449695",
+    appId: "1:393448449695:web:3410c692e065a9d9cf64aa"
   },
   // Telegram is used as the actual FREE file host (Firebase free storage is
   // only ~5GB, not enough). Create a bot with @BotFather, create a PRIVATE
@@ -871,6 +871,7 @@ try{
   firebaseReady = true;
 }catch(e){
   console.warn("Firebase not configured yet — running in local demo mode.", e);
+  setTimeout(()=>toast("Firebase init failed: " + (e && e.message ? e.message : e), "ic-close"), 500);
 }
 
 /* ---------------------------------------------------------------------
@@ -1172,7 +1173,11 @@ function listenApps(){
   onSnapshot(q, snap=>{
     state.apps = snap.docs.map(d=>({ id:d.id, ...d.data() }));
     renderHome();
-  }, err=>{ console.warn(err); renderEmptyState(); });
+  }, err=>{
+    console.warn(err);
+    toast(`Firestore connection error: ${err.code || ""} ${err.message || err}`, "ic-close");
+    renderEmptyState();
+  });
 }
 function renderEmptyState(){ /* rows already show a friendly empty message by default in HTML */ }
 
