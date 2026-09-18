@@ -1401,12 +1401,25 @@ async function startDownload(app){
       }
     }
     if(!url){ toast("No download link available for this file","ic-close"); return; }
-    await downloadInsideStore(url, `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`, pct=>{ bar.style.width = pct+"%"; });
-    toast("Download complete");
+    try{
+      await downloadInsideStore(url, `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`, pct=>{ bar.style.width = pct+"%"; });
+      toast("Download complete");
+    }catch(inAppErr){
+      // In-app progress download can fail for reasons that have nothing to
+      // do with the file being missing — e.g. the host not allowing
+      // cross-origin fetch, or Internet Archive still ingesting a very
+      // recent upload. Falling back to a plain browser download (a normal
+      // navigation, not a JS fetch) sidesteps both of those.
+      console.warn("In-app download failed, falling back to direct link:", inAppErr);
+      const a = document.createElement("a");
+      a.href = url; a.target = "_blank"; a.rel = "noopener";
+      document.body.appendChild(a); a.click(); a.remove();
+      toast("Opening download in browser…");
+    }
     if(firebaseReady){ await updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }); }
   }catch(e){
     console.warn(e);
-    toast("Download failed — check the file URL","ic-close");
+    toast(e && e.message ? e.message : "Download failed — check the file URL","ic-close");
   }finally{
     $("#detail-download-btn").removeAttribute("disabled");
   }
