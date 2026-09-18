@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<!--
+  Zoom is disabled on purpose (user-scalable=no, maximum-scale=1). This is a requirement
+  from the brief because this page is meant to be wrapped into a native APK (WebView),
+  where pinch-zoom and browser chrome should not exist.
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0B0E14" />
+<title>Pika Store</title>
+<link rel="manifest" href="pika-manifest.json" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
+
+<!--
+  =====================================================================
+  ONESIGNAL — real OS-level POP-UP push notifications, 100% free,
+  no credit card, no server needed for sending simple broadcasts.
+  This solves the "silent notification" problem: Firebase Cloud
+  Messaging needs a paid Blaze plan + Cloud Function to broadcast to
+  everyone, OneSignal does not. See guide.md → "Push Notifications".
+  Replace ONESIGNAL_APP_ID in the CONFIG block near the bottom of
+  this file before publishing.
+  =====================================================================
+-->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
+<!-- Firebase (modular v10, loaded as ES module further down together with app logic) -->
+
+<style>
+/* =====================================================================
+   1. DESIGN TOKENS
+   Theme: "Pika Store" — cinematic dark shelf (Netflix-style rows) with
+   an electric amber "Pika" accent, glassy iOS-style chrome, spring
+   motion. Light mode swaps the base surfaces only, accent stays.
+   ===================================================================== */
+:root{
+  --accent:#FFC61A;           /* Pika amber — primary actions */
+  --accent-2:#33E0C1;         /* teal — secondary/links/badges */
+  --danger:#FF5C6C;
+  --radius-s:10px;
+  --radius-m:16px;
+  --radius-l:22px;
+  --radius-xl:28px;
+  --ease-spring: cubic-bezier(.22,1,.36,1);
+  --ease-snap: cubic-bezier(.4,0,.2,1);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+html[data-theme="dark"]{
+  --bg:#0B0E14;
+  --bg-elevated:#12161F;
+  --surface:#171C26;
+  --surface-2:#1E2430;
+  --border:rgba(255,255,255,0.08);
+  --text:#F4F5F7;
+  --text-dim:#9AA2B1;
+  --text-faint:#5C6577;
+  --glass:rgba(23,28,38,0.72);
+  --shadow: 0 18px 40px rgba(0,0,0,0.45);
+}
+html[data-theme="light"]{
+  --bg:#F5F6F8;
+  --bg-elevated:#FFFFFF;
+  --surface:#FFFFFF;
+  --surface-2:#EEF0F4;
+  --border:rgba(10,15,25,0.08);
+  --text:#12161F;
+  --text-dim:#5B6472;
+  --text-faint:#8A93A3;
+  --glass:rgba(255,255,255,0.78);
+  --shadow: 0 16px 34px rgba(20,25,40,0.12);
+}
+
+/* =====================================================================
+   2. RESET + "FEELS LIKE A NATIVE APP" HARDENING
+   - No text selection / no long-press copy menu / no callout bubble
+   - No tap highlight flash, no focus rings on touch
+   - touch-action manipulation kills the 300ms delay + the ghost-click
+     "flash" that makes rounded corners appear briefly square
+   ===================================================================== */
+*,*::before,*::after{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
+  touch-action:manipulation;                 /* kills tap delay + corner flash */
+  -webkit-user-select:none; user-select:none; /* no text selection */
+  -webkit-touch-callout:none;                 /* no iOS long-press callout/copy menu */
+  -webkit-tap-highlight-color:transparent;    /* no grey flash on tap */
+}
+input,textarea{ -webkit-user-select:text; user-select:text; } /* allow typing/selecting inside fields */
+img{ -webkit-user-drag:none; user-drag:none; pointer-events:none; }
+button,a,.tappable{
+  -webkit-tap-highlight-color:transparent;
+  outline:none;
+  touch-action:manipulation;
+}
+::-webkit-scrollbar{ display:none; }
+* { scrollbar-width:none; -ms-overflow-style:none; }
+
+/* Buttons: rounded corners must stay rounded on press, no sharp-edge flash */
+button{
+  font-family:inherit;
+  border:none;
+  background:none;
+  color:inherit;
+  cursor:pointer;
+  border-radius:var(--radius-m);
+  -webkit-mask-image:-webkit-radial-gradient(white,black); /* forces Safari to respect radius on :active */
+  transform:translateZ(0);
+  transition:transform .12s var(--ease-snap), opacity .12s var(--ease-snap), background-color .15s var(--ease-snap);
+}
+button:active{ transform:scale(0.96); }
+
+a{ color:inherit; text-decoration:none; }
+
+/* =====================================================================
+   3. LAYOUT SHELL
+   ===================================================================== */
+#app{ min-height:100%; padding-bottom:calc(84px + var(--safe-bottom)); }
+[hidden]{ display:none !important; }
+
+.topbar{
+  position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; gap:12px;
+  padding:calc(14px + var(--safe-top)) 18px 14px;
+  background:var(--glass);
+  backdrop-filter:blur(20px) saturate(160%);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  border-bottom:1px solid var(--border);
+}
+.brand{ display:flex; align-items:center; gap:10px; font-weight:800; font-size:19px; letter-spacing:-0.02em; }
+.brand .mark{ width:32px; height:32px; border-radius:10px; }
+.topbar .search-box{
+  flex:1; display:flex; align-items:center; gap:8px;
+  background:var(--surface-2); border:1px solid var(--border);
+  border-radius:var(--radius-l); padding:9px 14px;
+}
+.topbar .search-box input{
+  flex:1; background:none; border:none; color:var(--text); font-size:15px; outline:none;
+}
+.topbar .search-box input::placeholder{ color:var(--text-faint); }
+.icon-btn{
+  width:38px; height:38px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--surface-2); flex-shrink:0;
+}
+.icon-btn svg{ width:19px; height:19px; }
+
+/* Bottom tab bar (iOS style) */
+.bottom-nav{
+  position:fixed; left:0; right:0; bottom:0; z-index:50;
+  display:flex; justify-content:space-around; align-items:center;
+  padding:10px 6px calc(10px + var(--safe-bottom));
+  background:var(--glass);
+  backdrop-filter:blur(22px) saturate(160%);
+  -webkit-backdrop-filter:blur(22px) saturate(160%);
+  border-top:1px solid var(--border);
+}
+.bottom-nav button{
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  font-size:10.5px; font-weight:600; color:var(--text-faint);
+  padding:6px 14px; border-radius:14px;
+}
+.bottom-nav button svg{ width:23px; height:23px; }
+.bottom-nav button.active{ color:var(--accent); }
+.bottom-nav button.active svg{ filter:drop-shadow(0 2px 8px rgba(255,198,26,.5)); }
+
+main{ padding-top:6px; }
+.page{ animation:fadeUp .35s var(--ease-spring); }
+@keyframes fadeUp{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+
+/* =====================================================================
+   4. HOME — HERO
+   ===================================================================== */
+.hero{
+  position:relative; margin:14px 16px 6px; height:230px;
+  border-radius:var(--radius-xl); overflow:hidden;
+  background:linear-gradient(135deg,#20263a,#12161f);
+  display:flex; align-items:flex-end;
+  box-shadow:var(--shadow);
+}
+.hero-bg{ position:absolute; inset:0; opacity:.55; background-size:cover; background-position:center; transition:opacity .6s ease; }
+.hero-fade{ position:absolute; inset:0; background:linear-gradient(0deg, rgba(0,0,0,.85) 5%, transparent 65%); }
+.hero-content{ position:relative; padding:18px; width:100%; }
+.hero-badge{
+  display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700;
+  background:rgba(255,198,26,.16); color:var(--accent); padding:4px 10px; border-radius:20px; margin-bottom:8px;
+}
+.hero-title{ font-size:24px; font-weight:800; color:#fff; letter-spacing:-0.02em; margin:0 0 4px; }
+.hero-sub{ font-size:13px; color:rgba(255,255,255,.75); margin:0 0 12px; }
+.hero-actions{ display:flex; gap:10px; }
+.btn{
+  border-radius:var(--radius-m); padding:11px 18px; font-weight:700; font-size:14px;
+  display:inline-flex; align-items:center; gap:8px;
+}
+.btn svg{ width:16px; height:16px; }
+.btn-primary{ background:var(--accent); color:#171200; }
+.btn-ghost{ background:rgba(255,255,255,.14); color:#fff; backdrop-filter:blur(6px); }
+.btn-outline{ background:transparent; border:1.5px solid var(--border); color:var(--text); }
+.btn-block{ width:100%; justify-content:center; }
+.btn-lg{ padding:15px 20px; font-size:15.5px; border-radius:var(--radius-l); }
+.hero-dots{ display:flex; gap:5px; justify-content:center; margin-top:10px; }
+.hero-dots span{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.3); transition:.3s; }
+.hero-dots span.active{ background:var(--accent); width:16px; border-radius:4px; }
+
+/* =====================================================================
+   5. SECTIONS / ROWS (Netflix-style horizontal shelves)
+   ===================================================================== */
+.section{ margin:22px 0 0; }
+.section-head{ display:flex; align-items:center; justify-content:space-between; padding:0 16px 10px; }
+.section-head h2{ font-size:17px; font-weight:800; letter-spacing:-0.01em; margin:0; }
+.section-head .see-all{ font-size:12.5px; color:var(--text-dim); font-weight:600; }
+
+.chip-row, .app-row, .thumb-row{
+  display:flex; gap:10px; overflow-x:auto; padding:2px 16px 10px; scroll-snap-type:x proximity;
+}
+.chip{
+  scroll-snap-align:start; flex-shrink:0;
+  display:flex; align-items:center; gap:7px;
+  padding:9px 15px; border-radius:20px; background:var(--surface); border:1px solid var(--border);
+  font-size:13px; font-weight:700; color:var(--text-dim); white-space:nowrap;
+}
+.chip.active{ background:var(--accent); color:#171200; border-color:var(--accent); }
+.chip .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent-2); }
+.chip-add{ background:transparent; border:1.5px dashed var(--border); color:var(--accent); }
+
+.app-card{
+  scroll-snap-align:start; flex-shrink:0; width:132px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.app-card .icon-wrap{
+  width:132px; height:132px; border-radius:var(--radius-l);
+  background:var(--surface); border:1px solid var(--border); overflow:hidden;
+  position:relative; box-shadow:0 10px 24px rgba(0,0,0,.25);
+}
+.app-card .icon-wrap img{ width:100%; height:100%; object-fit:cover; }
+.app-card .rank{
+  position:absolute; top:6px; left:6px; background:rgba(0,0,0,.55); color:#fff;
+  font-size:10px; font-weight:800; padding:2px 7px; border-radius:8px;
+}
+.app-card .fmt-badge{
+  position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,.6); color:var(--accent-2);
+  font-size:9px; font-weight:800; padding:2px 6px; border-radius:6px; letter-spacing:.03em;
+}
+.app-card .name{ font-size:12.5px; font-weight:700; line-height:1.25; }
+.app-card .meta{ font-size:11px; color:var(--text-faint); display:flex; align-items:center; gap:4px; }
+.app-card .meta svg{ width:11px; height:11px; }
+
+.empty-row{
+  margin:0 16px; padding:26px 16px; border-radius:var(--radius-l); border:1.5px dashed var(--border);
+  color:var(--text-faint); font-size:13px; text-align:center;
+}
+
+/* =====================================================================
+   6. MODALS / SHEETS (App detail, Upload wizard, Chat)
+   ===================================================================== */
+.sheet-backdrop{
+  position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.55);
+  backdrop-filter:blur(2px);
+  display:flex; align-items:flex-end;
+  animation:fadeIn .25s var(--ease-snap);
+}
+@keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+.sheet{
+  width:100%; max-height:92vh; background:var(--bg-elevated);
+  border-radius:26px 26px 0 0; overflow-y:auto; overscroll-behavior:contain;
+  animation:slideUp .38s var(--ease-spring);
+  padding-bottom:calc(28px + var(--safe-bottom));
+}
+@keyframes slideUp{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
+.sheet-handle{ width:38px; height:5px; border-radius:3px; background:var(--border); margin:10px auto 4px; }
+.sheet-close{
+  position:sticky; top:10px; float:right; margin:0 14px; z-index:5;
+  width:32px; height:32px; border-radius:50%; background:rgba(0,0,0,.4); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+}
+html[data-theme="light"] .sheet-close{ background:rgba(0,0,0,.25); }
+
+/* App detail */
+.detail-hero{ position:relative; height:150px; background:linear-gradient(135deg,#20263a,#12161f); }
+.detail-hero .bg{ position:absolute; inset:0; background-size:cover; background-position:center; opacity:.6; }
+.detail-hero .fade{ position:absolute; inset:0; background:linear-gradient(0deg,var(--bg-elevated) 0%, transparent 80%); }
+.detail-head{ display:flex; gap:14px; padding:0 18px; margin-top:-46px; position:relative; }
+.detail-icon{
+  width:88px; height:88px; border-radius:22px; background:var(--surface); border:1px solid var(--border);
+  overflow:hidden; box-shadow:0 12px 26px rgba(0,0,0,.4); flex-shrink:0;
+}
+.detail-icon img{ width:100%; height:100%; object-fit:cover; }
+.detail-title h1{ font-size:19px; font-weight:800; margin:6px 0 2px; letter-spacing:-0.01em; }
+.detail-title .dev{ font-size:12.5px; color:var(--accent-2); font-weight:600; }
+.detail-stats{ display:flex; gap:22px; padding:16px 18px 6px; }
+.detail-stats .stat{ text-align:center; }
+.detail-stats .stat b{ display:block; font-size:15px; font-weight:800; }
+.detail-stats .stat span{ font-size:10.5px; color:var(--text-faint); }
+.stars{ display:flex; gap:2px; align-items:center; justify-content:center; }
+.stars svg{ width:13px; height:13px; }
+
+.screens-row{ display:flex; gap:10px; overflow-x:auto; padding:14px 18px; scroll-snap-type:x mandatory; }
+.screens-row img{
+  scroll-snap-align:start; height:280px; border-radius:var(--radius-l); flex-shrink:0;
+  border:1px solid var(--border); background:var(--surface-2); pointer-events:auto;
+}
+
+.accordion{ margin:6px 18px; border-top:1px solid var(--border); }
+.accordion-item{ border-bottom:1px solid var(--border); }
+.accordion-item summary{
+  list-style:none; display:flex; align-items:center; justify-content:space-between;
+  padding:15px 2px; font-weight:700; font-size:14px; cursor:pointer;
+}
+.accordion-item summary::-webkit-details-marker{ display:none; }
+.accordion-item summary svg{ width:16px; height:16px; transition:transform .25s var(--ease-snap); color:var(--text-faint); }
+.accordion-item[open] summary svg{ transform:rotate(180deg); }
+.accordion-item .body{ padding:0 2px 16px; color:var(--text-dim); font-size:13.5px; line-height:1.6; white-space:pre-wrap; }
+
+.detail-footer{ padding:16px 18px 4px; display:flex; gap:10px; align-items:center; }
+.dl-progress{
+  height:6px; border-radius:6px; background:var(--surface-2); overflow:hidden; margin:0 18px 14px;
+}
+.dl-progress i{ display:block; height:100%; width:0%; background:var(--accent); transition:width .15s linear; }
+
+/* Category pill inside detail */
+.cat-pill{ display:inline-flex; align-items:center; gap:5px; background:var(--surface-2); padding:5px 11px; border-radius:14px; font-size:11px; font-weight:700; color:var(--accent-2); margin:0 18px 8px; }
+
+/* =====================================================================
+   7. UPLOAD DASHBOARD
+   ===================================================================== */
+.upload-hero{ padding:20px 18px 4px; }
+.upload-hero h1{ font-size:22px; font-weight:800; margin:0 0 4px; letter-spacing:-0.02em; }
+.upload-hero p{ font-size:13px; color:var(--text-dim); margin:0; }
+
+.stepper{ display:flex; gap:6px; padding:16px 18px 4px; }
+.stepper i{ flex:1; height:4px; border-radius:3px; background:var(--surface-2); }
+.stepper i.done{ background:var(--accent); }
+
+.card{
+  margin:14px 18px; padding:16px; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-l);
+}
+.card h3{ font-size:14px; font-weight:800; margin:0 0 10px; display:flex; align-items:center; gap:8px; }
+.card h3 svg{ width:16px; height:16px; color:var(--accent); }
+
+.dropzone{
+  border:1.5px dashed var(--border); border-radius:var(--radius-m); padding:26px 14px; text-align:center;
+  color:var(--text-faint); font-size:12.5px;
+}
+.dropzone svg{ width:34px; height:34px; margin-bottom:8px; color:var(--accent-2); }
+.dropzone b{ display:block; color:var(--text); font-size:13.5px; margin-bottom:3px; }
+.dropzone.filled{ border-style:solid; color:var(--text); text-align:left; display:flex; align-items:center; gap:12px; }
+.dropzone.filled .file-thumb{ width:46px; height:46px; border-radius:10px; background:var(--surface-2); object-fit:cover; flex-shrink:0; }
+
+.format-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; }
+.format-opt{
+  border:1.5px solid var(--border); border-radius:12px; padding:10px 4px; text-align:center;
+  font-size:11.5px; font-weight:800; color:var(--text-dim);
+}
+.format-opt.active{ border-color:var(--accent); background:rgba(255,198,26,.1); color:var(--accent); }
+.format-opt small{ display:block; font-size:9px; font-weight:600; color:var(--text-faint); margin-top:2px; }
+.format-opt.active small{ color:var(--accent); }
+
+.field{ margin-bottom:12px; }
+.field label{ display:block; font-size:12px; font-weight:700; color:var(--text-dim); margin-bottom:6px; }
+.field input[type=text], .field textarea, .field select{
+  width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
+  padding:12px 13px; color:var(--text); font-size:14px; font-family:inherit; -webkit-user-select:text; user-select:text;
+}
+.field textarea{ min-height:90px; resize:vertical; }
+
+.thumb-strip{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.thumb-strip .shot{
+  width:64px; height:64px; border-radius:10px; overflow:hidden; position:relative; background:var(--surface-2);
+}
+.thumb-strip .shot img{ width:100%; height:100%; object-fit:cover; }
+.thumb-strip .shot button{
+  position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%; background:rgba(0,0,0,.6); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+}
+.thumb-strip .shot button svg{ width:10px; height:10px; }
+.add-shot{
+  width:64px; height:64px; border-radius:10px; border:1.5px dashed var(--border); color:var(--accent);
+  display:flex; align-items:center; justify-content:center;
+}
+.add-shot svg{ width:20px; height:20px; }
+
+.switch-row{ display:flex; align-items:center; justify-content:space-between; padding:6px 2px; }
+.switch-row .lbl{ font-size:13.5px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.switch-row .lbl svg{ width:16px; height:16px; color:var(--accent-2); }
+.switch-row small{ display:block; font-weight:500; color:var(--text-faint); font-size:11px; margin-top:2px; }
+.switch{ width:46px; height:27px; border-radius:20px; background:var(--surface-2); position:relative; flex-shrink:0; border:1px solid var(--border); }
+.switch i{
+  position:absolute; top:2px; left:2px; width:21px; height:21px; border-radius:50%; background:#fff;
+  box-shadow:0 2px 4px rgba(0,0,0,.3); transition:transform .25s var(--ease-spring);
+}
+.switch.on{ background:var(--accent); border-color:var(--accent); }
+.switch.on i{ transform:translateX(19px); }
+
+.cat-select-row{ display:flex; gap:8px; overflow-x:auto; padding:2px 0; }
+.cat-select-row .chip{ padding:8px 13px; }
+
+.upload-progress-wrap{ margin:14px 18px; }
+.upload-progress-wrap .bar{ height:8px; border-radius:6px; background:var(--surface-2); overflow:hidden; }
+.upload-progress-wrap .bar i{ display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); transition:width .2s linear; }
+.upload-progress-wrap .pct{ font-size:12px; color:var(--text-dim); margin-top:6px; text-align:center; }
+
+.wizard-nav{ display:flex; gap:10px; margin:20px 18px 6px; }
+
+/* =====================================================================
+   8. GROUP CHAT
+   ===================================================================== */
+.chat-fab{
+  position:fixed; right:16px; bottom:calc(96px + var(--safe-bottom)); z-index:60;
+  width:56px; height:56px; border-radius:50%; background:var(--accent);
+  display:flex; align-items:center; justify-content:center; box-shadow:0 14px 30px rgba(255,198,26,.4);
+}
+.chat-fab svg{ width:24px; height:24px; color:#171200; }
+.chat-fab .badge{
+  position:absolute; top:-2px; right:-2px; background:var(--danger); color:#fff; font-size:10px; font-weight:800;
+  min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;
+}
+.chat-sheet{ height:88vh; display:flex; flex-direction:column; }
+.chat-header{ display:flex; align-items:center; gap:10px; padding:6px 18px 12px; border-bottom:1px solid var(--border); }
+.chat-header .av{ width:36px; height:36px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; }
+.chat-header .av svg{ width:18px; height:18px; color:var(--accent-2); }
+.chat-header b{ font-size:14.5px; }
+.chat-header small{ display:block; font-size:11px; color:var(--text-faint); }
+.chat-log{ flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+.msg{ max-width:76%; padding:9px 13px; border-radius:16px; font-size:13.5px; line-height:1.4; }
+.msg .who{ font-size:10.5px; font-weight:800; color:var(--accent-2); margin-bottom:2px; }
+.msg.me{ align-self:flex-end; background:var(--accent); color:#171200; border-bottom-right-radius:4px; }
+.msg.other{ align-self:flex-start; background:var(--surface-2); border-bottom-left-radius:4px; }
+.msg.system{ align-self:center; background:transparent; color:var(--text-faint); font-size:11px; }
+.chat-input-row{ display:flex; gap:8px; padding:12px 14px calc(12px + var(--safe-bottom)); border-top:1px solid var(--border); }
+.chat-input-row input{
+  flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:22px; padding:12px 16px;
+  color:var(--text); font-size:14px; -webkit-user-select:text; user-select:text;
+}
+.chat-send{ width:44px; height:44px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.chat-send svg{ width:18px; height:18px; color:#171200; }
+
+/* =====================================================================
+   9. ONBOARDING (username gate)
+   ===================================================================== */
+#username-gate{
+  position:fixed; inset:0; z-index:100; background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px;
+  text-align:center;
+}
+.gate-logo{ width:84px; height:84px; border-radius:24px; margin-bottom:22px; box-shadow:0 16px 40px rgba(255,198,26,.35); animation:pop .6s var(--ease-spring); }
+@keyframes pop{ from{ transform:scale(.6); opacity:0; } to{ transform:scale(1); opacity:1; } }
+#username-gate h1{ font-size:24px; font-weight:800; margin:0 0 6px; letter-spacing:-0.02em; }
+#username-gate p{ font-size:13.5px; color:var(--text-dim); margin:0 0 26px; max-width:280px; }
+#username-gate input{
+  width:100%; max-width:300px; background:var(--surface); border:1.5px solid var(--border); border-radius:16px;
+  padding:15px 18px; color:var(--text); font-size:16px; text-align:center; font-weight:700; margin-bottom:8px;
+  -webkit-user-select:text; user-select:text;
+}
+.gate-hint{ font-size:11px; color:var(--text-faint); margin-bottom:22px; }
+#username-gate .btn{ width:100%; max-width:300px; }
+
+/* =====================================================================
+   10. TOASTS + MISC
+   ===================================================================== */
+#toast-container{ position:fixed; top:calc(14px + var(--safe-top)); left:0; right:0; z-index:120; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+.toast{
+  background:var(--surface); border:1px solid var(--border); color:var(--text); padding:12px 18px; border-radius:16px;
+  font-size:13px; font-weight:600; box-shadow:var(--shadow); display:flex; align-items:center; gap:8px;
+  animation:toastIn .35s var(--ease-spring);
+}
+.toast svg{ width:16px; height:16px; color:var(--accent); flex-shrink:0; }
+@keyframes toastIn{ from{ transform:translateY(-14px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+
+.theme-toggle{ width:38px; height:38px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+.theme-toggle svg{ width:18px; height:18px; position:absolute; transition:transform .4s var(--ease-spring), opacity .3s; }
+.theme-toggle .i-sun{ opacity:0; transform:rotate(-90deg) scale(.4); color:var(--accent); }
+.theme-toggle .i-moon{ opacity:1; transform:none; color:var(--accent-2); }
+html[data-theme="light"] .theme-toggle .i-sun{ opacity:1; transform:none; }
+html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90deg) scale(.4); }
+
+.skeleton{ background:linear-gradient(100deg, var(--surface) 30%, var(--surface-2) 50%, var(--surface) 70%); background-size:200% 100%; animation:shimmer 1.4s infinite; }
+@keyframes shimmer{ from{ background-position:200% 0; } to{ background-position:-200% 0; } }
+
+.profile-head{ display:flex; align-items:center; gap:14px; padding:20px 18px; }
+.profile-avatar{ width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-2)); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:24px; color:#171200; }
+.profile-stats{ display:flex; gap:20px; padding:0 18px 20px; }
+.profile-stats .stat{ text-align:center; flex:1; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:12px 6px; }
+.profile-stats .stat b{ display:block; font-size:18px; font-weight:800; }
+.profile-stats .stat span{ font-size:10.5px; color:var(--text-faint); }
+.settings-list{ margin:0 18px; border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.settings-list .row{ display:flex; align-items:center; justify-content:space-between; padding:15px 16px; border-bottom:1px solid var(--border); font-size:14px; font-weight:600; }
+.settings-list .row:last-child{ border-bottom:none; }
+.settings-list .row svg{ width:16px; height:16px; color:var(--text-faint); }
+.row-left{ display:flex; align-items:center; gap:10px; }
+
+@media (min-width:720px){
+  #app{ max-width:520px; margin:0 auto; border-left:1px solid var(--border); border-right:1px solid var(--border); min-height:100%; }
+  body{ display:flex; justify-content:center; background:var(--bg-elevated); }
+}
+</style>
+</head>
+<body>
+
+<!-- =========================================================
+     SVG ICON SPRITE — hand-built layered / gradient icons.
+     No emoji anywhere in this project, per the brief.
+     ========================================================= -->
+<svg style="display:none">
+<defs>
+  <linearGradient id="gradAmber" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#FFD966"/><stop offset="100%" stop-color="#FF9F1A"/>
+  </linearGradient>
+  <linearGradient id="gradTeal" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#5CF0D6"/><stop offset="100%" stop-color="#1FB89C"/>
+  </linearGradient>
+</defs>
+
+<symbol id="ic-home" viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+<symbol id="ic-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2" fill="currentColor"/><rect x="13" y="4" width="7" height="7" rx="2" fill="currentColor" opacity=".55"/><rect x="4" y="13" width="7" height="7" rx="2" fill="currentColor" opacity=".55"/><rect x="13" y="13" width="7" height="7" rx="2" fill="currentColor" opacity=".85"/></symbol>
+<symbol id="ic-upload" viewBox="0 0 24 24"><path d="M12 3v12" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="m7 8 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+<symbol id="ic-chat" viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" fill="currentColor"/></symbol>
+<symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 20c1.3-4 4-6 7.5-6s6.2 2 7.5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="m20 20-4.3-4.3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+<symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="url(#gradAmber)"/><g stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2.5v2.2M12 19.3v2.2M4.2 12H2M22 12h-2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></g></symbol>
+<symbol id="ic-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" fill="url(#gradTeal)"/></symbol>
+<symbol id="ic-star-full" viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8Z" fill="url(#gradAmber)"/></symbol>
+<symbol id="ic-star-empty" viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8Z" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".4"/></symbol>
+<symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="ic-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></symbol>
+<symbol id="ic-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4" fill="url(#gradTeal)"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+<symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></symbol>
+<symbol id="ic-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8.5" cy="9.5" r="1.6" fill="currentColor"/><path d="m5 17 4.5-5 3.5 4 2.5-3 4.5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+<symbol id="ic-trash" viewBox="0 0 24 24"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5Z" fill="currentColor"/></symbol>
+<symbol id="ic-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-cube" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z" fill="url(#gradAmber)" opacity=".9"/><path d="M12 3v18M4 7.5 12 12l8-4.5" fill="none" stroke="#171200" stroke-width="1.1" opacity=".35"/></symbol>
+<symbol id="ic-fire" viewBox="0 0 24 24"><path d="M12 2c1 3-3 4-3 8a4 4 0 0 0 8 0c1.5 1.5 2 3.5 2 5a7 7 0 1 1-14 0c0-5 4-8 4-9 1 0 2 2 3 3.5C12.4 6.5 11.5 4 12 2Z" fill="url(#gradAmber)"/></symbol>
+<symbol id="ic-sparkle" viewBox="0 0 24 24"><path d="M12 3c.6 3.4 1.6 4.4 5 5-3.4.6-4.4 1.6-5 5-.6-3.4-1.6-4.4-5-5 3.4-.6 4.4-1.6 5-5Z" fill="url(#gradTeal)"/></symbol>
+</svg>
+
+<!-- =========================================================
+     USERNAME GATE — first screen on app launch
+     ========================================================= -->
+<div id="username-gate">
+  <img class="gate-logo" alt="Pika Store" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
+  <h1>Welcome to Pika Store</h1>
+  <p>Enter a name so your uploads, categories and chat messages are yours. No email, no phone number — just a name.</p>
+  <input id="gate-username-input" type="text" maxlength="20" placeholder="Your name" autocomplete="off" />
+  <div class="gate-hint" id="gate-hint">We've suggested a name below — feel free to change it.</div>
+  <button class="btn btn-primary btn-lg btn-block" id="gate-continue-btn">
+    <svg><use href="#ic-check"/></svg> Continue
+  </button>
+</div>
+
+<!-- =========================================================
+     MAIN APP SHELL
+     ========================================================= -->
+<div id="app" hidden>
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img class="mark" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
+      <span>Pika</span>
+    </div>
+    <div class="search-box">
+      <svg width="16" height="16"><use href="#ic-search"/></svg>
+      <input id="search-input" type="text" placeholder="Search apps, games, files…" />
+    </div>
+    <button class="theme-toggle" id="theme-toggle-btn" title="Toggle theme">
+      <svg class="i-sun"><use href="#ic-sun"/></svg>
+      <svg class="i-moon"><use href="#ic-moon"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <!-- ===================== HOME PAGE ===================== -->
+    <section id="home-page" class="page">
+
+      <!-- Hero banner -->
+      <div class="hero" id="hero">
+        <div class="hero-bg" id="hero-bg"></div>
+        <div class="hero-fade"></div>
+        <div class="hero-content">
+          <span class="hero-badge"><svg width="12" height="12"><use href="#ic-fire"/></svg> Featured on Pika</span>
+          <h1 class="hero-title" id="hero-title">No apps yet — be the first!</h1>
+          <p class="hero-sub" id="hero-sub">Upload your own APK, ZIP or RAR and share it with your members.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" id="hero-primary-btn"><svg><use href="#ic-play"/></svg> Open</button>
+            <button class="btn btn-ghost" id="hero-upload-btn"><svg><use href="#ic-upload"/></svg> Upload app</button>
+          </div>
+        </div>
+      </div>
+      <div class="hero-dots" id="hero-dots"></div>
+
+      <!-- Categories -->
+      <div class="section">
+        <div class="section-head"><h2>Categories</h2><span class="see-all" id="manage-cats-btn">Manage</span></div>
+        <div class="chip-row" id="category-row">
+          <button class="chip active" data-cat="all"><span class="dot"></span> All</button>
+          <button class="chip chip-add" id="add-category-chip"><svg width="13" height="13"><use href="#ic-plus"/></svg> New category</button>
+        </div>
+      </div>
+
+      <!-- Top downloaded -->
+      <div class="section">
+        <div class="section-head"><h2>Top Downloaded</h2></div>
+        <div class="app-row" id="top-downloaded-row"><div class="empty-row">Nothing uploaded yet in this store.</div></div>
+      </div>
+
+      <!-- New releases -->
+      <div class="section">
+        <div class="section-head"><h2>New Releases</h2></div>
+        <div class="app-row" id="new-releases-row"><div class="empty-row">New uploads will show up here first.</div></div>
+      </div>
+
+      <!-- Search results (hidden unless searching) -->
+      <div class="section" id="search-results-section" hidden>
+        <div class="section-head"><h2>Search results</h2></div>
+        <div class="app-row" id="search-results-row"></div>
+      </div>
+
+      <div style="height:20px"></div>
+    </section>
+
+    <!-- ===================== UPLOAD DASHBOARD ===================== -->
+    <section id="upload-page" class="page" hidden>
+      <div class="upload-hero">
+        <h1>Upload to Pika Store</h1>
+        <p>Share an APK, APK+ bundle, ZIP or RAR with your community. Free 50GB shared library.</p>
+      </div>
+
+      <div class="stepper">
+        <i data-step="1" class="done"></i><i data-step="2"></i><i data-step="3"></i><i data-step="4"></i>
+      </div>
+
+      <!-- STEP 1: file + format -->
+      <div class="wizard-step" data-step="1">
+        <div class="card">
+          <h3><svg><use href="#ic-cube"/></svg> App file</h3>
+          <label class="dropzone" id="file-dropzone" for="file-input">
+            <svg><use href="#ic-upload"/></svg>
+            <b>Tap to choose a file</b>
+            Supports .apk, .zip, .rar — best under 20MB (see guide.md)
+          </label>
+          <input type="file" id="file-input" accept=".apk,.zip,.rar" hidden />
+          <div class="format-grid">
+            <div class="format-opt active" data-format="APK">APK<small>Android</small></div>
+            <div class="format-opt" data-format="APK+">APK+<small>Split bundle</small></div>
+            <div class="format-opt" data-format="ZIP">ZIP<small>Archive</small></div>
+            <div class="format-opt" data-format="RAR">RAR<small>Archive</small></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: thumbnail + screenshots -->
+      <div class="wizard-step" data-step="2" hidden>
+        <div class="card">
+          <h3><svg><use href="#ic-image"/></svg> Thumbnail (app icon)</h3>
+          <label class="dropzone" id="thumb-dropzone" for="thumb-input">
+            <svg><use href="#ic-image"/></svg>
+            <b>Add a square icon</b>
+            Shown on the home page and app card
+          </label>
+          <input type="file" id="thumb-input" accept="image/*" hidden />
+        </div>
+        <div class="card">
+          <h3><svg><use href="#ic-sparkle"/></svg> Screenshots (up to 3)</h3>
+          <div class="thumb-strip" id="screens-strip">
+            <button class="add-shot" id="add-screenshot-btn"><svg><use href="#ic-plus"/></svg></button>
+          </div>
+          <input type="file" id="screens-input" accept="image/*" multiple hidden />
+        </div>
+      </div>
+
+      <!-- STEP 3: description + category -->
+      <div class="wizard-step" data-step="3" hidden>
+        <div class="card">
+          <h3><svg><use href="#ic-chat"/></svg> Details</h3>
+          <div class="field">
+            <label>App name</label>
+            <input type="text" id="app-name-input" placeholder="e.g. My Cool Game" />
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <textarea id="app-desc-input" placeholder="What does this app do? Any install notes?"></textarea>
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <div class="cat-select-row" id="upload-cat-row"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: password + review -->
+      <div class="wizard-step" data-step="4" hidden>
+        <div class="card">
+          <h3><svg><use href="#ic-lock"/></svg> Protection</h3>
+          <div class="switch-row">
+            <div class="lbl">
+              <svg><use href="#ic-lock"/></svg>
+              <div>Password-protect this file
+                <small>Only people you share the password with can download it</small>
+              </div>
+            </div>
+            <div class="switch" id="password-switch"><i></i></div>
+          </div>
+          <div class="field" id="password-field" style="margin-top:12px" hidden>
+            <label>Set a download password</label>
+            <input type="text" id="app-password-input" placeholder="e.g. pika2026" />
+          </div>
+        </div>
+        <div class="card" id="review-card">
+          <h3><svg><use href="#ic-check"/></svg> Review</h3>
+          <div id="review-summary" style="font-size:13px; color:var(--text-dim); line-height:1.8;"></div>
+        </div>
+        <div class="upload-progress-wrap" id="upload-progress-wrap" hidden>
+          <div class="bar"><i id="upload-progress-bar"></i></div>
+          <div class="pct" id="upload-progress-pct">Uploading… 0%</div>
+        </div>
+      </div>
+
+      <div class="wizard-nav">
+        <button class="btn btn-outline" id="wizard-back-btn" hidden>Back</button>
+        <button class="btn btn-primary btn-block" id="wizard-next-btn">Continue</button>
+      </div>
+      <div style="height:30px"></div>
+    </section>
+
+    <!-- ===================== PROFILE PAGE ===================== -->
+    <section id="profile-page" class="page" hidden>
+      <div class="profile-head">
+        <div class="profile-avatar" id="profile-avatar">P</div>
+        <div>
+          <h2 style="margin:0 0 3px; font-size:19px;" id="profile-name">—</h2>
+          <div style="font-size:12px; color:var(--text-faint);">Member of Pika Store</div>
+        </div>
+      </div>
+      <div class="profile-stats">
+        <div class="stat"><b id="profile-uploads-count">0</b><span>Uploads</span></div>
+        <div class="stat"><b id="profile-cats-count">0</b><span>Categories</span></div>
+        <div class="stat"><b id="profile-downloads-count">0</b><span>Downloads</span></div>
+      </div>
+      <div class="settings-list">
+        <div class="row"><div class="row-left"><svg><use href="#ic-user"/></svg> Change display name</div><button id="change-name-btn"><svg width="14" height="14"><use href="#ic-chevron"/></svg></button></div>
+        <div class="row"><div class="row-left"><svg><use href="#ic-sun"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
+        <div class="row"><div class="row-left"><svg><use href="#ic-grid"/></svg> My categories</div><span style="font-size:12px;color:var(--text-faint)" id="profile-cats-inline">0</span></div>
+      </div>
+      <div style="height:30px"></div>
+    </section>
+  </main>
+
+  <!-- Bottom navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-page="home-page"><svg><use href="#ic-home"/></svg>Home</button>
+    <button class="nav-btn" data-page="__categories"><svg><use href="#ic-grid"/></svg>Categories</button>
+    <button class="nav-btn" data-page="upload-page"><svg><use href="#ic-upload"/></svg>Upload</button>
+    <button class="nav-btn" data-page="profile-page"><svg><use href="#ic-user"/></svg>Profile</button>
+  </nav>
+
+  <!-- Group chat floating button -->
+  <button class="chat-fab" id="chat-fab-btn">
+    <svg><use href="#ic-chat"/></svg>
+    <span class="badge" id="chat-badge" hidden>0</span>
+  </button>
+
+  <div id="toast-container"></div>
+</div>
+
+<!-- =========================================================
+     Templates rendered by JS (kept out of the DOM until needed)
+     ========================================================= -->
+<template id="tmpl-app-card">
+  <div class="app-card tappable">
+    <div class="icon-wrap">
+      <span class="rank" hidden></span>
+      <img alt="" />
+      <span class="fmt-badge"></span>
+    </div>
+    <div class="name"></div>
+    <div class="meta"><svg width="11" height="11"><use href="#ic-download"/></svg><span></span></div>
+  </div>
+</template>
+
+<script type="module">
+/* =====================================================================
+   PIKA STORE — APPLICATION LOGIC
+   -----------------------------------------------------------------
+   Sections in this file:
+   1.  CONFIG            — fill in your own Firebase + Telegram bot + OneSignal keys
+   2.  Firebase bootstrap — Firestore (data)
+   3.  Telegram storage   — free file hosting via a Telegram bot (instead of paid cloud storage)
+   4.  State & helpers
+   5.  Onboarding (username gate)
+   6.  Theme
+   7.  Navigation
+   8.  Home feed (hero, categories, rows) — realtime via Firestore
+   9.  App detail sheet
+   10. Upload wizard
+   11. Group chat
+   12. Native-app hardening (zoom / long-press / etc.) — see also <style>
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. CONFIG — EDIT THESE BEFORE YOU PUBLISH THE STORE.
+   See guide.md for exact step-by-step instructions on where each value
+   comes from. Nothing in this app works with fake/blank values.
+   --------------------------------------------------------------------- */
+const CONFIG = {
+  // Firebase console → Project settings → General → "Your apps" → SDK config
+  firebase: {
+    apiKey: "PASTE_YOUR_FIREBASE_API_KEY",
+    authDomain: "your-project.firebaseapp.com",
+    projectId: "your-project-id",
+    storageBucket: "your-project.appspot.com",
+    messagingSenderId: "000000000000",
+    appId: "1:000000000000:web:xxxxxxxxxxxxxxxx"
+  },
+  // Telegram is used as the actual FREE file host (Firebase free storage is
+  // only ~5GB, not enough). Create a bot with @BotFather, create a PRIVATE
+  // channel or group, add the bot to it as admin, and put the bot token +
+  // that chat's ID below. Every uploaded file (APK/ZIP/RAR, icon, each
+  // screenshot) is sent to this chat as a document, tagged with a unique
+  // per-app ID in the caption so everything for one app can be found
+  // together. See guide.md → "Telegram Storage Backend" for exact steps.
+  // ⚠ IMPORTANT LIMIT: Telegram's cloud Bot API only lets a bot DOWNLOAD
+  // files up to 20MB (uploads can be up to 50MB, but getFile caps at 20MB).
+  // Bigger APKs will upload fine but will fail to resolve a download link.
+  // guide.md explains two ways around this.
+  telegram: {
+    botToken: "PASTE_YOUR_TELEGRAM_BOT_TOKEN", // from @BotFather
+    chatId: "PASTE_YOUR_TELEGRAM_CHAT_ID"      // the private channel/group id, e.g. -1001234567890
+  },
+  // Internet Archive (archive.org) is used as the real file host instead of
+  // Telegram — no size cap, no card, and links never expire. Browsers can't
+  // talk to archive.org's upload API directly (it blocks cross-origin
+  // requests and your S3 keys can't safely live in this HTML anyway), so
+  // uploads are relayed through a small free Cloudflare Worker that holds
+  // your keys server-side. See guide.md → "Internet Archive storage" for
+  // how to deploy the Worker (worker.js, provided alongside this file).
+  archive: {
+    workerUrl: "https://pika-storage.itsme16241897.workers.dev", // your deployed Cloudflare Worker
+    itemPrefix: "pika-store"                        // groups all your items under this name on archive.org
+  },
+  // OneSignal → onesignal.com → free account → New Web App
+  oneSignalAppId: "PASTE_YOUR_ONESIGNAL_APP_ID",
+  // Soft cap only used for the storage meter on the Profile page.
+  totalStorageGB: 50
+};
+
+/* ---------------------------------------------------------------------
+   2. FIREBASE BOOTSTRAP (Firestore = database for apps/categories/chat)
+   --------------------------------------------------------------------- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, doc, setDoc, updateDoc, increment,
+  onSnapshot, query, orderBy, limit, serverTimestamp, where
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+let db = null;
+let firebaseReady = false;
+try{
+  const fbApp = initializeApp(CONFIG.firebase);
+  db = getFirestore(fbApp);
+  firebaseReady = true;
+}catch(e){
+  console.warn("Firebase not configured yet — running in local demo mode.", e);
+}
+
+/* ---------------------------------------------------------------------
+   3. TELEGRAM FILE STORAGE HELPERS
+   Every file (main APK/ZIP/RAR, icon, screenshots) is sent as a
+   "document" message to a private Telegram chat via the Bot API. Each
+   app gets one unique ID (generateAppId, below); every file belonging
+   to that app is tagged with that ID in its caption (#pika_<id>) so
+   the file, icon and screenshots for one app are always identifiable
+   and linkable together, even just by scrolling the chat manually.
+
+   We store BOTH the resolved download url (fast, used immediately for
+   <img> tags and first download) AND the raw Telegram file_id (used to
+   re-resolve a fresh url later — Telegram file links are only
+   guaranteed valid for about an hour, the file_id itself never
+   expires as long as the message isn't deleted).
+   --------------------------------------------------------------------- */
+function generateAppId(){
+  if(crypto.randomUUID) return crypto.randomUUID().replace(/-/g,"").slice(0,16);
+  return "app" + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+}
+
+function telegramReady(){
+  return CONFIG.telegram.botToken !== "PASTE_YOUR_TELEGRAM_BOT_TOKEN" && CONFIG.telegram.chatId !== "PASTE_YOUR_TELEGRAM_CHAT_ID";
+}
+
+/**
+ * Sends one file to the Telegram storage chat.
+ * @param {File} file        the browser File object to upload
+ * @param {string} appId     unique id for the app this file belongs to
+ * @param {string} kind      "file" | "icon" | "screenshot" — just used in the caption tag
+ * @param {function} onProgress  called with 0-100
+ */
+async function uploadFileToTelegram(file, appId, kind, onProgress){
+  if(!telegramReady()){
+    // Demo mode: no bot configured yet — keep the file only in memory
+    // (as a blob URL) so the UI still works end-to-end while you're testing.
+    onProgress && onProgress(100);
+    return { fileId:null, url: URL.createObjectURL(file), demo:true };
+  }
+  const form = new FormData();
+  form.append("chat_id", CONFIG.telegram.chatId);
+  form.append("caption", `#pika_${appId} #${kind}`);
+  form.append("document", file, file.name);
+
+  onProgress && onProgress(10);
+  const res = await fetch(`https://api.telegram.org/bot${CONFIG.telegram.botToken}/sendDocument`, {
+    method: "POST",
+    body: form
+  });
+  const data = await res.json();
+  if(!data.ok){
+    // The most common failure here is a file over Telegram's 50MB bot upload cap.
+    throw new Error("Telegram upload failed: " + (data.description || res.status));
+  }
+  onProgress && onProgress(70);
+  const tgDoc = data.result.document || data.result.video || data.result.photo?.slice(-1)[0];
+  const fileId = tgDoc.file_id;
+  let url;
+  try{
+    url = await resolveTelegramFileUrl(fileId);
+  }catch(e){
+    // Upload succeeded but the file is too big for getFile (>20MB) — the
+    // file is safely stored in the chat, it just can't be auto-linked yet.
+    // See guide.md → "The 20MB download limit" for the fix.
+    console.warn("Uploaded but could not resolve a download link:", e);
+    url = "";
+  }
+  onProgress && onProgress(100);
+  return { fileId, fileUniqueId: tgDoc.file_unique_id, fileName: tgDoc.file_name || file.name, fileSize: tgDoc.file_size || file.size, url, demo:false };
+}
+
+/** Turns a stored Telegram file_id into a fresh, directly downloadable URL. */
+async function resolveTelegramFileUrl(fileId){
+  const res = await fetch(`https://api.telegram.org/bot${CONFIG.telegram.botToken}/getFile?file_id=${fileId}`);
+  const data = await res.json();
+  if(!data.ok){ throw new Error(data.description || "getFile failed (file may be over the 20MB Bot API download limit)"); }
+  return `https://api.telegram.org/file/bot${CONFIG.telegram.botToken}/${data.result.file_path}`;
+}
+
+/* ---------------------------------------------------------------------
+   3b. INTERNET ARCHIVE FILE STORAGE (via Cloudflare Worker relay)
+   Every file for one app (main APK/ZIP, icon, screenshots) is PUT into
+   the SAME archive.org "item", named "<itemPrefix>-<appId>" — so the
+   item itself is the shared unique ID, and every file inside it is
+   just named by kind (file.apk, icon.png, screenshot-...). Download
+   links are permanent (unlike Telegram's ~1hr links), so no re-resolve
+   step is needed later — startDownload() already handles this since it
+   only re-resolves when app.fileId is set, which archive uploads leave null.
+   --------------------------------------------------------------------- */
+function archiveReady(){
+  return CONFIG.archive.workerUrl && !CONFIG.archive.workerUrl.startsWith("PASTE_");
+}
+
+/**
+ * Uploads one file to Internet Archive via your Cloudflare Worker.
+ * @param {File} file     the browser File object to upload
+ * @param {string} appId  unique id shared by every file belonging to this app
+ * @param {string} kind   "file" | "icon" | "screenshot" — used as the filename inside the item
+ * @param {function} onProgress  called with 0-100 (real upload progress, not a fake estimate)
+ */
+async function uploadFileToArchive(file, appId, kind, onProgress){
+  if(!archiveReady()){
+    // Demo mode: no Worker configured yet — keep the file only in memory
+    // (as a blob URL) so the UI still works end-to-end while you're testing.
+    onProgress && onProgress(100);
+    return { url: URL.createObjectURL(file), itemId:null, demo:true };
+  }
+  const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+  const filename = kind === "screenshot" ? `screenshot-${Date.now()}.${ext}` : `${kind}.${ext}`;
+  const itemId = `${CONFIG.archive.itemPrefix}-${appId}`;
+
+  const form = new FormData();
+  form.append("itemId", itemId);
+  form.append("filename", filename);
+  form.append("title", `Pika Store item ${appId}`);
+  form.append("file", file, file.name);
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", CONFIG.archive.workerUrl);
+    xhr.timeout = 90000; // 90s — if nothing happens in this long, something is stuck; fail loudly instead of hanging forever
+    xhr.upload.onprogress = e => {
+      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if(xhr.status >= 200 && xhr.status < 300){
+        try{
+          const data = JSON.parse(xhr.responseText);
+          resolve({ url: data.url, itemId, filename, demo:false });
+        }catch(e){
+          reject(new Error("Storage worker returned an unexpected response"));
+        }
+      }else{
+        // Common causes: Worker not deployed yet, wrong workerUrl, or bad/rotated IA keys.
+        reject(new Error(`Archive upload failed (${xhr.status}): ${xhr.responseText}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Network error reaching the storage worker — check workerUrl in CONFIG"));
+    xhr.ontimeout = () => reject(new Error(`Upload of "${filename}" timed out after 90s — your connection may be too slow or unstable right now`));
+    xhr.send(form);
+  });
+}
+
+/** Wraps any promise with a timeout so a stuck step (e.g. Firestore) fails loudly instead of freezing the progress bar forever. */
+function withTimeout(promise, ms, label){
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${Math.round(ms/1000)}s — check your Firebase connection and try again`)), ms);
+    promise.then(v => { clearTimeout(timer); resolve(v); }, e => { clearTimeout(timer); reject(e); });
+  });
+}
+
+/* Download a file INSIDE Pika Store (no browser tab), with a live progress bar. */
+async function downloadInsideStore(url, filename, onProgress){
+  const res = await fetch(url);
+  const total = Number(res.headers.get("content-length")) || 0;
+  const reader = res.body.getReader();
+  let received = 0;
+  const chunks = [];
+  while(true){
+    const { done, value } = await reader.read();
+    if(done) break;
+    chunks.push(value);
+    received += value.length;
+    if(total) onProgress && onProgress(Math.round((received/total)*100));
+  }
+  const blob = new Blob(chunks);
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(blobUrl), 8000);
+}
+
+/* ---------------------------------------------------------------------
+   4. STATE & GENERIC HELPERS
+   --------------------------------------------------------------------- */
+const state = {
+  username: localStorage.getItem("pika_username") || "",
+  deviceId: localStorage.getItem("pika_device_id") || (()=>{
+    const id = "pika_" + Math.random().toString(36).slice(2,10);
+    localStorage.setItem("pika_device_id", id);
+    return id;
+  })(),
+  apps: [],            // live from Firestore 'apps' collection
+  categories: [],       // live from Firestore 'categories' collection
+  activeCategory: "all",
+  heroIndex: 0,
+  upload: { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"" }
+};
+
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+function toast(msg, icon="ic-check"){
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.innerHTML = `<svg><use href="#${icon}"/></svg><span>${escapeHtml(msg)}</span>`;
+  $("#toast-container").appendChild(el);
+  setTimeout(()=>{ el.style.opacity="0"; el.style.transform="translateY(-10px)"; el.style.transition="all .3s"; }, 2400);
+  setTimeout(()=>el.remove(), 2800);
+}
+function escapeHtml(s=""){ return s.replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c])); }
+function fmtCount(n=0){ if(n>=1000000) return (n/1000000).toFixed(1)+"M"; if(n>=1000) return (n/1000).toFixed(1)+"k"; return String(n); }
+async function sha256(text){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+/* ---------------------------------------------------------------------
+   5. ONBOARDING — username gate
+   Browsers cannot read a device owner's real contact name (no such API
+   exists, for privacy reasons). "Auto detect" here means: reuse the last
+   name typed on this device/browser, otherwise suggest a friendly random
+   guest name the user can edit in one tap — this is the closest honest
+   equivalent to "auto detect" without asking for contacts/accounts.
+   --------------------------------------------------------------------- */
+function suggestUsername(){
+  const remembered = localStorage.getItem("pika_username");
+  if(remembered) return remembered;
+  const adjectives = ["Swift","Bright","Cosmic","Turbo","Pixel","Neon","Lucky","Shadow"];
+  const noun = "Player" + Math.floor(1000 + Math.random()*9000);
+  return adjectives[Math.floor(Math.random()*adjectives.length)] + noun;
+}
+
+function initOnboarding(){
+  const gate = $("#username-gate");
+  const input = $("#gate-username-input");
+  const app = $("#app");
+
+  if(state.username){
+    gate.hidden = true; app.hidden = false; boot();
+    return;
+  }
+  input.value = suggestUsername();
+  $("#gate-continue-btn").addEventListener("click", async ()=>{
+    const name = input.value.trim();
+    if(!name){ input.focus(); return; }
+    state.username = name;
+    localStorage.setItem("pika_username", name);
+    if(firebaseReady){
+      try{ await setDoc(doc(db,"users", state.deviceId), { name, updatedAt: serverTimestamp() }, { merge:true }); }catch(e){ console.warn(e); }
+    }
+    gate.style.animation = "fadeIn .3s ease reverse";
+    setTimeout(()=>{ gate.hidden = true; app.hidden = false; boot(); }, 260);
+  });
+  input.addEventListener("keydown", e=>{ if(e.key==="Enter") $("#gate-continue-btn").click(); });
+}
+
+let booted = false;
+function boot(){
+  if(booted) return; booted = true;
+  $("#profile-name").textContent = state.username;
+  $("#profile-avatar").textContent = state.username.slice(0,1).toUpperCase();
+  initOneSignal();
+  listenApps();
+  listenCategories();
+  listenChat();
+}
+
+/* ---------------------------------------------------------------------
+   6. THEME
+   --------------------------------------------------------------------- */
+function initTheme(){
+  const saved = localStorage.getItem("pika_theme") || "dark";
+  document.documentElement.setAttribute("data-theme", saved);
+  $("#theme-label").textContent = saved === "dark" ? "Dark" : "Light";
+  $("#theme-toggle-btn").addEventListener("click", ()=>{
+    const cur = document.documentElement.getAttribute("data-theme");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("pika_theme", next);
+    $("#theme-label").textContent = next === "dark" ? "Dark" : "Light";
+  });
+}
+
+/* ---------------------------------------------------------------------
+   7. NAVIGATION (bottom tab bar)
+   --------------------------------------------------------------------- */
+function initNav(){
+  $$(".nav-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const target = btn.dataset.page;
+      if(target === "__categories"){ openCategoriesSheet(); return; }
+      $$(".nav-btn").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      $$(".page").forEach(p=>p.hidden = true);
+      $("#"+target).hidden = false;
+    });
+  });
+}
+
+/* ---------------------------------------------------------------------
+   8. HOME FEED — realtime Firestore listeners render hero + rows
+   --------------------------------------------------------------------- */
+function listenApps(){
+  if(!firebaseReady){ renderEmptyState(); return; }
+  const q = query(collection(db,"apps"), orderBy("createdAt","desc"), limit(200));
+  onSnapshot(q, snap=>{
+    state.apps = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    renderHome();
+  }, err=>{ console.warn(err); renderEmptyState(); });
+}
+function renderEmptyState(){ /* rows already show a friendly empty message by default in HTML */ }
+
+function listenCategories(){
+  if(!firebaseReady) return;
+  const q = query(collection(db,"categories"), orderBy("createdAt","desc"));
+  onSnapshot(q, snap=>{
+    state.categories = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    renderCategoryChips();
+  });
+}
+
+function renderCategoryChips(){
+  const row = $("#category-row");
+  const addBtn = $("#add-category-chip");
+  $$(".chip[data-cat]", row).forEach(c=>{ if(c.dataset.cat!=="all") c.remove(); });
+  state.categories.forEach(cat=>{
+    const chip = document.createElement("button");
+    chip.className = "chip" + (state.activeCategory===cat.name ? " active" : "");
+    chip.dataset.cat = cat.name;
+    chip.innerHTML = `<span class="dot"></span> ${escapeHtml(cat.name)}`;
+    chip.addEventListener("click", ()=>{ state.activeCategory = cat.name; renderCategoryChips(); renderHome(); });
+    row.insertBefore(chip, addBtn);
+  });
+  // upload wizard category chips reuse same list
+  const upRow = $("#upload-cat-row");
+  upRow.innerHTML = "";
+  state.categories.forEach(cat=>{
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (state.upload.category===cat.name ? " active" : "");
+    chip.textContent = cat.name;
+    chip.addEventListener("click", ()=>{ state.upload.category = cat.name; renderCategoryChips(); });
+    upRow.appendChild(chip);
+  });
+  if(!state.categories.length){
+    upRow.innerHTML = `<span style="font-size:12px;color:var(--text-faint)">No categories yet — create one from the Categories tab.</span>`;
+  }
+}
+
+function renderHome(){
+  const list = state.activeCategory === "all"
+    ? state.apps
+    : state.apps.filter(a=>a.category === state.activeCategory);
+
+  // Hero: feature the most recently uploaded app
+  if(list.length){
+    const featured = list[0];
+    $("#hero-title").textContent = featured.name;
+    $("#hero-sub").textContent = (featured.description||"").slice(0,80) || `Uploaded by ${featured.uploaderName||"a member"}`;
+    $("#hero-bg").style.backgroundImage = featured.thumbUrl ? `url(${featured.thumbUrl})` : "none";
+    $("#hero-primary-btn").onclick = ()=>openAppDetail(featured.id);
+  } else {
+    $("#hero-title").textContent = "No apps yet — be the first!";
+    $("#hero-sub").textContent = "Upload your own APK, ZIP or RAR and share it with your members.";
+    $("#hero-bg").style.backgroundImage = "none";
+    $("#hero-primary-btn").onclick = ()=>{ $$(".nav-btn")[2].click(); };
+  }
+  $("#hero-upload-btn").onclick = ()=>{ $$(".nav-btn")[2].click(); };
+
+  renderAppRow("#top-downloaded-row", [...list].sort((a,b)=>(b.downloadCount||0)-(a.downloadCount||0)).slice(0,20), true);
+  renderAppRow("#new-releases-row", [...list].sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0)).slice(0,20), false);
+}
+
+function renderAppRow(selector, apps, showRank){
+  const row = $(selector);
+  if(!apps.length){
+    row.innerHTML = `<div class="empty-row">Nothing here yet.</div>`;
+    return;
+  }
+  row.innerHTML = "";
+  apps.forEach((app, i)=>{
+    const node = $("#tmpl-app-card").content.cloneNode(true);
+    const wrap = node.querySelector(".app-card");
+    const rank = node.querySelector(".rank");
+    if(showRank){ rank.hidden = false; rank.textContent = "#"+(i+1); }
+    node.querySelector("img").src = app.thumbUrl || placeholderIcon(app.name);
+    node.querySelector(".fmt-badge").textContent = app.format || "APK";
+    node.querySelector(".name").textContent = app.name;
+    node.querySelector(".meta span").textContent = fmtCount(app.downloadCount||0) + " downloads";
+    wrap.addEventListener("click", ()=>openAppDetail(app.id));
+    row.appendChild(node);
+  });
+}
+function placeholderIcon(name=""){
+  const letter = (name.trim()[0]||"P").toUpperCase();
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231E2430'/%3E%3Ctext x='50' y='62' font-size='42' text-anchor='middle' font-family='Arial' font-weight='800' fill='%23FFC61A'%3E${letter}%3C/text%3E%3C/svg%3E`;
+}
+
+/* Search (client-side filter over the live list) */
+$("#search-input").addEventListener("input", e=>{
+  const term = e.target.value.trim().toLowerCase();
+  const section = $("#search-results-section");
+  if(!term){ section.hidden = true; return; }
+  section.hidden = false;
+  const results = state.apps.filter(a => a.name.toLowerCase().includes(term));
+  renderAppRow("#search-results-row", results, false);
+});
+
+/* Categories management sheet */
+function openCategoriesSheet(){
+  const html = `
+  <div class="sheet-backdrop" id="cats-backdrop">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <div style="padding:8px 18px 4px;"><h2 style="font-size:18px;margin:6px 0 2px;">Categories</h2><p style="font-size:12.5px;color:var(--text-dim);margin:0 0 14px;">Anyone can create a category and name it. Share it with your friends so they know where to find your app.</p></div>
+      <div class="field" style="margin:0 18px 10px;">
+        <label>New category name</label>
+        <input type="text" id="new-cat-input" placeholder="e.g. My Mods, Family Apps, Tools" />
+      </div>
+      <div style="padding:0 18px 16px;"><button class="btn btn-primary btn-block" id="create-cat-btn"><svg><use href="#ic-plus"/></svg> Create category</button></div>
+      <div class="settings-list" id="cats-list" style="margin:0 18px 20px;"></div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#cats-backdrop");
+  wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")) wrap.remove(); });
+  const list = $("#cats-list");
+  list.innerHTML = state.categories.map(c=>`<div class="row"><span>${escapeHtml(c.name)}</span><span style="font-size:11px;color:var(--text-faint)">by ${escapeHtml(c.ownerName||"member")}</span></div>`).join("") || `<div class="row" style="color:var(--text-faint)">No categories yet</div>`;
+  $("#create-cat-btn").addEventListener("click", async ()=>{
+    const name = $("#new-cat-input").value.trim();
+    if(!name) return;
+    if(!firebaseReady){ toast("Connect Firebase first — see guide.md","ic-lock"); return; }
+    await addDoc(collection(db,"categories"), { name, ownerName: state.username, ownerDevice: state.deviceId, createdAt: serverTimestamp() });
+    toast(`Category "${name}" created`);
+    wrap.remove();
+  });
+}
+
+/* ---------------------------------------------------------------------
+   9. APP DETAIL SHEET
+   --------------------------------------------------------------------- */
+function openAppDetail(appId){
+  const app = state.apps.find(a=>a.id===appId);
+  if(!app) return;
+  const shots = (app.screenshots||[]);
+  const desc = app.description || "No description provided.";
+  const html = `
+  <div class="sheet-backdrop" id="detail-backdrop">
+    <div class="sheet">
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <div class="detail-hero">
+        <div class="bg" style="background-image:url('${app.thumbUrl||placeholderIcon(app.name)}')"></div>
+        <div class="fade"></div>
+      </div>
+      <div class="detail-head">
+        <div class="detail-icon"><img src="${app.thumbUrl||placeholderIcon(app.name)}" alt=""/></div>
+        <div class="detail-title">
+          <h1>${escapeHtml(app.name)}</h1>
+          <div class="dev">${escapeHtml(app.uploaderName||"Unknown uploader")}</div>
+        </div>
+      </div>
+      ${app.category ? `<div class="cat-pill"><svg width="11" height="11"><use href="#ic-grid"/></svg> ${escapeHtml(app.category)}</div>` : ""}
+      <div class="detail-stats">
+        <div class="stat"><b>${fmtCount(app.downloadCount||0)}</b><span>Downloads</span></div>
+        <div class="stat"><b>${app.format||"APK"}</b><span>Format</span></div>
+        <div class="stat">
+          <div class="stars">${renderStars(app.rating||4.5)}</div>
+          <span>${(app.rating||4.5).toFixed(1)} rating</span>
+        </div>
+        ${app.hasPassword ? `<div class="stat"><b><svg width="14" height="14" style="color:var(--accent-2)"><use href="#ic-lock"/></svg></b><span>Locked</span></div>` : ""}
+      </div>
+      ${shots.length ? `<div class="screens-row">${shots.map(s=>`<img src="${s}" alt=""/>`).join("")}</div>` : ""}
+      <div class="accordion">
+        <details class="accordion-item" open>
+          <summary>Description <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary>
+          <div class="body">${escapeHtml(desc)}</div>
+        </details>
+        <details class="accordion-item">
+          <summary>File info <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary>
+          <div class="body">Format: ${app.format||"APK"}${app.sizeLabel? " • "+app.sizeLabel:""}\nUploaded by: ${escapeHtml(app.uploaderName||"member")}\nCategory: ${escapeHtml(app.category||"Uncategorized")}</div>
+        </details>
+      </div>
+      <div class="dl-progress" id="detail-dl-progress" hidden><i id="detail-dl-bar"></i></div>
+      <div class="detail-footer">
+        <button class="btn btn-primary btn-lg btn-block" id="detail-download-btn">
+          <svg><use href="${app.hasPassword?"ic-lock":"ic-download"}"/></svg>
+          ${app.hasPassword ? "Enter password to download" : "Download"}
+        </button>
+      </div>
+      <div style="height:20px"></div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#detail-backdrop");
+  wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")) wrap.remove(); });
+
+  $("#detail-download-btn").addEventListener("click", async ()=>{
+    if(app.hasPassword){
+      const entered = prompt("This file is password-protected.\nEnter the password to download:");
+      if(entered===null) return;
+      const hash = await sha256(entered);
+      if(hash !== app.passwordHash){ toast("Wrong password", "ic-close"); return; }
+    }
+    await startDownload(app);
+  });
+}
+function renderStars(rating){
+  let out = "";
+  for(let i=1;i<=5;i++){
+    out += `<svg><use href="${i<=Math.round(rating) ? "#ic-star-full" : "#ic-star-empty"}"/></svg>`;
+  }
+  return out;
+}
+async function startDownload(app){
+  const progressWrap = $("#detail-dl-progress");
+  const bar = $("#detail-dl-bar");
+  progressWrap.hidden = false;
+  $("#detail-download-btn").setAttribute("disabled","true");
+  try{
+    // Always re-resolve a fresh Telegram link right before downloading —
+    // the cached fileUrl saved at upload time is only guaranteed valid for
+    // about an hour, the file_id behind it is what's permanent.
+    let url = app.fileUrl;
+    if(telegramReady() && app.fileId){
+      try{ url = await resolveTelegramFileUrl(app.fileId); }
+      catch(e){
+        toast("This file is over Telegram's 20MB download limit — see guide.md","ic-lock");
+        return;
+      }
+    }
+    if(!url){ toast("No download link available for this file","ic-close"); return; }
+    await downloadInsideStore(url, `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`, pct=>{ bar.style.width = pct+"%"; });
+    toast("Download complete");
+    if(firebaseReady){ await updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }); }
+  }catch(e){
+    console.warn(e);
+    toast("Download failed — check the file URL","ic-close");
+  }finally{
+    $("#detail-download-btn").removeAttribute("disabled");
+  }
+}
+
+/* ---------------------------------------------------------------------
+   10. UPLOAD WIZARD (4 steps)
+   --------------------------------------------------------------------- */
+function initUploadWizard(){
+  let step = 1;
+  const total = 4;
+
+  function goto(n){
+    step = Math.max(1, Math.min(total, n));
+    $$(".wizard-step").forEach(s=> s.hidden = Number(s.dataset.step) !== step);
+    $$(".stepper i").forEach(i=> i.classList.toggle("done", Number(i.dataset.step) <= step));
+    $("#wizard-back-btn").hidden = step === 1;
+    $("#wizard-next-btn").textContent = step === total ? "Upload to Pika Store" : "Continue";
+    if(step === total) renderReview();
+  }
+
+  $("#wizard-back-btn").addEventListener("click", ()=>goto(step-1));
+  $("#wizard-next-btn").addEventListener("click", async ()=>{
+    if(step === 1 && !state.upload.file){ toast("Choose a file first","ic-close"); return; }
+    if(step === 3 && !state.upload.name.trim()){ toast("Give your app a name","ic-close"); return; }
+    if(step < total){ goto(step+1); return; }
+    await submitUpload();
+  });
+
+  // step 1: file + format
+  $("#file-dropzone").addEventListener("click", ()=> $("#file-input").click());
+  $("#file-input").addEventListener("change", e=>{
+    const f = e.target.files[0]; if(!f) return;
+    state.upload.file = f;
+    const dz = $("#file-dropzone");
+    dz.classList.add("filled");
+    dz.innerHTML = `<div class="file-thumb" style="display:flex;align-items:center;justify-content:center;"><svg width="22" height="22"><use href="#ic-cube"/></svg></div><div><b style="display:block">${escapeHtml(f.name)}</b><span style="font-size:11px;color:var(--text-faint)">${(f.size/1024/1024).toFixed(1)} MB</span></div>`;
+    if(!state.upload.name) state.upload.name = f.name.replace(/\.(apk|zip|rar)$/i,"");
+  });
+  $$(".format-opt").forEach(opt=>{
+    opt.addEventListener("click", ()=>{
+      $$(".format-opt").forEach(o=>o.classList.remove("active"));
+      opt.classList.add("active");
+      state.upload.format = opt.dataset.format;
+    });
+  });
+
+  // step 2: thumbnail + screenshots
+  $("#thumb-dropzone").addEventListener("click", ()=> $("#thumb-input").click());
+  $("#thumb-input").addEventListener("change", async e=>{
+    const f = e.target.files[0]; if(!f) return;
+    state.upload.thumb = f;
+    const url = URL.createObjectURL(f);
+    const dz = $("#thumb-dropzone");
+    dz.classList.add("filled");
+    dz.innerHTML = `<img class="file-thumb" src="${url}" alt=""/><div><b>${escapeHtml(f.name)}</b></div>`;
+  });
+  $("#add-screenshot-btn").addEventListener("click", ()=> $("#screens-input").click());
+  $("#screens-input").addEventListener("change", e=>{
+    Array.from(e.target.files).forEach(f=>{
+      if(state.upload.screenshots.length >= 3){ toast("Max 3 screenshots","ic-close"); return; }
+      state.upload.screenshots.push(f);
+      renderScreenshotStrip();
+    });
+    e.target.value = ""; // allow re-selecting the same file later
+  });
+  function renderScreenshotStrip(){
+    const strip = $("#screens-strip");
+    strip.querySelectorAll(".shot").forEach(n=>n.remove());
+    state.upload.screenshots.forEach((f,i)=>{
+      const div = document.createElement("div");
+      div.className = "shot";
+      div.innerHTML = `<img src="${URL.createObjectURL(f)}" alt=""/><button data-i="${i}"><svg><use href="#ic-close"/></svg></button>`;
+      div.querySelector("button").addEventListener("click", ()=>{ state.upload.screenshots.splice(i,1); renderScreenshotStrip(); });
+      strip.insertBefore(div, $("#add-screenshot-btn"));
+    });
+    $("#add-screenshot-btn").hidden = state.upload.screenshots.length >= 3;
+  }
+
+  // step 3: name/desc/category
+  $("#app-name-input").addEventListener("input", e=> state.upload.name = e.target.value);
+  $("#app-desc-input").addEventListener("input", e=> state.upload.desc = e.target.value);
+
+  // step 4: password switch
+  $("#password-switch").addEventListener("click", ()=>{
+    state.upload.hasPassword = !state.upload.hasPassword;
+    $("#password-switch").classList.toggle("on", state.upload.hasPassword);
+    $("#password-field").hidden = !state.upload.hasPassword;
+  });
+  $("#app-password-input").addEventListener("input", e=> state.upload.password = e.target.value);
+
+  function renderReview(){
+    const u = state.upload;
+    $("#review-summary").innerHTML = `
+      <div><b>Name:</b> ${escapeHtml(u.name||"—")}</div>
+      <div><b>Format:</b> ${u.format}</div>
+      <div><b>Category:</b> ${escapeHtml(u.category||"Uncategorized")}</div>
+      <div><b>Screenshots:</b> ${u.screenshots.length}</div>
+      <div><b>Password:</b> ${u.hasPassword ? "Enabled 🔒" : "Not set"}</div>
+    `.replace("🔒",""); // no emoji — text label only
+  }
+
+  async function submitUpload(){
+    if(!firebaseReady){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
+    if(!archiveReady()){ toast("Connect your storage Worker first — see guide.md","ic-close"); return; }
+    const btn = $("#wizard-next-btn");
+    btn.setAttribute("disabled","true");
+    const progWrap = $("#upload-progress-wrap");
+    const bar = $("#upload-progress-bar");
+    const pctLabel = $("#upload-progress-pct");
+    progWrap.hidden = false;
+    const setPct = p => { bar.style.width = p+"%"; pctLabel.textContent = `Uploading… ${p}%`; };
+    try{
+      // One shared ID ties the main file + icon + screenshots together for
+      // this app, both in Firestore (as the document ID) and in Telegram
+      // (as the #pika_<id> tag on every message's caption).
+      const appId = generateAppId();
+      setPct(5);
+
+      // 1. Main app file (APK / APK+ / ZIP / RAR) — all three files below
+      // land in the SAME archive.org item (appId), so that item is the
+      // shared unique ID tying file + icon + screenshots together.
+      const fileRes = await uploadFileToArchive(state.upload.file, appId, "file", p=>setPct(5 + Math.round(p*0.45)));
+      setPct(55);
+
+      // 2. Icon / thumbnail
+      let thumbUrl = "";
+      if(state.upload.thumb){
+        const t = await uploadFileToArchive(state.upload.thumb, appId, "icon", p=>setPct(55 + Math.round(p*0.15)));
+        thumbUrl = t.url;
+      }
+      setPct(72);
+
+      // 3. Up to 3 screenshots — each one moves the bar a bit (72→90) so it
+      // never looks frozen even on a slow connection.
+      const screenshotUrls = [];
+      const shots = state.upload.screenshots;
+      for(let i=0;i<shots.length;i++){
+        const base = 72 + Math.round((i/Math.max(shots.length,1))*18);
+        const s = await uploadFileToArchive(shots[i], appId, "screenshot",
+          p => setPct(base + Math.round((p/100) * (18/Math.max(shots.length,1)))));
+        screenshotUrls.push(s.url);
+      }
+      setPct(90);
+
+      const passwordHash = state.upload.hasPassword ? await sha256(state.upload.password) : null;
+
+      // Firestore doc uses the SAME id as the Telegram caption tag, so the
+      // database record and the Telegram messages for this app always
+      // point at each other.
+      // Wrapped with a timeout: without this, a stalled Firestore write
+      // (bad rules, dropped connection) leaves the bar stuck at 90% forever
+      // with no visible error — this makes it fail loudly instead.
+      await withTimeout(setDoc(doc(db,"apps",appId), {
+        name: state.upload.name.trim(),
+        description: state.upload.desc.trim(),
+        format: state.upload.format,
+        category: state.upload.category || "Uncategorized",
+        // These links are permanent (archive.org doesn't expire them), so
+        // unlike the old Telegram version there's no fileId to re-resolve later.
+        fileUrl: fileRes.url,
+        thumbUrl,
+        screenshots: screenshotUrls,
+        archiveItemId: fileRes.itemId, // the shared archive.org item — open https://archive.org/details/<this> to see all files for this app
+        hasPassword: !!state.upload.hasPassword,
+        passwordHash,
+        uploaderName: state.username,
+        uploaderDevice: state.deviceId,
+        downloadCount: 0,
+        rating: 4.5,
+        sizeLabel: (state.upload.file.size/1024/1024).toFixed(1)+" MB",
+        createdAt: serverTimestamp(),
+        createdAtMs: Date.now()
+      }), 25000, "Saving to database");
+      setPct(100);
+      toast("Uploaded! Your app is now live on Pika Store");
+      notifyEveryone(`${state.username} just uploaded "${state.upload.name}"`);
+      resetUploadForm();
+      goto(1);
+      $$(".nav-btn")[0].click();
+    }catch(e){
+      console.error(e);
+      toast(e && e.message ? e.message : "Upload failed — check the storage Worker config in CONFIG", "ic-close");
+    }finally{
+      btn.removeAttribute("disabled");
+      setTimeout(()=>{ progWrap.hidden = true; }, 1200);
+    }
+  }
+  function resetUploadForm(){
+    state.upload = { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"" };
+    $("#file-dropzone").className = "dropzone";
+    $("#file-dropzone").innerHTML = `<svg><use href="#ic-upload"/></svg><b>Tap to choose a file</b>Supports .apk, .zip, .rar — best under 20MB (see guide.md)`;
+    $("#thumb-dropzone").className = "dropzone";
+    $("#thumb-dropzone").innerHTML = `<svg><use href="#ic-image"/></svg><b>Add a square icon</b>Shown on the home page and app card`;
+    $("#app-name-input").value = ""; $("#app-desc-input").value = "";
+    $("#password-switch").classList.remove("on"); $("#password-field").hidden = true; $("#app-password-input").value="";
+    renderScreenshotStrip();
+  }
+
+  goto(1);
+}
+
+/* ---------------------------------------------------------------------
+   11. GROUP CHAT — everyone types just a name, no login
+   --------------------------------------------------------------------- */
+let chatUnread = 0;
+let chatPanelOpen = false;
+function listenChat(){
+  if(!firebaseReady) return;
+  const q = query(collection(db,"chat"), orderBy("createdAt","asc"), limit(300));
+  let first = true;
+  onSnapshot(q, snap=>{
+    const changes = snap.docChanges();
+    renderChatLog(snap.docs.map(d=>d.data()));
+    if(!first){
+      changes.forEach(ch=>{
+        if(ch.type==="added" && ch.doc.data().deviceId !== state.deviceId){
+          if(!chatPanelOpen){ chatUnread++; updateChatBadge(); }
+          popupNotify(ch.doc.data().name, ch.doc.data().text);
+        }
+      });
+    }
+    first = false;
+  });
+}
+function updateChatBadge(){
+  const badge = $("#chat-badge");
+  if(chatUnread>0){ badge.hidden=false; badge.textContent = chatUnread>9?"9+":chatUnread; }
+  else{ badge.hidden = true; }
+}
+function renderChatLog(messages){
+  const log = document.getElementById("chat-log-el");
+  if(!log) return;
+  log.innerHTML = messages.map(m=>{
+    if(m.deviceId === state.deviceId){
+      return `<div class="msg me">${escapeHtml(m.text)}</div>`;
+    }
+    return `<div class="msg other"><div class="who">${escapeHtml(m.name)}</div>${escapeHtml(m.text)}</div>`;
+  }).join("");
+  log.scrollTop = log.scrollHeight;
+}
+function openChatPanel(){
+  chatPanelOpen = true; chatUnread = 0; updateChatBadge();
+  const html = `
+  <div class="sheet-backdrop" id="chat-backdrop">
+    <div class="sheet chat-sheet">
+      <div class="sheet-handle"></div>
+      <div class="chat-header">
+        <div class="av"><svg><use href="#ic-chat"/></svg></div>
+        <div><b>Pika Group Chat</b><small>Everyone in the store can see this</small></div>
+        <button class="sheet-close" data-close style="position:static; margin-left:auto; float:none;"><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      </div>
+      <div class="chat-log" id="chat-log-el"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Message as ${escapeHtml(state.username)}…" />
+        <button class="chat-send" id="chat-send-btn"><svg><use href="#ic-play"/></svg></button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#chat-backdrop");
+  wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")){ wrap.remove(); chatPanelOpen=false; } });
+  renderChatLog([]); // will refresh via the live listener already running
+
+  const send = async ()=>{
+    const input = $("#chat-input");
+    const text = input.value.trim();
+    if(!text) return;
+    input.value = "";
+    if(!firebaseReady){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
+    await addDoc(collection(db,"chat"), { name: state.username, deviceId: state.deviceId, text, createdAt: serverTimestamp() });
+  };
+  $("#chat-send-btn").addEventListener("click", send);
+  $("#chat-input").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
+}
+$("#chat-fab-btn").addEventListener("click", openChatPanel);
+
+/* ---------------------------------------------------------------------
+   12a. POP-UP NOTIFICATIONS
+   OneSignal handles real background/closed-app push. For messages that
+   arrive while the app is OPEN in foreground, we also fire a native
+   Notification popup immediately (this is the part that was "silent"
+   with raw Firebase — foreground FCM messages never auto-popup, you
+   must call `new Notification()` yourself, which is what this does).
+   --------------------------------------------------------------------- */
+function popupNotify(title, body){
+  if("Notification" in window && Notification.permission === "granted"){
+    try{ new Notification(title, { body, icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3C/svg%3E" }); }catch(e){}
+  }
+  toast(`${title}: ${body}`.slice(0,60), "ic-chat");
+}
+function notifyEveryone(message){
+  // Local popup for this device immediately:
+  popupNotify("Pika Store", message);
+  // Real push to ALL members (including closed app) needs OneSignal's
+  // REST API call from a server/Cloud Function — see guide.md, section
+  // "Sending a real push to everyone", for the 5-line snippet.
+}
+async function initOneSignal(){
+  if(!("Notification" in window)) return;
+  try{
+    if(Notification.permission === "default"){
+      // Ask once, politely, after the user has already seen the home page.
+      setTimeout(()=>{ Notification.requestPermission(); }, 2500);
+    }
+  }catch(e){}
+  // OneSignal SDK (loaded in <head>) initializes itself once OneSignalDeferred
+  // fires — wire the login so pushes can be targeted by username later.
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal){
+    if(CONFIG.oneSignalAppId.startsWith("PASTE_")) return; // not configured yet
+    await OneSignal.init({ appId: CONFIG.oneSignalAppId, notifyButton: { enable:false } });
+    try{ await OneSignal.login(state.deviceId); }catch(e){}
+  });
+}
+
+/* ---------------------------------------------------------------------
+   12b. NATIVE-APP HARDENING (extra JS layer on top of the CSS rules)
+   - Blocks pinch-zoom gestures
+   - Blocks double-tap-to-zoom
+   - Blocks the long-press context menu (copy/save image etc.)
+   --------------------------------------------------------------------- */
+document.addEventListener("gesturestart", e=> e.preventDefault());
+document.addEventListener("touchmove", e=>{ if(e.touches.length>1) e.preventDefault(); }, { passive:false });
+let lastTouchEnd = 0;
+document.addEventListener("touchend", e=>{
+  const now = Date.now();
+  if(now - lastTouchEnd <= 300){ e.preventDefault(); }
+  lastTouchEnd = now;
+}, { passive:false });
+document.addEventListener("contextmenu", e=> e.preventDefault());
+
+/* ---------------------------------------------------------------------
+   BOOTSTRAP
+   --------------------------------------------------------------------- */
+initTheme();
+initNav();
+initUploadWizard();
+initOnboarding();
+</script>
+</body>
+</html>
