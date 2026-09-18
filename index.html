@@ -859,7 +859,7 @@ const CONFIG = {
    --------------------------------------------------------------------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, doc, setDoc, updateDoc, increment,
+  initializeFirestore, getFirestore, collection, addDoc, doc, setDoc, updateDoc, increment,
   onSnapshot, query, orderBy, limit, serverTimestamp, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -867,7 +867,7 @@ let db = null;
 let firebaseReady = false;
 try{
   const fbApp = initializeApp(CONFIG.firebase);
-  db = getFirestore(fbApp);
+  db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
   firebaseReady = true;
 }catch(e){
   console.warn("Firebase not configured yet — running in local demo mode.", e);
