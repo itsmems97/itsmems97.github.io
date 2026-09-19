@@ -964,7 +964,19 @@ async function resolveTelegramFileUrl(fileId){
   const res = await fetch(`${localServerUrl}/bot${botToken}/getFile?file_id=${fileId}`);
   const data = await res.json();
   if(!data.ok) throw new Error(data.description || "getFile failed — is the Local Bot API Server still running?");
-  return `${localServerUrl}/file/bot${botToken}/${data.result.file_path}`;
+
+  // In --local mode, Telegram returns file_path as the server's own absolute
+  // filesystem path (e.g. "/var/lib/telegram-bot-api/<token>/documents/file_0.apk")
+  // instead of a short relative path. The /file/bot<token>/<path> HTTP endpoint
+  // expects the SHORT relative path (relative to that bot's own folder), so we
+  // strip the "/var/lib/telegram-bot-api/<token>/" prefix if present — without
+  // this, every download/thumbnail/screenshot link 404s.
+  let filePath = data.result.file_path;
+  const localPrefix = `/var/lib/telegram-bot-api/${botToken}/`;
+  if (filePath.startsWith(localPrefix)) {
+    filePath = filePath.slice(localPrefix.length);
+  }
+  return `${localServerUrl}/file/bot${botToken}/${filePath}`;
 }
 
 /** Wraps any promise with a timeout so a stuck step (e.g. Firestore) fails loudly instead of freezing the progress bar forever. */
@@ -978,6 +990,12 @@ function withTimeout(promise, ms, label){
 /* Download a file INSIDE Pika Store (no browser tab), with a live progress bar. */
 async function downloadInsideStore(url, filename, onProgress){
   const res = await fetch(url);
+  if(!res.ok){
+    // Without this check, a 404/error response body (a few dozen bytes of
+    // JSON) would silently get saved AS the file — exactly the "55 byte
+    // fake APK" bug. Fail loudly instead.
+    throw new Error(`Download failed (HTTP ${res.status}) — the file link may be broken`);
+  }
   const total = Number(res.headers.get("content-length")) || 0;
   const reader = res.body.getReader();
   let received = 0;
