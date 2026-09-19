@@ -793,9 +793,9 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
    PIKA STORE — APPLICATION LOGIC
    -----------------------------------------------------------------
    Sections in this file:
-   1.  CONFIG            — fill in your own Firebase + Telegram bot + OneSignal keys
+   1.  CONFIG            — fill in your own Firebase + Telegram Local Server + OneSignal keys
    2.  Firebase bootstrap — Firestore (data)
-   3.  Telegram storage   — free file hosting via a Telegram bot (instead of paid cloud storage)
+   3.  Telegram storage   — free file hosting via your own Local Bot API Server (up to 2GB/file, no 20MB cap)
    4.  State & helpers
    5.  Onboarding (username gate)
    6.  Theme
@@ -822,35 +822,35 @@ const CONFIG = {
     messagingSenderId: "393448449695",
     appId: "1:393448449695:web:3410c692e065a9d9cf64aa"
   },
-  // Telegram is used as the actual FREE file host (Firebase free storage is
-  // only ~5GB, not enough). Create a bot with @BotFather, create a PRIVATE
-  // channel or group, add the bot to it as admin, and put the bot token +
-  // that chat's ID below. Every uploaded file (APK/ZIP/RAR, icon, each
-  // screenshot) is sent to this chat as a document, tagged with a unique
-  // per-app ID in the caption so everything for one app can be found
-  // together. See guide.md → "Telegram Storage Backend" for exact steps.
-  // ⚠ IMPORTANT LIMIT: Telegram's cloud Bot API only lets a bot DOWNLOAD
-  // files up to 20MB (uploads can be up to 50MB, but getFile caps at 20MB).
-  // Bigger APKs will upload fine but will fail to resolve a download link.
-  // guide.md explains two ways around this.
+  // Cloudflare R2 is the real file host: your OWN private bucket (10GB
+  // free storage, and — this is the important part — download bandwidth
+  // ("egress") is free and UNLIMITED, which is what actually matters once
+  // you have thousands of members downloading. Unlike Internet Archive,
+  // nothing here gets auto-scanned or taken down — it's your bucket, your
+  // rules, no Terms-of-Use review on your uploads.
+  // Browsers can't safely hold R2 secret keys, so uploads are relayed
+  // through a small free Cloudflare Worker (worker.js, provided alongside
+  // this file) that has the bucket bound to it directly — no keys ever
+  // touch this HTML file at all. See guide.md → "Cloudflare R2 storage"
+  // for the exact deploy steps (about 10 minutes, no credit card).
+  // Your own self-hosted Telegram "Local Bot API Server" is the real file
+  // host: files up to 2GB, upload AND download, no 20MB/50MB Bot-API-cloud
+  // limits — because requests go to YOUR server instead of api.telegram.org.
+  // Runs free forever on an Oracle Cloud "Always Free" VPS (docker-compose.yml
+  // + Caddyfile provided alongside this file). See guide.md → "Telegram
+  // Local Bot API Server" for the exact deploy steps.
   telegram: {
-    botToken: "PASTE_YOUR_TELEGRAM_BOT_TOKEN", // from @BotFather
-    chatId: "PASTE_YOUR_TELEGRAM_CHAT_ID"      // the private channel/group id, e.g. -1001234567890
-  },
-  // Internet Archive (archive.org) is used as the real file host instead of
-  // Telegram — no size cap, no card, and links never expire. Browsers can't
-  // talk to archive.org's upload API directly (it blocks cross-origin
-  // requests and your S3 keys can't safely live in this HTML anyway), so
-  // uploads are relayed through a small free Cloudflare Worker that holds
-  // your keys server-side. See guide.md → "Internet Archive storage" for
-  // how to deploy the Worker (worker.js, provided alongside this file).
-  archive: {
-    workerUrl: "https://pika-storage.itsme16241897.workers.dev", // your deployed Cloudflare Worker
-    itemPrefix: "pika-store"                        // groups all your items under this name on archive.org
+    localServerUrl: "https://144-24-218-100.nip.io", // your deployed Local Bot API Server (via Caddy)
+    botToken: "8868104441:AAFSmq4jTUdsHMRf6rwf0zuMGWpnX9qcjZA", // @pika_store_files_bot
+    chatId: "-1004494948918",                  // "Pika Store" private channel
   },
   // OneSignal → onesignal.com → free account → New Web App
   oneSignalAppId: "PASTE_YOUR_ONESIGNAL_APP_ID",
   // Soft cap only used for the storage meter on the Profile page.
+  // Telegram gives every account unlimited free cloud storage, so this
+  // number is really just "how big do I want the meter to look" — raise
+  // it freely, nothing here enforces a hard stop.
+  // see guide.md → "Growing past 10GB" for the plan.
   totalStorageGB: 50
 };
 
@@ -875,145 +875,96 @@ try{
 }
 
 /* ---------------------------------------------------------------------
-   3. TELEGRAM FILE STORAGE HELPERS
+   3. TELEGRAM LOCAL BOT API SERVER — file storage
    Every file (main APK/ZIP/RAR, icon, screenshots) is sent as a
-   "document" message to a private Telegram chat via the Bot API. Each
-   app gets one unique ID (generateAppId, below); every file belonging
-   to that app is tagged with that ID in its caption (#pika_<id>) so
-   the file, icon and screenshots for one app are always identifiable
-   and linkable together, even just by scrolling the chat manually.
+   "document" message to your private Telegram chat, via YOUR OWN
+   self-hosted Local Bot API Server instead of api.telegram.org. That
+   one change removes the 20MB download / 50MB upload caps entirely —
+   your server allows files up to 2GB each way, because it's the exact
+   same TDLib code Telegram itself runs, just deployed under your
+   control (see guide.md → "Telegram Local Bot API Server").
+
+   Each app gets one unique ID (generateAppId, below); every file
+   belonging to that app is tagged with that ID in its caption
+   (#pika_<id>) so the file, icon and screenshots for one app are
+   always identifiable, even just by scrolling the private chat by hand.
 
    We store BOTH the resolved download url (fast, used immediately for
-   <img> tags and first download) AND the raw Telegram file_id (used to
-   re-resolve a fresh url later — Telegram file links are only
-   guaranteed valid for about an hour, the file_id itself never
-   expires as long as the message isn't deleted).
+   <img> tags and the first download) AND the raw Telegram file_id
+   (used to re-resolve a fresh url right before every later download —
+   Telegram file paths are only guaranteed valid for a while, the
+   file_id itself never expires as long as the message isn't deleted).
    --------------------------------------------------------------------- */
 function generateAppId(){
   if(crypto.randomUUID) return crypto.randomUUID().replace(/-/g,"").slice(0,16);
   return "app" + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
 }
 
-function telegramReady(){
-  return CONFIG.telegram.botToken !== "PASTE_YOUR_TELEGRAM_BOT_TOKEN" && CONFIG.telegram.chatId !== "PASTE_YOUR_TELEGRAM_CHAT_ID";
+function storageReady(){
+  const t = CONFIG.telegram;
+  return t.localServerUrl && !t.localServerUrl.startsWith("PASTE_")
+      && t.botToken && !t.botToken.startsWith("PASTE_")
+      && t.chatId && !t.chatId.startsWith("PASTE_");
 }
 
 /**
- * Sends one file to the Telegram storage chat.
+ * Sends one file to the Telegram storage chat, through your Local Bot
+ * API Server (no 20MB/50MB caps — up to 2GB per file).
  * @param {File} file        the browser File object to upload
  * @param {string} appId     unique id for the app this file belongs to
- * @param {string} kind      "file" | "icon" | "screenshot" — just used in the caption tag
- * @param {function} onProgress  called with 0-100
+ * @param {string} kind      "file" | "icon" | "screenshot" — used in the caption tag
+ * @param {function} onProgress  called with 0-100 (real upload progress)
  */
 async function uploadFileToTelegram(file, appId, kind, onProgress){
-  if(!telegramReady()){
-    // Demo mode: no bot configured yet — keep the file only in memory
+  if(!storageReady()){
+    // Demo mode: server not configured yet — keep the file only in memory
     // (as a blob URL) so the UI still works end-to-end while you're testing.
     onProgress && onProgress(100);
     return { fileId:null, url: URL.createObjectURL(file), demo:true };
   }
+  const { localServerUrl, botToken, chatId } = CONFIG.telegram;
   const form = new FormData();
-  form.append("chat_id", CONFIG.telegram.chatId);
+  form.append("chat_id", chatId);
   form.append("caption", `#pika_${appId} #${kind}`);
   form.append("document", file, file.name);
 
-  onProgress && onProgress(10);
-  const res = await fetch(`https://api.telegram.org/bot${CONFIG.telegram.botToken}/sendDocument`, {
-    method: "POST",
-    body: form
-  });
-  const data = await res.json();
-  if(!data.ok){
-    // The most common failure here is a file over Telegram's 50MB bot upload cap.
-    throw new Error("Telegram upload failed: " + (data.description || res.status));
-  }
-  onProgress && onProgress(70);
-  const tgDoc = data.result.document || data.result.video || data.result.photo?.slice(-1)[0];
-  const fileId = tgDoc.file_id;
-  let url;
-  try{
-    url = await resolveTelegramFileUrl(fileId);
-  }catch(e){
-    // Upload succeeded but the file is too big for getFile (>20MB) — the
-    // file is safely stored in the chat, it just can't be auto-linked yet.
-    // See guide.md → "The 20MB download limit" for the fix.
-    console.warn("Uploaded but could not resolve a download link:", e);
-    url = "";
-  }
-  onProgress && onProgress(100);
-  return { fileId, fileUniqueId: tgDoc.file_unique_id, fileName: tgDoc.file_name || file.name, fileSize: tgDoc.file_size || file.size, url, demo:false };
-}
-
-/** Turns a stored Telegram file_id into a fresh, directly downloadable URL. */
-async function resolveTelegramFileUrl(fileId){
-  const res = await fetch(`https://api.telegram.org/bot${CONFIG.telegram.botToken}/getFile?file_id=${fileId}`);
-  const data = await res.json();
-  if(!data.ok){ throw new Error(data.description || "getFile failed (file may be over the 20MB Bot API download limit)"); }
-  return `https://api.telegram.org/file/bot${CONFIG.telegram.botToken}/${data.result.file_path}`;
-}
-
-/* ---------------------------------------------------------------------
-   3b. INTERNET ARCHIVE FILE STORAGE (via Cloudflare Worker relay)
-   Every file for one app (main APK/ZIP, icon, screenshots) is PUT into
-   the SAME archive.org "item", named "<itemPrefix>-<appId>" — so the
-   item itself is the shared unique ID, and every file inside it is
-   just named by kind (file.apk, icon.png, screenshot-...). Download
-   links are permanent (unlike Telegram's ~1hr links), so no re-resolve
-   step is needed later — startDownload() already handles this since it
-   only re-resolves when app.fileId is set, which archive uploads leave null.
-   --------------------------------------------------------------------- */
-function archiveReady(){
-  return CONFIG.archive.workerUrl && !CONFIG.archive.workerUrl.startsWith("PASTE_");
-}
-
-/**
- * Uploads one file to Internet Archive via your Cloudflare Worker.
- * @param {File} file     the browser File object to upload
- * @param {string} appId  unique id shared by every file belonging to this app
- * @param {string} kind   "file" | "icon" | "screenshot" — used as the filename inside the item
- * @param {function} onProgress  called with 0-100 (real upload progress, not a fake estimate)
- */
-async function uploadFileToArchive(file, appId, kind, onProgress){
-  if(!archiveReady()){
-    // Demo mode: no Worker configured yet — keep the file only in memory
-    // (as a blob URL) so the UI still works end-to-end while you're testing.
-    onProgress && onProgress(100);
-    return { url: URL.createObjectURL(file), itemId:null, demo:true };
-  }
-  const ext = (file.name.split(".").pop() || "bin").toLowerCase();
-  const filename = kind === "screenshot" ? `screenshot-${Date.now()}.${ext}` : `${kind}.${ext}`;
-  const itemId = `${CONFIG.archive.itemPrefix}-${appId}`;
-
-  const form = new FormData();
-  form.append("itemId", itemId);
-  form.append("filename", filename);
-  form.append("title", `Pika Store item ${appId}`);
-  form.append("file", file, file.name);
-
-  return new Promise((resolve, reject) => {
+  const data = await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", CONFIG.archive.workerUrl);
-    xhr.timeout = 90000; // 90s — if nothing happens in this long, something is stuck; fail loudly instead of hanging forever
+    xhr.open("POST", `${localServerUrl}/bot${botToken}/sendDocument`);
+    xhr.timeout = 300000; // 300s — large files over a slow connection legitimately take a while
     xhr.upload.onprogress = e => {
-      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+      // Upload itself is the first 90% of the bar; the last 10% covers
+      // resolving the download link (getFile) right after.
+      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 90));
     };
     xhr.onload = () => {
-      if(xhr.status >= 200 && xhr.status < 300){
-        try{
-          const data = JSON.parse(xhr.responseText);
-          resolve({ url: data.url, itemId, filename, demo:false });
-        }catch(e){
-          reject(new Error("Storage worker returned an unexpected response"));
-        }
-      }else{
-        // Common causes: Worker not deployed yet, wrong workerUrl, or bad/rotated IA keys.
-        reject(new Error(`Archive upload failed (${xhr.status}): ${xhr.responseText}`));
-      }
+      try{ resolve(JSON.parse(xhr.responseText)); }
+      catch(e){ reject(new Error("Local Bot API Server returned an unexpected response")); }
     };
-    xhr.onerror = () => reject(new Error("Network error reaching the storage worker — check workerUrl in CONFIG"));
-    xhr.ontimeout = () => reject(new Error(`Upload of "${filename}" timed out after 90s — your connection may be too slow or unstable right now`));
+    // Common causes: the VPS/server is down, wrong localServerUrl, wrong
+    // botToken, or Caddy's HTTPS cert isn't ready yet — see guide.md.
+    xhr.onerror = () => reject(new Error("Network error reaching your Local Bot API Server — check localServerUrl in CONFIG"));
+    xhr.ontimeout = () => reject(new Error(`Upload of "${file.name}" timed out — check your VPS is running and reachable`));
     xhr.send(form);
   });
+
+  if(!data.ok) throw new Error("Telegram upload failed: " + (data.description || "unknown error"));
+  onProgress && onProgress(92);
+
+  const tgDoc = data.result.document || data.result.video || data.result.photo?.slice(-1)[0];
+  const fileId = tgDoc.file_id;
+  const url = await resolveTelegramFileUrl(fileId); // works up to 2GB — no 20MB cap on a local server
+  onProgress && onProgress(100);
+  return { fileId, fileName: tgDoc.file_name || file.name, fileSize: tgDoc.file_size || file.size, url, demo:false };
+}
+
+/** Turns a stored Telegram file_id into a fresh, directly downloadable URL via your Local Bot API Server. */
+async function resolveTelegramFileUrl(fileId){
+  const { localServerUrl, botToken } = CONFIG.telegram;
+  const res = await fetch(`${localServerUrl}/bot${botToken}/getFile?file_id=${fileId}`);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.description || "getFile failed — is the Local Bot API Server still running?");
+  return `${localServerUrl}/file/bot${botToken}/${data.result.file_path}`;
 }
 
 /** Wraps any promise with a timeout so a stuck step (e.g. Firestore) fails loudly instead of freezing the progress bar forever. */
@@ -1389,14 +1340,15 @@ async function startDownload(app){
   progressWrap.hidden = false;
   $("#detail-download-btn").setAttribute("disabled","true");
   try{
-    // Always re-resolve a fresh Telegram link right before downloading —
-    // the cached fileUrl saved at upload time is only guaranteed valid for
-    // about an hour, the file_id behind it is what's permanent.
+    // Always re-resolve a fresh link right before downloading — the
+    // cached fileUrl saved at upload time isn't guaranteed to stay valid
+    // forever, but the file_id behind it is (as long as the message in
+    // your private chat isn't deleted).
     let url = app.fileUrl;
-    if(telegramReady() && app.fileId){
+    if(storageReady() && app.fileId){
       try{ url = await resolveTelegramFileUrl(app.fileId); }
       catch(e){
-        toast("This file is over Telegram's 20MB download limit — see guide.md","ic-lock");
+        toast("Couldn't reach your Local Bot API Server — is the VPS running?","ic-close");
         return;
       }
     }
@@ -1406,10 +1358,9 @@ async function startDownload(app){
       toast("Download complete");
     }catch(inAppErr){
       // In-app progress download can fail for reasons that have nothing to
-      // do with the file being missing — e.g. the host not allowing
-      // cross-origin fetch, or Internet Archive still ingesting a very
-      // recent upload. Falling back to a plain browser download (a normal
-      // navigation, not a JS fetch) sidesteps both of those.
+      // do with the file being missing — e.g. a CORS setting on the bucket.
+      // Falling back to a plain browser download (a normal navigation, not
+      // a JS fetch) sidesteps that.
       console.warn("In-app download failed, falling back to direct link:", inAppErr);
       const a = document.createElement("a");
       a.href = url; a.target = "_blank"; a.rel = "noopener";
@@ -1524,7 +1475,7 @@ function initUploadWizard(){
 
   async function submitUpload(){
     if(!firebaseReady){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
-    if(!archiveReady()){ toast("Connect your storage Worker first — see guide.md","ic-close"); return; }
+    if(!storageReady()){ toast("Connect your Telegram Local Bot API Server first — see guide.md","ic-close"); return; }
     const btn = $("#wizard-next-btn");
     btn.setAttribute("disabled","true");
     const progWrap = $("#upload-progress-wrap");
@@ -1539,27 +1490,26 @@ function initUploadWizard(){
       const appId = generateAppId();
       setPct(5);
 
-      // 1. Main app file (APK / APK+ / ZIP / RAR) — all three files below
-      // land in the SAME archive.org item (appId), so that item is the
-      // shared unique ID tying file + icon + screenshots together.
-      const fileRes = await uploadFileToArchive(state.upload.file, appId, "file", p=>setPct(5 + Math.round(p*0.45)));
+      // 1. Main app file (APK / APK+ / ZIP / RAR) — up to 2GB, no cap,
+      // because this goes through your own Local Bot API Server.
+      const fileRes = await uploadFileToTelegram(state.upload.file, appId, "file", p=>setPct(5 + Math.round(p*0.45)));
       setPct(55);
 
       // 2. Icon / thumbnail
       let thumbUrl = "";
       if(state.upload.thumb){
-        const t = await uploadFileToArchive(state.upload.thumb, appId, "icon", p=>setPct(55 + Math.round(p*0.15)));
+        const t = await uploadFileToTelegram(state.upload.thumb, appId, "icon", p=>setPct(55 + Math.round(p*0.15)));
         thumbUrl = t.url;
       }
       setPct(72);
 
-      // 3. Up to 3 screenshots — each one moves the bar a bit (72→90) so it
+      // 3. Up to 6 screenshots — each one moves the bar a bit (72→90) so it
       // never looks frozen even on a slow connection.
       const screenshotUrls = [];
       const shots = state.upload.screenshots;
       for(let i=0;i<shots.length;i++){
         const base = 72 + Math.round((i/Math.max(shots.length,1))*18);
-        const s = await uploadFileToArchive(shots[i], appId, "screenshot",
+        const s = await uploadFileToTelegram(shots[i], appId, "screenshot",
           p => setPct(base + Math.round((p/100) * (18/Math.max(shots.length,1)))));
         screenshotUrls.push(s.url);
       }
@@ -1567,8 +1517,8 @@ function initUploadWizard(){
 
       const passwordHash = state.upload.hasPassword ? await sha256(state.upload.password) : null;
 
-      // Firestore doc uses the SAME id as the Telegram caption tag, so the
-      // database record and the Telegram messages for this app always
+      // Firestore doc uses the SAME id as the #pika_<id> caption tag, so
+      // the database record and the Telegram messages for this app always
       // point at each other.
       // Wrapped with a timeout: without this, a stalled Firestore write
       // (bad rules, dropped connection) leaves the bar stuck at 90% forever
@@ -1578,12 +1528,10 @@ function initUploadWizard(){
         description: state.upload.desc.trim(),
         format: state.upload.format,
         category: state.upload.category || "Uncategorized",
-        // These links are permanent (archive.org doesn't expire them), so
-        // unlike the old Telegram version there's no fileId to re-resolve later.
-        fileUrl: fileRes.url,
+        fileUrl: fileRes.url,   // cached link, used immediately after upload
+        fileId: fileRes.fileId, // used to resolve a FRESH link on every later download
         thumbUrl,
         screenshots: screenshotUrls,
-        archiveItemId: fileRes.itemId, // the shared archive.org item — open https://archive.org/details/<this> to see all files for this app
         hasPassword: !!state.upload.hasPassword,
         passwordHash,
         uploaderName: state.username,
