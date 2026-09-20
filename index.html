@@ -502,6 +502,51 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
   #app{ max-width:520px; margin:0 auto; border-left:1px solid var(--border); border-right:1px solid var(--border); min-height:100%; }
   body{ display:flex; justify-content:center; background:var(--bg-elevated); }
 }
+
+/* =====================================================================
+   11. OWNER / PROFILE / VERIFIED-TICK / NOTIFICATION ADDITIONS
+   ===================================================================== */
+.vtick{ display:inline-block; width:15px; height:15px; vertical-align:-3px; margin-left:3px; flex-shrink:0; }
+.btn-danger{ background:var(--danger); color:#fff; }
+.uav{ display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; overflow:hidden; vertical-align:middle; margin-right:5px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#171200; font-size:9px; font-weight:900; flex-shrink:0; }
+.uav img{ width:100%; height:100%; object-fit:cover; }
+.uav.lg{ width:40px; height:40px; font-size:16px; margin-right:0; }
+.gate-avatar{
+  width:96px; height:96px; border-radius:50%; margin:0 auto 6px; background:var(--surface); border:2px dashed var(--border);
+  display:flex; align-items:center; justify-content:center; overflow:hidden; color:var(--text-faint); position:relative;
+}
+.gate-avatar img{ width:100%; height:100%; object-fit:cover; }
+.gate-avatar svg{ width:30px; height:30px; }
+.profile-avatar{ position:relative; overflow:hidden; flex-shrink:0; }
+.profile-avatar img{ width:100%; height:100%; object-fit:cover; }
+.settings-list .row.tap{ cursor:pointer; }
+.settings-list .row.tap:active{ background:var(--surface-2); }
+.msg{ position:relative; }
+.msg .who{ display:flex; align-items:center; }
+.msg.me .who{ color:#171200; }
+.msg-del{ position:absolute; top:4px; right:4px; width:22px; height:22px; padding:0; border-radius:50%; background:rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center; color:inherit; opacity:.75; }
+.msg-del svg{ width:12px; height:12px; }
+.msg.has-del{ padding-right:30px; }
+.mini-row{ display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); font-size:13px; }
+.mini-row:last-child{ border-bottom:none; }
+.mini-row img.thumb{ width:38px; height:38px; border-radius:10px; object-fit:cover; background:var(--surface-2); flex-shrink:0; }
+.mini-main{ flex:1; min-width:0; }
+.mini-main b{ display:block; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mini-main small{ color:var(--text-faint); font-size:11px; }
+.mini-btn{ padding:7px 10px; font-size:11.5px; font-weight:700; border-radius:10px; background:var(--surface-2); color:var(--text); flex-shrink:0; }
+.mini-btn.red{ background:rgba(255,92,108,.15); color:var(--danger); }
+.icon-del{ width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center; color:var(--danger); flex-shrink:0; }
+.icon-del svg{ width:16px; height:16px; color:var(--danger) !important; }
+.section-title{ font-size:15px; font-weight:800; padding:6px 18px 10px; margin:0; display:flex; align-items:center; gap:6px; }
+.notif-banner{
+  position:fixed; left:12px; right:12px; top:calc(10px + var(--safe-top)); z-index:110; display:flex; align-items:center; gap:10px;
+  background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:12px 14px; box-shadow:var(--shadow);
+}
+.notif-banner div{ flex:1; font-size:12.5px; line-height:1.35; }
+.notif-banner small{ display:block; color:var(--text-dim); font-size:11px; }
+.notif-banner .btn{ padding:9px 14px; font-size:13px; }
+.notif-banner .nb-x{ width:30px; height:30px; padding:0; color:var(--text-faint); }
+
 </style>
 </head>
 <body>
@@ -542,6 +587,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <symbol id="ic-cube" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z" fill="url(#gradAmber)" opacity=".9"/><path d="M12 3v18M4 7.5 12 12l8-4.5" fill="none" stroke="#171200" stroke-width="1.1" opacity=".35"/></symbol>
 <symbol id="ic-fire" viewBox="0 0 24 24"><path d="M12 2c1 3-3 4-3 8a4 4 0 0 0 8 0c1.5 1.5 2 3.5 2 5a7 7 0 1 1-14 0c0-5 4-8 4-9 1 0 2 2 3 3.5C12.4 6.5 11.5 4 12 2Z" fill="url(#gradAmber)"/></symbol>
 <symbol id="ic-sparkle" viewBox="0 0 24 24"><path d="M12 3c.6 3.4 1.6 4.4 5 5-3.4.6-4.4 1.6-5 5-.6-3.4-1.6-4.4-5-5 3.4-.6 4.4-1.6 5-5Z" fill="url(#gradTeal)"/></symbol>
+<symbol id="ic-verified" viewBox="0 0 24 24"><path d="M12 1.8l2.5 1.9 3.1-.3 1.2 2.9 2.8 1.4-.6 3.1L22 12l-1.9 2.2.6 3.1-2.8 1.4-1.2 2.9-3.1-.3L12 22.2l-2.5-1.9-3.1.3-1.2-2.9-2.8-1.4.6-3.1L2 12l1.9-2.2-.6-3.1 2.8-1.4 1.2-2.9 3.1.3Z" fill="#1D9BF0"/><path d="m7.8 12.3 3 3 5.6-5.8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
 <!-- =========================================================
@@ -550,9 +596,12 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <div id="username-gate">
   <img class="gate-logo" alt="Pika Store" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
   <h1>Welcome to Pika Store</h1>
-  <p>Enter a name so your uploads, categories and chat messages are yours. No email, no phone number — just a name.</p>
+  <p>Apna naam likhein aur chahein to profile photo lagayein. Email ya phone number nahi chahiye.</p>
+  <button class="gate-avatar" id="gate-avatar-btn" type="button" aria-label="Choose profile photo"><svg><use href="#ic-image"/></svg></button>
+  <div class="gate-hint" style="margin-bottom:14px">Profile photo (optional) — tap karein</div>
+  <input id="gate-avatar-input" type="file" accept="image/*" hidden />
   <input id="gate-username-input" type="text" maxlength="20" placeholder="Your name" autocomplete="off" />
-  <div class="gate-hint" id="gate-hint">We've suggested a name below — feel free to change it.</div>
+  <div class="gate-hint" id="gate-hint">Suggested name neeche hai — chahein to badal lein.</div>
   <button class="btn btn-primary btn-lg btn-block" id="gate-continue-btn">
     <svg><use href="#ic-check"/></svg> Continue
   </button>
@@ -752,7 +801,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
         <div class="profile-avatar" id="profile-avatar">P</div>
         <div>
           <h2 style="margin:0 0 3px; font-size:19px;" id="profile-name">—</h2>
-          <div style="font-size:12px; color:var(--text-faint);">Member of Pika Store</div>
+          <div style="font-size:12px; color:var(--text-faint);" id="profile-role">Member of Pika Store</div>
         </div>
       </div>
       <div class="profile-stats">
@@ -760,10 +809,21 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
         <div class="stat"><b id="profile-cats-count">0</b><span>Categories</span></div>
         <div class="stat"><b id="profile-downloads-count">0</b><span>Downloads</span></div>
       </div>
+      <input type="file" id="profile-photo-input" accept="image/*" hidden />
       <div class="settings-list">
-        <div class="row"><div class="row-left"><svg><use href="#ic-user"/></svg> Change display name</div><button id="change-name-btn"><svg width="14" height="14"><use href="#ic-chevron"/></svg></button></div>
-        <div class="row"><div class="row-left"><svg><use href="#ic-sun"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
-        <div class="row"><div class="row-left"><svg><use href="#ic-grid"/></svg> My categories</div><span style="font-size:12px;color:var(--text-faint)" id="profile-cats-inline">0</span></div>
+        <div class="row tap" id="row-change-name"><div class="row-left"><svg><use href="#ic-user"/></svg> Change display name</div><span style="font-size:12px;color:var(--text-faint)" id="profile-name-inline"></span></div>
+        <div class="row tap" id="row-change-photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Change profile photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+        <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
+        <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
+        <div class="row tap" id="row-my-cats"><div class="row-left"><svg><use href="#ic-grid"/></svg> My categories</div><span style="font-size:12px;color:var(--text-faint)" id="profile-cats-inline">0</span></div>
+      </div>
+
+      <h3 class="section-title" id="my-uploads-title" style="margin-top:22px">My uploads</h3>
+      <div class="settings-list" id="my-uploads-list"></div>
+
+      <div id="owner-panel" hidden>
+        <h3 class="section-title" style="margin-top:22px">Owner panel — Members <svg class="vtick"><use href="#ic-verified"/></svg></h3>
+        <div class="settings-list" id="owner-users-list"></div>
       </div>
       <div style="height:30px"></div>
     </section>
@@ -862,7 +922,10 @@ const CONFIG = {
   // Soft cap only used for the storage meter on the Profile page.
   // Raise this to match your real disk size — nothing here enforces a hard
   // stop, it's purely cosmetic for the meter on the Profile page.
-  totalStorageGB: 150
+  totalStorageGB: 150,
+  // Public name + blue tick shown for the owner. The secret owner login name is NOT stored here —
+  // it lives only inside your Firestore rules (firestore.rules), so nobody can read it from this file.
+  ownerPublicName: "ARMY1897"
 };
 
 /* ---------------------------------------------------------------------
@@ -870,15 +933,18 @@ const CONFIG = {
    --------------------------------------------------------------------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  initializeFirestore, getFirestore, collection, addDoc, doc, setDoc, updateDoc, increment,
+  initializeFirestore, getFirestore, collection, addDoc, doc, setDoc, getDoc, deleteDoc, updateDoc, increment,
   onSnapshot, query, orderBy, limit, serverTimestamp, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 let db = null;
+let auth = null;
 let firebaseReady = false;
 try{
   const fbApp = initializeApp(CONFIG.firebase);
   db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
+  auth = getAuth(fbApp);
   firebaseReady = true;
 }catch(e){
   console.warn("Firebase not configured yet — running in local demo mode.", e);
@@ -1007,6 +1073,11 @@ const state = {
     localStorage.setItem("pika_device_id", id);
     return id;
   })(),
+  uid: "",             // Firebase anonymous-auth uid (real identity used by security rules)
+  isOwner: false,      // true only after the secret owner name was accepted by Firestore rules
+  photoURL: "",
+  users: {},           // live from Firestore 'users' collection: uid -> {name, photoURL, verified, banned}
+  chat: [],
   apps: [],            // live from Firestore 'apps' collection
   categories: [],       // live from Firestore 'categories' collection
   activeCategory: "all",
@@ -1033,12 +1104,123 @@ async function sha256(text){
 }
 
 /* ---------------------------------------------------------------------
-   5. ONBOARDING — username gate
-   Browsers cannot read a device owner's real contact name (no such API
-   exists, for privacy reasons). "Auto detect" here means: reuse the last
-   name typed on this device/browser, otherwise suggest a friendly random
-   guest name the user can edit in one tap — this is the closest honest
-   equivalent to "auto detect" without asking for contacts/accounts.
+   4b. IDENTITY HELPERS — anonymous auth, verified tick, avatars
+   --------------------------------------------------------------------- */
+function ensureAuth(){
+  return new Promise((resolve, reject)=>{
+    if(!auth) return reject(new Error("Firebase not ready"));
+    const unsub = onAuthStateChanged(auth, async user=>{
+      if(user){ unsub(); resolve(user); return; }
+      try{ const cred = await signInAnonymously(auth); unsub(); resolve(cred.user); }
+      catch(e){ unsub(); reject(e); }
+    });
+  });
+}
+function authError(e){
+  console.warn(e);
+  const code = (e && e.code) || "";
+  if(code.includes("operation-not-allowed") || code.includes("admin-restricted")){
+    toast("Firebase Console → Authentication → Sign-in method → Anonymous ko Enable karein", "ic-close");
+  } else {
+    toast("Login failed: " + (code || (e && e.message) || "unknown"), "ic-close");
+  }
+}
+const tick = v => v ? `<svg class="vtick"><use href="#ic-verified"/></svg>` : "";
+function userView(uid, fallbackName, fallbackVerified){
+  const u = uid && state.users[uid];
+  return {
+    name: (u && u.name) || fallbackName || "member",
+    photo: (u && u.photoURL) || "",
+    verified: !!(u ? u.verified : fallbackVerified),
+    banned: !!(u && u.banned)
+  };
+}
+function avatarHtml(name, photo, cls=""){
+  return `<span class="uav ${cls}">${photo ? `<img src="${escapeHtml(photo)}" alt="">` : escapeHtml((name||"?").trim().slice(0,1).toUpperCase())}</span>`;
+}
+function resizeImage(file, size=256){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      const s = Math.min(img.width, img.height);
+      const c = document.createElement("canvas"); c.width = c.height = size;
+      c.getContext("2d").drawImage(img, (img.width-s)/2, (img.height-s)/2, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? resolve(b) : reject(new Error("Image resize failed")), "image/jpeg", 0.85);
+    };
+    img.onerror = ()=> reject(new Error("Yeh valid image nahi hai"));
+    img.src = url;
+  });
+}
+function blobToDataURL(blob){
+  return new Promise((res, rej)=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = ()=>rej(r.error); r.readAsDataURL(blob); });
+}
+/** Profile photo: resized to 256px, saved on your VPS (Oracle). If the VPS refuses, falls back to a tiny inline copy in Firestore. */
+async function uploadAvatar(file){
+  const blob = await resizeImage(file, 256);
+  if(storageReady()){
+    try{
+      const f = new File([blob], "avatar.jpg", { type:"image/jpeg" });
+      const r = await uploadFileToServer(f, "avatar_" + state.uid, "icon", null);
+      return r.url + "?v=" + Date.now();
+    }catch(e){ console.warn("VPS avatar upload failed, using inline fallback", e); }
+  }
+  return await blobToDataURL(blob);
+}
+
+/** Themed replacements for prompt()/confirm() */
+function askText({ title, value="", placeholder="", max=20, okLabel="Save" }){
+  return new Promise(resolve=>{
+    const html = `
+    <div class="sheet-backdrop" id="txt-backdrop">
+      <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+        <h3 style="text-align:center;font-size:17px;margin:0 0 16px;">${escapeHtml(title)}</h3>
+        <div class="field" style="margin-bottom:16px;"><input type="text" id="txt-modal-input" maxlength="${max}" placeholder="${escapeHtml(placeholder)}" autocomplete="off" /></div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="txt-cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" id="txt-ok" type="button">${escapeHtml(okLabel)}</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML("beforeend", html);
+    const bd = $("#txt-backdrop"), input = $("#txt-modal-input");
+    input.value = value; input.focus();
+    const close = v => { bd.remove(); resolve(v); };
+    $("#txt-cancel").addEventListener("click", ()=>close(null));
+    $("#txt-ok").addEventListener("click", ()=>close(input.value));
+    input.addEventListener("keydown", e=>{ if(e.key==="Enter") close(input.value); if(e.key==="Escape") close(null); });
+    bd.addEventListener("click", e=>{ if(e.target===bd) close(null); });
+  });
+}
+function confirmSheet(title, message, okLabel="Delete"){
+  return new Promise(resolve=>{
+    const html = `
+    <div class="sheet-backdrop" id="cf-backdrop">
+      <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+        <h3 style="text-align:center;font-size:17px;margin:0 0 6px;">${escapeHtml(title)}</h3>
+        <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;">${escapeHtml(message)}</p>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="cf-cancel" type="button">Cancel</button>
+          <button class="btn btn-danger" style="flex:1" id="cf-ok" type="button">${escapeHtml(okLabel)}</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML("beforeend", html);
+    const bd = $("#cf-backdrop");
+    const close = v => { bd.remove(); resolve(v); };
+    $("#cf-cancel").addEventListener("click", ()=>close(false));
+    $("#cf-ok").addEventListener("click", ()=>close(true));
+    bd.addEventListener("click", e=>{ if(e.target===bd) close(false); });
+  });
+}
+const isReservedName = n => !state.isOwner && n.trim().toLowerCase() === CONFIG.ownerPublicName.toLowerCase();
+const canManage = uidOfOwner => state.isOwner || (!!uidOfOwner && uidOfOwner === state.uid);
+
+/* ---------------------------------------------------------------------
+   5. ONBOARDING — name + optional profile photo. The secret owner name is
+   never compared in this file: the app just tries to write it to
+   adminClaims/{uid}; Firestore rules accept it only for the real secret.
    --------------------------------------------------------------------- */
 function suggestUsername(){
   const remembered = localStorage.getItem("pika_username");
@@ -1047,40 +1229,110 @@ function suggestUsername(){
   const noun = "Player" + Math.floor(1000 + Math.random()*9000);
   return adjectives[Math.floor(Math.random()*adjectives.length)] + noun;
 }
+async function tryClaimOwner(code){
+  try{ await withTimeout(setDoc(doc(db,"adminClaims",state.uid), { code, at: serverTimestamp() }), 8000, "Owner check"); return true; }
+  catch(e){ return false; }
+}
+async function checkOwner(){
+  try{ const s = await getDoc(doc(db,"adminClaims",state.uid)); return s.exists(); }catch(e){ return false; }
+}
+function userPayload(extra={}){
+  return { name: state.username, photoURL: state.photoURL || "", verified: state.isOwner, deviceId: state.deviceId, updatedAt: serverTimestamp(), ...extra };
+}
+/** Returning visitor (name already saved on this device): re-attach identity + owner status. */
+async function restoreSession(){
+  if(!firebaseReady) return;
+  try{ state.uid = (await ensureAuth()).uid; }catch(e){ authError(e); return; }
+  state.isOwner = await checkOwner();
+  try{
+    const snap = await getDoc(doc(db,"users",state.uid));
+    if(snap.exists()){
+      const d = snap.data();
+      state.username = d.name || state.username;
+      state.photoURL = d.photoURL || "";
+      localStorage.setItem("pika_username", state.username);
+    } else {
+      await setDoc(doc(db,"users",state.uid), userPayload());
+    }
+  }catch(e){ console.warn(e); }
+}
 
 function initOnboarding(){
   const gate = $("#username-gate");
   const input = $("#gate-username-input");
   const app = $("#app");
+  let pickedAvatar = null;
 
   if(state.username){
-    gate.hidden = true; app.hidden = false; boot();
+    gate.hidden = true; app.hidden = false;
+    restoreSession().then(boot);
     return;
   }
   input.value = suggestUsername();
-  $("#gate-continue-btn").addEventListener("click", async ()=>{
-    const name = input.value.trim();
-    if(!name){ input.focus(); return; }
-    state.username = name;
-    localStorage.setItem("pika_username", name);
-    if(firebaseReady){
-      try{ await setDoc(doc(db,"users", state.deviceId), { name, updatedAt: serverTimestamp() }, { merge:true }); }catch(e){ console.warn(e); }
-    }
-    gate.style.animation = "fadeIn .3s ease reverse";
-    setTimeout(()=>{ gate.hidden = true; app.hidden = false; boot(); }, 260);
+
+  $("#gate-avatar-btn").addEventListener("click", ()=> $("#gate-avatar-input").click());
+  $("#gate-avatar-input").addEventListener("change", e=>{
+    const f = e.target.files[0]; if(!f) return;
+    pickedAvatar = f;
+    $("#gate-avatar-btn").innerHTML = `<img alt="" src="${URL.createObjectURL(f)}" />`;
   });
-  input.addEventListener("keydown", e=>{ if(e.key==="Enter") $("#gate-continue-btn").click(); });
+
+  const btn = $("#gate-continue-btn");
+  btn.addEventListener("click", async ()=>{
+    const raw = input.value.trim();
+    if(!raw){ input.focus(); return; }
+    // Ask for notification permission RIGHT NOW (inside the tap) — browsers only allow it from a user gesture.
+    askNotifPermission();
+    btn.setAttribute("disabled","true");
+    try{
+      if(!firebaseReady) throw new Error("Firebase connect nahi hua");
+      try{ state.uid = (await ensureAuth()).uid; }catch(e){ authError(e); return; }
+      const owner = await tryClaimOwner(raw);
+      state.isOwner = owner;
+      if(!owner && isReservedName(raw)){ toast("Yeh naam reserved hai — koi aur naam chunein", "ic-close"); return; }
+      state.username = owner ? CONFIG.ownerPublicName : raw;
+      if(pickedAvatar){
+        try{ state.photoURL = await uploadAvatar(pickedAvatar); }
+        catch(e){ toast("Photo save nahi hui — baad mein Profile se lagayein", "ic-close"); }
+      }
+      localStorage.setItem("pika_username", state.username);
+      try{ await setDoc(doc(db,"users",state.uid), userPayload(), { merge:true }); }catch(e){ console.warn(e); }
+      gate.style.animation = "fadeIn .3s ease reverse";
+      setTimeout(()=>{ gate.hidden = true; app.hidden = false; boot(); }, 260);
+    }catch(e){
+      console.warn(e); toast(e.message || "Something went wrong", "ic-close");
+    }finally{
+      btn.removeAttribute("disabled");
+    }
+  });
+  input.addEventListener("keydown", e=>{ if(e.key==="Enter") btn.click(); });
 }
 
 let booted = false;
 function boot(){
   if(booted) return; booted = true;
-  $("#profile-name").textContent = state.username;
-  $("#profile-avatar").textContent = state.username.slice(0,1).toUpperCase();
+  renderProfile();
   initOneSignal();
+  initNotifBanner();
+  initProfileActions();
+  listenUsers();
   listenApps();
   listenCategories();
   listenChat();
+  if(state.isOwner) toast("Owner control enabled", "ic-check");
+}
+
+function listenUsers(){
+  if(!firebaseReady) return;
+  onSnapshot(collection(db,"users"), snap=>{
+    const m = {};
+    snap.docs.forEach(d=> m[d.id] = d.data());
+    state.users = m;
+    const me = m[state.uid];
+    if(me){ state.username = me.name || state.username; state.photoURL = me.photoURL || ""; localStorage.setItem("pika_username", state.username); }
+    renderProfile();
+    renderChatLog();
+  }, err=> console.warn("users listener", err));
 }
 
 /* ---------------------------------------------------------------------
@@ -1124,6 +1376,7 @@ function listenApps(){
   onSnapshot(q, snap=>{
     state.apps = snap.docs.map(d=>({ id:d.id, ...d.data() }));
     renderHome();
+    renderProfile();
   }, err=>{
     console.warn(err);
     toast(`Firestore connection error: ${err.code || ""} ${err.message || err}`, "ic-close");
@@ -1138,6 +1391,7 @@ function listenCategories(){
   onSnapshot(q, snap=>{
     state.categories = snap.docs.map(d=>({ id:d.id, ...d.data() }));
     renderCategoryChips();
+    renderProfile();
   });
 }
 
@@ -1292,14 +1546,26 @@ function openCategoriesSheet(){
   const wrap = $("#cats-backdrop");
   wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")) wrap.remove(); });
   const list = $("#cats-list");
-  list.innerHTML = state.categories.map(c=>`<div class="row"><span>${escapeHtml(c.name)}</span><span style="font-size:11px;color:var(--text-faint)">by ${escapeHtml(c.ownerName||"member")}</span></div>`).join("") || `<div class="row" style="color:var(--text-faint)">No categories yet</div>`;
+  list.innerHTML = state.categories.map(c=>{
+    const ov = userView(c.ownerUid, c.ownerName, c.isOwner);
+    const del = canManage(c.ownerUid) ? `<button class="icon-del" data-del-cat="${c.id}" title="Delete"><svg><use href="#ic-trash"/></svg></button>` : "";
+    return `<div class="row"><span>${escapeHtml(c.name)}</span><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-faint)">by ${escapeHtml(ov.name)}${tick(ov.verified)}${del}</span></div>`;
+  }).join("") || `<div class="row" style="color:var(--text-faint)">No categories yet</div>`;
+  list.addEventListener("click", async e=>{
+    const b = e.target.closest("[data-del-cat]"); if(!b) return;
+    if(!(await confirmSheet("Delete category?", "Is category ko sab ke liye hata diya jayega.", "Delete"))) return;
+    try{ await deleteDoc(doc(db,"categories",b.dataset.delCat)); toast("Category deleted"); wrap.remove(); }
+    catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
+  });
   $("#create-cat-btn").addEventListener("click", async ()=>{
     const name = $("#new-cat-input").value.trim();
     if(!name) return;
-    if(!firebaseReady){ toast("Connect Firebase first — see guide.md","ic-lock"); return; }
-    await addDoc(collection(db,"categories"), { name, ownerName: state.username, ownerDevice: state.deviceId, createdAt: serverTimestamp() });
-    toast(`Category "${name}" created`);
-    wrap.remove();
+    if(!firebaseReady || !state.uid){ toast("Connect Firebase first — see guide.md","ic-lock"); return; }
+    try{
+      await addDoc(collection(db,"categories"), { name, ownerName: state.username, ownerUid: state.uid, isOwner: state.isOwner, ownerDevice: state.deviceId, createdAt: serverTimestamp() });
+      toast(`Category "${name}" created`);
+      wrap.remove();
+    }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
   });
 }
 
@@ -1344,6 +1610,7 @@ function askPassword(){
 function openAppDetail(appId){
   const app = state.apps.find(a=>a.id===appId);
   if(!app) return;
+  const up = userView(app.uploaderUid, app.uploaderName, app.isOwner);
   const shots = (app.screenshots||[]);
   const desc = app.description || "No description provided.";
   const html = `
@@ -1358,7 +1625,7 @@ function openAppDetail(appId){
         <div class="detail-icon"><img src="${app.thumbUrl||placeholderIcon(app.name)}" alt=""/></div>
         <div class="detail-title">
           <h1>${escapeHtml(app.name)}</h1>
-          <div class="dev">${escapeHtml(app.uploaderName||"Unknown uploader")}</div>
+          <div class="dev" style="display:flex;align-items:center">${avatarHtml(up.name, up.photo)}${escapeHtml(up.name)}${tick(up.verified)}</div>
         </div>
       </div>
       ${app.category ? `<div class="cat-pill"><svg width="11" height="11"><use href="#ic-grid"/></svg> ${escapeHtml(app.category)}</div>` : ""}
@@ -1379,7 +1646,7 @@ function openAppDetail(appId){
         </details>
         <details class="accordion-item">
           <summary>File info <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary>
-          <div class="body">Format: ${app.format||"APK"}${app.sizeLabel? " • "+app.sizeLabel:""}\nUploaded by: ${escapeHtml(app.uploaderName||"member")}\nCategory: ${escapeHtml(app.category||"Uncategorized")}</div>
+          <div class="body">Format: ${app.format||"APK"}${app.sizeLabel? " • "+app.sizeLabel:""}\nUploaded by: ${escapeHtml(up.name)}\nCategory: ${escapeHtml(app.category||"Uncategorized")}</div>
         </details>
       </div>
       <div class="dl-progress" id="detail-dl-progress" hidden><i id="detail-dl-bar"></i></div>
@@ -1388,6 +1655,7 @@ function openAppDetail(appId){
           <svg><use href="${app.hasPassword?"ic-lock":"ic-download"}"/></svg>
           ${app.hasPassword ? "Enter password to download" : "Download"}
         </button>
+        ${canManage(app.uploaderUid) ? `<button class="btn btn-danger btn-lg btn-block" style="margin-top:10px" id="detail-delete-btn"><svg><use href="#ic-trash"/></svg> Delete this upload</button>` : ""}
         ${app.downloadUrl ? `<a class="btn btn-ghost btn-lg btn-block" style="margin-top:10px" href="${escapeHtml(app.downloadUrl)}" target="_blank" rel="noopener noreferrer"><svg><use href="#ic-chevron"/></svg> Visit link</a>` : ""}
       </div>
       <div style="height:20px"></div>
@@ -1396,6 +1664,11 @@ function openAppDetail(appId){
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#detail-backdrop");
   wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")) wrap.remove(); });
+
+  const delBtn = $("#detail-delete-btn");
+  if(delBtn) delBtn.addEventListener("click", async ()=>{
+    if(await deleteApp(app)) wrap.remove();
+  });
 
   $("#detail-download-btn").addEventListener("click", async ()=>{
     if(app.hasPassword){
@@ -1406,6 +1679,11 @@ function openAppDetail(appId){
     }
     await startDownload(app);
   });
+}
+async function deleteApp(app){
+  if(!(await confirmSheet(`Delete "${app.name}"?`, "Yeh upload store se hamesha ke liye hat jayega.", "Delete"))) return false;
+  try{ await deleteDoc(doc(db,"apps",app.id)); toast("Upload deleted"); return true; }
+  catch(e){ toast("Delete failed: " + (e.code||e.message), "ic-close"); return false; }
 }
 function renderStars(rating){
   let out = "";
@@ -1569,7 +1847,8 @@ function initUploadWizard(){
   }
 
   async function submitUpload(){
-    if(!firebaseReady){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
+    if(!firebaseReady || !state.uid){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
+    if(state.users[state.uid] && state.users[state.uid].banned){ toast("Aap ko upload karne se rok diya gaya hai","ic-close"); return; }
     if(!storageReady()){ toast("Connect your VPS upload API first — see guide.md","ic-close"); return; }
     const btn = $("#wizard-next-btn");
     btn.setAttribute("disabled","true");
@@ -1631,6 +1910,8 @@ function initUploadWizard(){
         hasPassword: !!state.upload.hasPassword,
         passwordHash,
         uploaderName: state.username,
+        uploaderUid: state.uid,
+        isOwner: state.isOwner,
         uploaderDevice: state.deviceId,
         downloadCount: 0,
         rating: 4.5,
@@ -1679,32 +1960,37 @@ function listenChat(){
   const q = query(collection(db,"chat"), orderBy("createdAt","asc"), limit(300));
   let first = true;
   onSnapshot(q, snap=>{
-    const changes = snap.docChanges();
-    renderChatLog(snap.docs.map(d=>d.data()));
+    state.chat = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    renderChatLog();
     if(!first){
-      changes.forEach(ch=>{
-        if(ch.type==="added" && ch.doc.data().deviceId !== state.deviceId){
-          if(!chatPanelOpen){ chatUnread++; updateChatBadge(); }
-          popupNotify(ch.doc.data().name, ch.doc.data().text);
-        }
+      snap.docChanges().forEach(ch=>{
+        if(ch.type !== "added") return;
+        const m = ch.doc.data();
+        const mine = (m.uid && m.uid === state.uid) || (!m.uid && m.deviceId === state.deviceId);
+        if(mine) return;
+        if(!chatPanelOpen){ chatUnread++; updateChatBadge(); }
+        const u = userView(m.uid, m.name, m.isOwner);
+        popupNotify(u.name, m.text);
       });
     }
     first = false;
-  });
+  }, err=> console.warn("chat listener", err));
 }
 function updateChatBadge(){
   const badge = $("#chat-badge");
   if(chatUnread>0){ badge.hidden=false; badge.textContent = chatUnread>9?"9+":chatUnread; }
   else{ badge.hidden = true; }
 }
-function renderChatLog(messages){
+function renderChatLog(){
   const log = document.getElementById("chat-log-el");
   if(!log) return;
-  log.innerHTML = messages.map(m=>{
-    if(m.deviceId === state.deviceId){
-      return `<div class="msg me">${escapeHtml(m.text)}</div>`;
-    }
-    return `<div class="msg other"><div class="who">${escapeHtml(m.name)}</div>${escapeHtml(m.text)}</div>`;
+  log.innerHTML = state.chat.map(m=>{
+    const mine = (m.uid && m.uid === state.uid) || (!m.uid && m.deviceId === state.deviceId);
+    const u = userView(m.uid, m.name, m.isOwner);
+    const canDel = state.isOwner || mine;
+    const del = canDel ? `<button class="msg-del" data-del-msg="${m.id}" title="Delete"><svg><use href="#ic-trash"/></svg></button>` : "";
+    const who = `<div class="who">${avatarHtml(u.name, u.photo)}${escapeHtml(u.name)}${tick(u.verified)}</div>`;
+    return `<div class="msg ${mine ? "me" : "other"}${canDel ? " has-del" : ""}">${del}${who}${escapeHtml(m.text)}</div>`;
   }).join("");
   log.scrollTop = log.scrollHeight;
 }
@@ -1729,15 +2015,26 @@ function openChatPanel(){
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#chat-backdrop");
   wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")){ wrap.remove(); chatPanelOpen=false; } });
-  renderChatLog([]); // will refresh via the live listener already running
+  renderChatLog();
+
+  // Delete a message (owner: any message, everyone else: only their own)
+  $("#chat-log-el").addEventListener("click", async e=>{
+    const b = e.target.closest("[data-del-msg]"); if(!b) return;
+    if(!(await confirmSheet("Delete message?", "Yeh message sab ke liye hat jayega.", "Delete"))) return;
+    try{ await deleteDoc(doc(db,"chat",b.dataset.delMsg)); }
+    catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
+  });
 
   const send = async ()=>{
     const input = $("#chat-input");
     const text = input.value.trim();
     if(!text) return;
+    if(!firebaseReady || !state.uid){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
+    if(state.users[state.uid] && state.users[state.uid].banned){ toast("Aap ko chat se rok diya gaya hai","ic-close"); return; }
     input.value = "";
-    if(!firebaseReady){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
-    await addDoc(collection(db,"chat"), { name: state.username, deviceId: state.deviceId, text, createdAt: serverTimestamp() });
+    try{
+      await addDoc(collection(db,"chat"), { name: state.username, uid: state.uid, isOwner: state.isOwner, deviceId: state.deviceId, text: text.slice(0,1000), createdAt: serverTimestamp() });
+    }catch(err){ toast("Send failed: " + (err.code||err.message), "ic-close"); }
   };
   $("#chat-send-btn").addEventListener("click", send);
   $("#chat-input").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
@@ -1753,33 +2050,170 @@ $("#chat-fab-btn").addEventListener("click", openChatPanel);
    must call `new Notification()` yourself, which is what this does).
    --------------------------------------------------------------------- */
 function popupNotify(title, body){
-  if("Notification" in window && Notification.permission === "granted"){
+  if("Notification" in window && Notification.permission === "granted" && document.hidden){
     try{ new Notification(title, { body, icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3C/svg%3E" }); }catch(e){}
   }
   toast(`${title}: ${body}`.slice(0,60), "ic-chat");
 }
 function notifyEveryone(message){
-  // Local popup for this device immediately:
+  // In-app popup for this device. Real push to everyone (app closed) is sent by the
+  // notifier service on your VPS (notifier/ folder) which watches Firestore.
   popupNotify("Pika Store", message);
-  // Real push to ALL members (including closed app) needs OneSignal's
-  // REST API call from a server/Cloud Function — see guide.md, section
-  // "Sending a real push to everyone", for the 5-line snippet.
+}
+const notifSupported = () => "Notification" in window;
+function updateNotifRow(){
+  const el = $("#notif-status"); if(!el) return;
+  el.textContent = !notifSupported() ? "App-managed" : ({ granted:"On", denied:"Blocked", default:"Off — tap to enable" })[Notification.permission];
+}
+async function askNotifPermission(){
+  try{
+    if(notifSupported() && Notification.permission === "default") await Notification.requestPermission();
+    if(window.__pikaOneSignal){
+      try{ await window.__pikaOneSignal.Notifications.requestPermission(); }catch(e){}
+      try{ if(!notifSupported() || Notification.permission === "granted") await window.__pikaOneSignal.User.PushSubscription.optIn(); }catch(e){}
+    }
+  }catch(e){ console.warn(e); }
+  updateNotifRow();
+  const nb = $(".notif-banner"); if(nb && notifSupported() && Notification.permission !== "default") nb.remove();
+}
+function initNotifBanner(){
+  updateNotifRow();
+  if(!notifSupported() || Notification.permission !== "default" || localStorage.getItem("pika_notif_dismissed")) return;
+  const b = document.createElement("div");
+  b.className = "notif-banner";
+  b.innerHTML = `<div><b>Notifications ON karein</b><small>Group chat ke naye messages miss na hon</small></div><button class="btn btn-primary" id="nb-yes">Allow</button><button class="nb-x" id="nb-no"><svg width="14" height="14"><use href="#ic-close"/></svg></button>`;
+  document.body.appendChild(b);
+  $("#nb-yes").addEventListener("click", askNotifPermission);
+  $("#nb-no").addEventListener("click", ()=>{ localStorage.setItem("pika_notif_dismissed","1"); b.remove(); });
 }
 async function initOneSignal(){
-  if(!("Notification" in window)) return;
-  try{
-    if(Notification.permission === "default"){
-      // Ask once, politely, after the user has already seen the home page.
-      setTimeout(()=>{ Notification.requestPermission(); }, 2500);
-    }
-  }catch(e){}
-  // OneSignal SDK (loaded in <head>) initializes itself once OneSignalDeferred
-  // fires — wire the login so pushes can be targeted by username later.
+  // Inside the AppMint/WebView APK the native OneSignal SDK handles push, so the web SDK is skipped there.
+  const inWebView = /; wv\)|WebToApk/i.test(navigator.userAgent) || !!window.WebToApk;
+  if(inWebView) return;
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(async function(OneSignal){
     if(CONFIG.oneSignalAppId.startsWith("PASTE_")) return; // not configured yet
-    await OneSignal.init({ appId: CONFIG.oneSignalAppId, notifyButton: { enable:false } });
-    try{ await OneSignal.login(state.deviceId); }catch(e){}
+    try{
+      await OneSignal.init({ appId: CONFIG.oneSignalAppId, notifyButton: { enable:false } });
+      window.__pikaOneSignal = OneSignal;
+      try{ await OneSignal.login(state.uid || state.deviceId); }catch(e){}
+      try{ if(notifSupported() && Notification.permission === "granted") await OneSignal.User.PushSubscription.optIn(); }catch(e){}
+    }catch(e){ console.warn("OneSignal web init skipped:", e); }
+  });
+}
+
+/* ---------------------------------------------------------------------
+   12c. PROFILE — rename, photo, my uploads, owner panel
+   --------------------------------------------------------------------- */
+function renderProfile(){
+  const nameEl = $("#profile-name"); if(!nameEl) return;
+  nameEl.innerHTML = `${escapeHtml(state.username || "—")}${tick(state.isOwner)}`;
+  $("#profile-name-inline").textContent = state.username || "";
+  $("#profile-role").textContent = state.isOwner ? "Store Owner" : "Member of Pika Store";
+  $("#profile-avatar").innerHTML = state.photoURL ? `<img alt="" src="${escapeHtml(state.photoURL)}" />` : escapeHtml((state.username||"P").slice(0,1).toUpperCase());
+
+  const mine = state.apps.filter(a=> a.uploaderUid === state.uid);
+  const myCats = state.categories.filter(c=> c.ownerUid === state.uid);
+  $("#profile-uploads-count").textContent = mine.length;
+  $("#profile-cats-count").textContent = myCats.length;
+  $("#profile-cats-inline").textContent = myCats.length;
+  $("#profile-downloads-count").textContent = fmtCount(mine.reduce((s,a)=> s + (a.downloadCount||0), 0));
+
+  // Uploads list: members see their own, the owner sees everything (and can delete any)
+  const list = state.isOwner ? state.apps : mine;
+  $("#my-uploads-title").textContent = state.isOwner ? "All uploads (Owner)" : "My uploads";
+  $("#my-uploads-list").innerHTML = list.length ? list.map(a=>{
+    const u = userView(a.uploaderUid, a.uploaderName, a.isOwner);
+    return `<div class="mini-row">
+      <img class="thumb" alt="" src="${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}" />
+      <div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • ${fmtCount(a.downloadCount||0)} downloads${state.isOwner ? " • " + escapeHtml(u.name) : ""}</small></div>
+      <button class="icon-del" data-del-app="${a.id}" title="Delete"><svg><use href="#ic-trash"/></svg></button>
+    </div>`;
+  }).join("") : `<div class="mini-row" style="color:var(--text-faint)">Abhi koi upload nahi.</div>`;
+
+  // Owner panel — members list
+  $("#owner-panel").hidden = !state.isOwner;
+  if(state.isOwner){
+    const entries = Object.entries(state.users).sort((a,b)=> String(a[1].name||"").localeCompare(String(b[1].name||"")));
+    $("#owner-users-list").innerHTML = entries.map(([uid,u])=>`
+      <div class="mini-row">
+        ${avatarHtml(u.name, u.photoURL, "lg")}
+        <div class="mini-main"><b>${escapeHtml(u.name||"—")}${tick(u.verified)}</b><small>${u.banned ? "BANNED • " : ""}${uid.slice(0,6)}</small></div>
+        <button class="mini-btn" data-u-rename="${uid}">Rename</button>
+        ${u.photoURL ? `<button class="mini-btn" data-u-nophoto="${uid}">No photo</button>` : ""}
+        ${u.verified ? "" : `<button class="mini-btn red" data-u-ban="${uid}">${u.banned ? "Unban" : "Ban"}</button>`}
+      </div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
+  }
+}
+
+async function changeMyName(){
+  const v = await askText({ title:"Change display name", value: state.username, placeholder:"Your name" });
+  if(v === null) return;
+  const name = v.trim();
+  if(!name || name === state.username) return;
+  if(isReservedName(name)){ toast("Yeh naam reserved hai", "ic-close"); return; }
+  try{
+    await setDoc(doc(db,"users",state.uid), { name, verified: state.isOwner, updatedAt: serverTimestamp() }, { merge:true });
+    state.username = name; localStorage.setItem("pika_username", name);
+    toast("Name updated"); renderProfile();
+  }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+}
+async function changeMyPhoto(file){
+  if(!file) return;
+  toast("Photo upload ho rahi hai…", "ic-upload");
+  try{
+    const url = await uploadAvatar(file);
+    await setDoc(doc(db,"users",state.uid), { photoURL: url, verified: state.isOwner, updatedAt: serverTimestamp() }, { merge:true });
+    state.photoURL = url; toast("Profile photo updated"); renderProfile();
+  }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+}
+
+function initProfileActions(){
+  if(!state.uid){ /* auth failed earlier — actions will show their own errors */ }
+  $("#row-change-name").addEventListener("click", changeMyName);
+  $("#row-change-photo").addEventListener("click", ()=> $("#profile-photo-input").click());
+  $("#profile-avatar").addEventListener("click", ()=> $("#profile-photo-input").click());
+  $("#profile-photo-input").addEventListener("change", e=>{ changeMyPhoto(e.target.files[0]); e.target.value = ""; });
+  $("#row-theme").addEventListener("click", ()=> $("#theme-toggle-btn").click());
+  $("#row-my-cats").addEventListener("click", openCategoriesSheet);
+  $("#row-notif").addEventListener("click", async ()=>{
+    if(!notifSupported()){ toast("Notifications is app ki settings se manage hoti hain"); return; }
+    if(Notification.permission === "denied"){ toast("Phone/browser settings mein Pika Store ke notifications allow karein", "ic-close"); return; }
+    await askNotifPermission();
+    toast(Notification.permission === "granted" ? "Notifications ON" : "Notifications abhi bhi off hain");
+  });
+
+  // Delete an upload from the profile list
+  $("#my-uploads-list").addEventListener("click", async e=>{
+    const b = e.target.closest("[data-del-app]"); if(!b) return;
+    const app = state.apps.find(a=>a.id === b.dataset.delApp);
+    if(app) await deleteApp(app);
+  });
+
+  // Owner panel actions (Firestore rules reject all of these for non-owners)
+  $("#owner-users-list").addEventListener("click", async e=>{
+    if(!state.isOwner) return;
+    const ren = e.target.closest("[data-u-rename]");
+    const nop = e.target.closest("[data-u-nophoto]");
+    const ban = e.target.closest("[data-u-ban]");
+    try{
+      if(ren){
+        const uid = ren.dataset.uRename;
+        const v = await askText({ title:"Rename member", value: (state.users[uid]||{}).name || "", placeholder:"New name" });
+        if(v === null || !v.trim()) return;
+        await updateDoc(doc(db,"users",uid), { name: v.trim(), updatedAt: serverTimestamp() });
+        toast("Name changed");
+      } else if(nop){
+        await updateDoc(doc(db,"users",nop.dataset.uNophoto), { photoURL: "", updatedAt: serverTimestamp() });
+        toast("Photo removed");
+      } else if(ban){
+        const uid = ban.dataset.uBan;
+        const u = state.users[uid] || {};
+        if(!u.banned && !(await confirmSheet(`Ban ${u.name||"member"}?`, "Yeh member chat, upload aur category nahi bana sakega.", "Ban"))) return;
+        await updateDoc(doc(db,"users",uid), { banned: !u.banned, updatedAt: serverTimestamp() });
+        toast(u.banned ? "Member unbanned" : "Member banned");
+      }
+    }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
   });
 }
 
@@ -1802,6 +2236,8 @@ document.addEventListener("contextmenu", e=> e.preventDefault());
 /* ---------------------------------------------------------------------
    BOOTSTRAP
    --------------------------------------------------------------------- */
+$("#manage-cats-btn").addEventListener("click", ()=> openCategoriesSheet());
+$("#add-category-chip").addEventListener("click", ()=> openCategoriesSheet());
 initTheme();
 initNav();
 initUploadWizard();
