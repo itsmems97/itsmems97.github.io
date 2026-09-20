@@ -965,18 +965,25 @@ async function resolveTelegramFileUrl(fileId){
   const data = await res.json();
   if(!data.ok) throw new Error(data.description || "getFile failed — is the Local Bot API Server still running?");
 
-  // In --local mode, Telegram returns file_path as the server's own absolute
-  // filesystem path (e.g. "/var/lib/telegram-bot-api/<token>/documents/file_0.apk")
-  // instead of a short relative path. The /file/bot<token>/<path> HTTP endpoint
-  // expects the SHORT relative path (relative to that bot's own folder), so we
-  // strip the "/var/lib/telegram-bot-api/<token>/" prefix if present — without
-  // this, every download/thumbnail/screenshot link 404s.
+  // telegram-bot-api's own /file/bot<token>/<path> HTTP endpoint is unreliable
+  // (a long-standing unresolved upstream bug — 404s happen both with and
+  // without --local mode). Instead, Caddy serves the file straight off disk
+  // via its file_server, reading the same Docker volume telegram-bot-api
+  // writes into, mounted read-only at /srv/tgfiles and exposed at /tgfiles/*.
+  //
+  // getFile returns either a short relative path ("documents/file_0", when
+  // NOT in --local mode) or the server's own absolute path
+  // ("/var/lib/telegram-bot-api/<token>/documents/file_0", in --local mode).
+  // Either way we need "<token>/documents/file_0" to match how the volume
+  // is laid out under /srv/tgfiles.
   let filePath = data.result.file_path;
-  const localPrefix = `/var/lib/telegram-bot-api/${botToken}/`;
+  const localPrefix = `/var/lib/telegram-bot-api/`;
   if (filePath.startsWith(localPrefix)) {
-    filePath = filePath.slice(localPrefix.length);
+    filePath = filePath.slice(localPrefix.length); // -> "<token>/documents/file_0"
+  } else {
+    filePath = `${botToken}/${filePath}`; // relative path -> add the bot's own folder
   }
-  return `${localServerUrl}/file/bot${botToken}/${filePath}`;
+  return `${localServerUrl}/tgfiles/${filePath}`;
 }
 
 /** Wraps any promise with a timeout so a stuck step (e.g. Firestore) fails loudly instead of freezing the progress bar forever. */
