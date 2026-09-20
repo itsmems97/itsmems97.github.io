@@ -806,9 +806,9 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
    PIKA STORE — APPLICATION LOGIC
    -----------------------------------------------------------------
    Sections in this file:
-   1.  CONFIG            — fill in your own Firebase + Telegram Local Server + OneSignal keys
+   1.  CONFIG            — fill in your own Firebase + VPS upload API + OneSignal keys
    2.  Firebase bootstrap — Firestore (data)
-   3.  Telegram storage   — free file hosting via your own Local Bot API Server (up to 2GB/file, no 20MB cap)
+   3.  VPS storage        — file hosting straight on your own 150GB VPS disk
    4.  State & helpers
    5.  Onboarding (username gate)
    6.  Theme
@@ -846,25 +846,23 @@ const CONFIG = {
   // this file) that has the bucket bound to it directly — no keys ever
   // touch this HTML file at all. See guide.md → "Cloudflare R2 storage"
   // for the exact deploy steps (about 10 minutes, no credit card).
-  // Your own self-hosted Telegram "Local Bot API Server" is the real file
-  // host: files up to 2GB, upload AND download, no 20MB/50MB Bot-API-cloud
-  // limits — because requests go to YOUR server instead of api.telegram.org.
-  // Runs free forever on an Oracle Cloud "Always Free" VPS (docker-compose.yml
-  // + Caddyfile provided alongside this file). See guide.md → "Telegram
-  // Local Bot API Server" for the exact deploy steps.
-  telegram: {
-    localServerUrl: "https://144-24-218-100.nip.io", // your deployed Local Bot API Server (via Caddy)
-    botToken: "8868104441:AAFSmq4jTUdsHMRf6rwf0zuMGWpnX9qcjZA", // @pika_store_files_bot
-    chatId: "-1004494948918",                  // "Pika Store" private channel
+  // Your own VPS disk is the file host now (150GB, permanent — no Telegram
+  // relay involved anymore). Files are uploaded straight to a tiny upload
+  // API running on the VPS (upload-api container, see docker-compose.yml),
+  // which saves them under /mnt/pika-data/store-files and Caddy serves them
+  // back as plain static files at filesBaseUrl — permanent URLs, nothing to
+  // "re-resolve" before every download.
+  storage: {
+    uploadUrl: "https://144-24-218-100.nip.io/upload",   // your VPS upload endpoint
+    filesBaseUrl: "https://144-24-218-100.nip.io/files", // where uploaded files are served from
+    uploadSecret: "2956a61d4fce32814ac5bbea36954f17349ee68c85233a53", // matches UPLOAD_SECRET in .env on the VPS
   },
   // OneSignal → onesignal.com → free account → New Web App
   oneSignalAppId: "PASTE_YOUR_ONESIGNAL_APP_ID",
   // Soft cap only used for the storage meter on the Profile page.
-  // Telegram gives every account unlimited free cloud storage, so this
-  // number is really just "how big do I want the meter to look" — raise
-  // it freely, nothing here enforces a hard stop.
-  // see guide.md → "Growing past 10GB" for the plan.
-  totalStorageGB: 50
+  // Raise this to match your real disk size — nothing here enforces a hard
+  // stop, it's purely cosmetic for the meter on the Profile page.
+  totalStorageGB: 150
 };
 
 /* ---------------------------------------------------------------------
@@ -888,25 +886,22 @@ try{
 }
 
 /* ---------------------------------------------------------------------
-   3. TELEGRAM LOCAL BOT API SERVER — file storage
-   Every file (main APK/ZIP/RAR, icon, screenshots) is sent as a
-   "document" message to your private Telegram chat, via YOUR OWN
-   self-hosted Local Bot API Server instead of api.telegram.org. That
-   one change removes the 20MB download / 50MB upload caps entirely —
-   your server allows files up to 2GB each way, because it's the exact
-   same TDLib code Telegram itself runs, just deployed under your
-   control (see guide.md → "Telegram Local Bot API Server").
+   3. VPS STORAGE — file hosting straight on your own 150GB disk
+   Every file (main APK/ZIP/RAR, icon, screenshots) is POSTed straight to
+   a tiny upload API running on your VPS (upload-api container), which
+   writes it under /mnt/pika-data/store-files/<appId>/ and hands back a
+   permanent static URL that Caddy serves directly off disk. No relay
+   service, no expiring links, no 20MB/50MB caps — limited only by your
+   own disk space and the 2GB per-file cap set on the upload API.
 
-   Each app gets one unique ID (generateAppId, below); every file
-   belonging to that app is tagged with that ID in its caption
-   (#pika_<id>) so the file, icon and screenshots for one app are
-   always identifiable, even just by scrolling the private chat by hand.
+   Each app gets one unique ID (generateAppId, below), and every file for
+   that app is saved inside a folder named after that ID, so everything
+   belonging to one app stays grouped together on disk.
 
-   We store BOTH the resolved download url (fast, used immediately for
-   <img> tags and the first download) AND the raw Telegram file_id
-   (used to re-resolve a fresh url right before every later download —
-   Telegram file paths are only guaranteed valid for a while, the
-   file_id itself never expires as long as the message isn't deleted).
+   The returned url is permanent (it's just a static file path served by
+   Caddy), so unlike the old Telegram setup there's nothing to
+   "re-resolve" before every later download — fileUrl saved once at
+   upload time is good forever, as long as the file isn't deleted.
    --------------------------------------------------------------------- */
 function generateAppId(){
   if(crypto.randomUUID) return crypto.randomUUID().replace(/-/g,"").slice(0,16);
@@ -914,89 +909,56 @@ function generateAppId(){
 }
 
 function storageReady(){
-  const t = CONFIG.telegram;
-  return t.localServerUrl && !t.localServerUrl.startsWith("PASTE_")
-      && t.botToken && !t.botToken.startsWith("PASTE_")
-      && t.chatId && !t.chatId.startsWith("PASTE_");
+  const s = CONFIG.storage;
+  return s.uploadUrl && !s.uploadUrl.startsWith("PASTE_")
+      && s.filesBaseUrl && !s.filesBaseUrl.startsWith("PASTE_")
+      && s.uploadSecret && !s.uploadSecret.startsWith("PASTE_");
 }
 
 /**
- * Sends one file to the Telegram storage chat, through your Local Bot
- * API Server (no 20MB/50MB caps — up to 2GB per file).
+ * Sends one file straight to your own VPS upload API (no 20MB/50MB caps —
+ * up to 2GB per file, limited only by disk space).
  * @param {File} file        the browser File object to upload
  * @param {string} appId     unique id for the app this file belongs to
- * @param {string} kind      "file" | "icon" | "screenshot" — used in the caption tag
+ * @param {string} kind      "file" | "icon" | "screenshot" — used to name the saved file
  * @param {function} onProgress  called with 0-100 (real upload progress)
  */
-async function uploadFileToTelegram(file, appId, kind, onProgress){
+async function uploadFileToServer(file, appId, kind, onProgress){
   if(!storageReady()){
     // Demo mode: server not configured yet — keep the file only in memory
     // (as a blob URL) so the UI still works end-to-end while you're testing.
     onProgress && onProgress(100);
-    return { fileId:null, url: URL.createObjectURL(file), demo:true };
+    return { path:null, url: URL.createObjectURL(file), demo:true };
   }
-  const { localServerUrl, botToken, chatId } = CONFIG.telegram;
+  const { uploadUrl, filesBaseUrl, uploadSecret } = CONFIG.storage;
   const form = new FormData();
-  form.append("chat_id", chatId);
-  form.append("caption", `#pika_${appId} #${kind}`);
-  form.append("document", file, file.name);
+  form.append("appId", appId);
+  form.append("kind", kind);
+  form.append("file", file, file.name);
 
   const data = await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${localServerUrl}/bot${botToken}/sendDocument`);
+    xhr.open("POST", uploadUrl);
+    xhr.setRequestHeader("X-Upload-Secret", uploadSecret);
     xhr.timeout = 300000; // 300s — large files over a slow connection legitimately take a while
     xhr.upload.onprogress = e => {
-      // Upload itself is the first 90% of the bar; the last 10% covers
-      // resolving the download link (getFile) right after.
-      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 90));
+      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
     };
     xhr.onload = () => {
       try{ resolve(JSON.parse(xhr.responseText)); }
-      catch(e){ reject(new Error("Local Bot API Server returned an unexpected response")); }
+      catch(e){ reject(new Error("Upload API returned an unexpected response")); }
     };
-    // Common causes: the VPS/server is down, wrong localServerUrl, wrong
-    // botToken, or Caddy's HTTPS cert isn't ready yet — see guide.md.
-    xhr.onerror = () => reject(new Error("Network error reaching your Local Bot API Server — check localServerUrl in CONFIG"));
+    // Common causes: the VPS/container is down, wrong uploadUrl, wrong
+    // uploadSecret, or Caddy's HTTPS cert isn't ready yet — see guide.md.
+    xhr.onerror = () => reject(new Error("Network error reaching your VPS upload API — check uploadUrl in CONFIG"));
     xhr.ontimeout = () => reject(new Error(`Upload of "${file.name}" timed out — check your VPS is running and reachable`));
     xhr.send(form);
   });
 
-  if(!data.ok) throw new Error("Telegram upload failed: " + (data.description || "unknown error"));
-  onProgress && onProgress(92);
-
-  const tgDoc = data.result.document || data.result.video || data.result.photo?.slice(-1)[0];
-  const fileId = tgDoc.file_id;
-  const url = await resolveTelegramFileUrl(fileId); // works up to 2GB — no 20MB cap on a local server
+  if(!data.ok) throw new Error("Upload failed: " + (data.error || "unknown error"));
   onProgress && onProgress(100);
-  return { fileId, fileName: tgDoc.file_name || file.name, fileSize: tgDoc.file_size || file.size, url, demo:false };
-}
-
-/** Turns a stored Telegram file_id into a fresh, directly downloadable URL via your Local Bot API Server. */
-async function resolveTelegramFileUrl(fileId){
-  const { localServerUrl, botToken } = CONFIG.telegram;
-  const res = await fetch(`${localServerUrl}/bot${botToken}/getFile?file_id=${fileId}`);
-  const data = await res.json();
-  if(!data.ok) throw new Error(data.description || "getFile failed — is the Local Bot API Server still running?");
-
-  // telegram-bot-api's own /file/bot<token>/<path> HTTP endpoint is unreliable
-  // (a long-standing unresolved upstream bug — 404s happen both with and
-  // without --local mode). Instead, Caddy serves the file straight off disk
-  // via its file_server, reading the same Docker volume telegram-bot-api
-  // writes into, mounted read-only at /srv/tgfiles and exposed at /tgfiles/*.
-  //
-  // getFile returns either a short relative path ("documents/file_0", when
-  // NOT in --local mode) or the server's own absolute path
-  // ("/var/lib/telegram-bot-api/<token>/documents/file_0", in --local mode).
-  // Either way we need "<token>/documents/file_0" to match how the volume
-  // is laid out under /srv/tgfiles.
-  let filePath = data.result.file_path;
-  const localPrefix = `/var/lib/telegram-bot-api/`;
-  if (filePath.startsWith(localPrefix)) {
-    filePath = filePath.slice(localPrefix.length); // -> "<token>/documents/file_0"
-  } else {
-    filePath = `${botToken}/${filePath}`; // relative path -> add the bot's own folder
-  }
-  return `${localServerUrl}/tgfiles/${filePath}`;
+  const url = `${filesBaseUrl}/${data.path}`; // permanent — served straight off disk by Caddy
+  return { path: data.path, fileName: data.fileName || file.name, fileSize: data.fileSize || file.size, url, demo:false };
 }
 
 /** Wraps any promise with a timeout so a stuck step (e.g. Firestore) fails loudly instead of freezing the progress bar forever. */
@@ -1458,18 +1420,9 @@ async function startDownload(app){
   progressWrap.hidden = false;
   $("#detail-download-btn").setAttribute("disabled","true");
   try{
-    // Always re-resolve a fresh link right before downloading — the
-    // cached fileUrl saved at upload time isn't guaranteed to stay valid
-    // forever, but the file_id behind it is (as long as the message in
-    // your private chat isn't deleted).
-    let url = app.fileUrl;
-    if(storageReady() && app.fileId){
-      try{ url = await resolveTelegramFileUrl(app.fileId); }
-      catch(e){
-        toast("Couldn't reach your Local Bot API Server — is the VPS running?","ic-close");
-        return;
-      }
-    }
+    // fileUrl is a permanent static link served straight off your VPS disk
+    // by Caddy — no expiry, no re-resolving needed before each download.
+    const url = app.fileUrl;
     if(!url){ toast("No download link available for this file","ic-close"); return; }
     try{
       await downloadInsideStore(url, `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`, pct=>{ bar.style.width = pct+"%"; });
@@ -1617,7 +1570,7 @@ function initUploadWizard(){
 
   async function submitUpload(){
     if(!firebaseReady){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
-    if(!storageReady()){ toast("Connect your Telegram Local Bot API Server first — see guide.md","ic-close"); return; }
+    if(!storageReady()){ toast("Connect your VPS upload API first — see guide.md","ic-close"); return; }
     const btn = $("#wizard-next-btn");
     btn.setAttribute("disabled","true");
     const progWrap = $("#upload-progress-wrap");
@@ -1627,20 +1580,20 @@ function initUploadWizard(){
     const setPct = p => { bar.style.width = p+"%"; pctLabel.textContent = `Uploading… ${p}%`; };
     try{
       // One shared ID ties the main file + icon + screenshots together for
-      // this app, both in Firestore (as the document ID) and in Telegram
-      // (as the #pika_<id> tag on every message's caption).
+      // this app, both in Firestore (as the document ID) and as the folder
+      // name they're saved under on the VPS disk.
       const appId = generateAppId();
       setPct(5);
 
       // 1. Main app file (APK / APK+ / ZIP / RAR) — up to 2GB, no cap,
-      // because this goes through your own Local Bot API Server.
-      const fileRes = await uploadFileToTelegram(state.upload.file, appId, "file", p=>setPct(5 + Math.round(p*0.45)));
+      // saved straight onto your own VPS disk.
+      const fileRes = await uploadFileToServer(state.upload.file, appId, "file", p=>setPct(5 + Math.round(p*0.45)));
       setPct(55);
 
       // 2. Icon / thumbnail
       let thumbUrl = "";
       if(state.upload.thumb){
-        const t = await uploadFileToTelegram(state.upload.thumb, appId, "icon", p=>setPct(55 + Math.round(p*0.15)));
+        const t = await uploadFileToServer(state.upload.thumb, appId, "icon", p=>setPct(55 + Math.round(p*0.15)));
         thumbUrl = t.url;
       }
       setPct(72);
@@ -1651,7 +1604,7 @@ function initUploadWizard(){
       const shots = state.upload.screenshots;
       for(let i=0;i<shots.length;i++){
         const base = 72 + Math.round((i/Math.max(shots.length,1))*18);
-        const s = await uploadFileToTelegram(shots[i], appId, "screenshot",
+        const s = await uploadFileToServer(shots[i], appId, "screenshot",
           p => setPct(base + Math.round((p/100) * (18/Math.max(shots.length,1)))));
         screenshotUrls.push(s.url);
       }
@@ -1659,9 +1612,9 @@ function initUploadWizard(){
 
       const passwordHash = state.upload.hasPassword ? await sha256(state.upload.password) : null;
 
-      // Firestore doc uses the SAME id as the #pika_<id> caption tag, so
-      // the database record and the Telegram messages for this app always
-      // point at each other.
+      // Firestore doc uses the SAME id as the folder name the files were
+      // saved under on the VPS disk, so the database record and the files
+      // for this app always point at each other.
       // Wrapped with a timeout: without this, a stalled Firestore write
       // (bad rules, dropped connection) leaves the bar stuck at 90% forever
       // with no visible error — this makes it fail loudly instead.
@@ -1670,8 +1623,8 @@ function initUploadWizard(){
         description: state.upload.desc.trim(),
         format: state.upload.format,
         category: state.upload.category || "Uncategorized",
-        fileUrl: fileRes.url,   // cached link, used immediately after upload
-        fileId: fileRes.fileId, // used to resolve a FRESH link on every later download
+        fileUrl: fileRes.url,   // permanent static link, served straight off your VPS disk
+        filePath: fileRes.path, // relative path on disk, kept for reference/cleanup
         thumbUrl,
         screenshots: screenshotUrls,
         downloadUrl: (state.upload.hasUrl && state.upload.url.trim()) ? state.upload.url.trim() : null,
@@ -1693,7 +1646,7 @@ function initUploadWizard(){
       $$(".nav-btn")[0].click();
     }catch(e){
       console.error(e);
-      toast(e && e.message ? e.message : "Upload failed — check the storage Worker config in CONFIG", "ic-close");
+      toast(e && e.message ? e.message : "Upload failed — check the storage config in CONFIG", "ic-close");
     }finally{
       btn.removeAttribute("disabled");
       setTimeout(()=>{ progWrap.hidden = true; }, 1200);
