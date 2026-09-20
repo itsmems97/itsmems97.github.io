@@ -82,7 +82,7 @@ html[data-theme="light"]{
      "flash" that makes rounded corners appear briefly square
    ===================================================================== */
 *,*::before,*::after{ box-sizing:border-box; }
-html,body{ height:100%; }
+html,body{ height:100%; width:100%; overflow-x:hidden; }
 body{
   margin:0;
   background:var(--bg);
@@ -136,10 +136,10 @@ a{ color:inherit; text-decoration:none; }
   -webkit-backdrop-filter:blur(20px) saturate(160%);
   border-bottom:1px solid var(--border);
 }
-.brand{ display:flex; align-items:center; gap:10px; font-weight:800; font-size:19px; letter-spacing:-0.02em; }
+.brand{ display:flex; align-items:center; gap:10px; font-weight:800; font-size:19px; letter-spacing:-0.02em; flex-shrink:0; }
 .brand .mark{ width:32px; height:32px; border-radius:10px; }
 .topbar .search-box{
-  flex:1; display:flex; align-items:center; gap:8px;
+  flex:1; min-width:0; display:flex; align-items:center; gap:8px;
   background:var(--surface-2); border:1px solid var(--border);
   border-radius:var(--radius-l); padding:9px 14px;
 }
@@ -187,15 +187,15 @@ main{ padding-top:6px; }
   display:flex; align-items:flex-end;
   box-shadow:var(--shadow);
 }
-.hero-bg{ position:absolute; inset:0; opacity:.55; background-size:cover; background-position:center; transition:opacity .6s ease; }
+.hero-bg{ position:absolute; inset:0; opacity:.55; background-size:cover; background-position:center; transition:opacity .35s ease; }
 .hero-fade{ position:absolute; inset:0; background:linear-gradient(0deg, rgba(0,0,0,.85) 5%, transparent 65%); }
 .hero-content{ position:relative; padding:18px; width:100%; }
 .hero-badge{
   display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700;
   background:rgba(255,198,26,.16); color:var(--accent); padding:4px 10px; border-radius:20px; margin-bottom:8px;
 }
-.hero-title{ font-size:24px; font-weight:800; color:#fff; letter-spacing:-0.02em; margin:0 0 4px; }
-.hero-sub{ font-size:13px; color:rgba(255,255,255,.75); margin:0 0 12px; }
+.hero-title{ font-size:24px; font-weight:800; color:#fff; letter-spacing:-0.02em; margin:0 0 4px; transition:opacity .35s ease; }
+.hero-sub{ font-size:13px; color:rgba(255,255,255,.75); margin:0 0 12px; transition:opacity .35s ease; }
 .hero-actions{ display:flex; gap:10px; }
 .btn{
   border-radius:var(--radius-m); padding:11px 18px; font-weight:700; font-size:14px;
@@ -367,7 +367,7 @@ html[data-theme="light"] .sheet-close{ background:rgba(0,0,0,.25); }
 
 .field{ margin-bottom:12px; }
 .field label{ display:block; font-size:12px; font-weight:700; color:var(--text-dim); margin-bottom:6px; }
-.field input[type=text], .field textarea, .field select{
+.field input[type=text], .field input[type=password], .field input[type=url], .field textarea, .field select{
   width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
   padding:12px 13px; color:var(--text); font-size:14px; font-family:inherit; -webkit-user-select:text; user-select:text;
 }
@@ -476,7 +476,7 @@ html[data-theme="light"] .sheet-close{ background:rgba(0,0,0,.25); }
 .toast svg{ width:16px; height:16px; color:var(--accent); flex-shrink:0; }
 @keyframes toastIn{ from{ transform:translateY(-14px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
 
-.theme-toggle{ width:38px; height:38px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+.theme-toggle{ width:38px; height:38px; flex-shrink:0; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
 .theme-toggle svg{ width:18px; height:18px; position:absolute; transition:transform .4s var(--ease-spring), opacity .3s; }
 .theme-toggle .i-sun{ opacity:0; transform:rotate(-90deg) scale(.4); color:var(--accent); }
 .theme-toggle .i-moon{ opacity:1; transform:none; color:var(--accent-2); }
@@ -713,7 +713,20 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
           </div>
           <div class="field" id="password-field" style="margin-top:12px" hidden>
             <label>Set a download password</label>
-            <input type="text" id="app-password-input" placeholder="e.g. pika2026" />
+            <input type="password" id="app-password-input" placeholder="e.g. pika2026" />
+          </div>
+          <div class="switch-row" style="margin-top:14px">
+            <div class="lbl">
+              <svg><use href="#ic-download"/></svg>
+              <div>Add an external URL
+                <small>Optional — shown as an extra link on the app's download page</small>
+              </div>
+            </div>
+            <div class="switch" id="url-switch"><i></i></div>
+          </div>
+          <div class="field" id="url-field" style="margin-top:12px" hidden>
+            <label>URL</label>
+            <input type="url" id="app-url-input" placeholder="https://example.com" />
           </div>
         </div>
         <div class="card" id="review-card">
@@ -1036,7 +1049,7 @@ const state = {
   categories: [],       // live from Firestore 'categories' collection
   activeCategory: "all",
   heroIndex: 0,
-  upload: { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"" }
+  upload: { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"", hasUrl:false, url:"" }
 };
 
 const $ = (sel, root=document) => root.querySelector(sel);
@@ -1194,23 +1207,67 @@ function renderCategoryChips(){
   }
 }
 
+// --- Hero carousel: cycles the "Featured on Pika" banner through a few
+// recent apps automatically, with a soft crossfade + dot indicators. ---
+let heroApps = [];
+let heroIndex = 0;
+let heroTimer = null;
+
+function stopHeroCarousel(){
+  if(heroTimer){ clearInterval(heroTimer); heroTimer = null; }
+  heroApps = [];
+}
+
+function startHeroCarousel(apps){
+  const same = apps.length === heroApps.length && apps.every((a,i)=> heroApps[i] && a.id === heroApps[i].id);
+  if(same) return; // exact same set already cycling — don't reset the timer/position
+  if(heroTimer) clearInterval(heroTimer);
+  heroApps = apps;
+  heroIndex = 0;
+  $("#hero-dots").innerHTML = heroApps.map((_,i)=>`<span class="${i===0?"active":""}"></span>`).join("");
+  showHeroSlide(0, true);
+  heroTimer = heroApps.length > 1 ? setInterval(()=>{
+    heroIndex = (heroIndex + 1) % heroApps.length;
+    showHeroSlide(heroIndex);
+  }, 3000) : null;
+}
+
+function showHeroSlide(i, instant){
+  const featured = heroApps[i];
+  if(!featured) return;
+  const bg = $("#hero-bg"), title = $("#hero-title"), sub = $("#hero-sub");
+  const apply = () => {
+    title.textContent = featured.name;
+    sub.textContent = (featured.description||"").slice(0,80) || `Uploaded by ${featured.uploaderName||"a member"}`;
+    bg.style.backgroundImage = featured.thumbUrl ? `url(${featured.thumbUrl})` : "none";
+    $("#hero-primary-btn").onclick = ()=>openAppDetail(featured.id);
+    $$("#hero-dots span").forEach((d,idx)=> d.classList.toggle("active", idx===i));
+    bg.style.opacity = "0.55";
+    title.style.opacity = "1";
+    sub.style.opacity = "1";
+  };
+  if(instant){ apply(); return; }
+  bg.style.opacity = "0";
+  title.style.opacity = "0";
+  sub.style.opacity = "0";
+  setTimeout(apply, 350);
+}
+
 function renderHome(){
   const list = state.activeCategory === "all"
     ? state.apps
     : state.apps.filter(a=>a.category === state.activeCategory);
 
-  // Hero: feature the most recently uploaded app
+  // Hero: auto-rotate through the most recently uploaded apps
   if(list.length){
-    const featured = list[0];
-    $("#hero-title").textContent = featured.name;
-    $("#hero-sub").textContent = (featured.description||"").slice(0,80) || `Uploaded by ${featured.uploaderName||"a member"}`;
-    $("#hero-bg").style.backgroundImage = featured.thumbUrl ? `url(${featured.thumbUrl})` : "none";
-    $("#hero-primary-btn").onclick = ()=>openAppDetail(featured.id);
+    startHeroCarousel(list.slice(0,5));
   } else {
+    stopHeroCarousel();
     $("#hero-title").textContent = "No apps yet — be the first!";
     $("#hero-sub").textContent = "Upload your own APK, ZIP or RAR and share it with your members.";
     $("#hero-bg").style.backgroundImage = "none";
     $("#hero-primary-btn").onclick = ()=>{ $$(".nav-btn")[2].click(); };
+    $("#hero-dots").innerHTML = "";
   }
   $("#hero-upload-btn").onclick = ()=>{ $$(".nav-btn")[2].click(); };
 
@@ -1287,6 +1344,41 @@ function openCategoriesSheet(){
 /* ---------------------------------------------------------------------
    9. APP DETAIL SHEET
    --------------------------------------------------------------------- */
+/** Themed replacement for the native prompt() — matches the app's own bottom-sheet look. Resolves with the entered string, or null if cancelled. */
+function askPassword(){
+  return new Promise(resolve=>{
+    const html = `
+    <div class="sheet-backdrop" id="pw-backdrop">
+      <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+        <div style="width:52px;height:52px;border-radius:16px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+          <svg width="24" height="24" style="color:var(--accent-2)"><use href="#ic-lock"/></svg>
+        </div>
+        <h3 style="text-align:center;font-size:17px;margin:0 0 4px;">Password protected</h3>
+        <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;">Enter the password to download this file.</p>
+        <div class="field" style="margin-bottom:16px;">
+          <input type="password" id="pw-modal-input" placeholder="Password" autocomplete="off" />
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="pw-modal-cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" id="pw-modal-ok" type="button">Unlock</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML("beforeend", html);
+    const backdrop = $("#pw-backdrop");
+    const input = $("#pw-modal-input");
+    input.focus();
+    const close = val => { backdrop.remove(); resolve(val); };
+    $("#pw-modal-cancel").addEventListener("click", ()=> close(null));
+    $("#pw-modal-ok").addEventListener("click", ()=> close(input.value));
+    input.addEventListener("keydown", e=>{
+      if(e.key === "Enter") close(input.value);
+      if(e.key === "Escape") close(null);
+    });
+    backdrop.addEventListener("click", e=>{ if(e.target === backdrop) close(null); });
+  });
+}
+
 function openAppDetail(appId){
   const app = state.apps.find(a=>a.id===appId);
   if(!app) return;
@@ -1334,6 +1426,7 @@ function openAppDetail(appId){
           <svg><use href="${app.hasPassword?"ic-lock":"ic-download"}"/></svg>
           ${app.hasPassword ? "Enter password to download" : "Download"}
         </button>
+        ${app.downloadUrl ? `<a class="btn btn-ghost btn-lg btn-block" style="margin-top:10px" href="${escapeHtml(app.downloadUrl)}" target="_blank" rel="noopener noreferrer"><svg><use href="#ic-chevron"/></svg> Visit link</a>` : ""}
       </div>
       <div style="height:20px"></div>
     </div>
@@ -1344,7 +1437,7 @@ function openAppDetail(appId){
 
   $("#detail-download-btn").addEventListener("click", async ()=>{
     if(app.hasPassword){
-      const entered = prompt("This file is password-protected.\nEnter the password to download:");
+      const entered = await askPassword();
       if(entered===null) return;
       const hash = await sha256(entered);
       if(hash !== app.passwordHash){ toast("Wrong password", "ic-close"); return; }
@@ -1433,7 +1526,22 @@ function initUploadWizard(){
     const dz = $("#file-dropzone");
     dz.classList.add("filled");
     dz.innerHTML = `<div class="file-thumb" style="display:flex;align-items:center;justify-content:center;"><svg width="22" height="22"><use href="#ic-cube"/></svg></div><div><b style="display:block">${escapeHtml(f.name)}</b><span style="font-size:11px;color:var(--text-faint)">${(f.size/1024/1024).toFixed(1)} MB</span></div>`;
-    if(!state.upload.name) state.upload.name = f.name.replace(/\.(apk|zip|rar)$/i,"");
+
+    // Auto-detect the format from the file's own extension instead of
+    // silently leaving whatever format-opt was last active (e.g. a .zip
+    // getting saved/labelled as "APK" just because APK is the default).
+    const ext = (f.name.match(/\.([a-z0-9]+)$/i) || [,""])[1].toLowerCase();
+    const extToFormat = { apk:"APK", apks:"APK+", xapk:"APK+", zip:"ZIP", rar:"RAR" };
+    const detected = extToFormat[ext];
+    if(detected){
+      state.upload.format = detected;
+      $$(".format-opt").forEach(o=> o.classList.toggle("active", o.dataset.format === detected));
+    }
+
+    if(!state.upload.name){
+      state.upload.name = f.name.replace(/\.[a-z0-9]+$/i,"");
+      $("#app-name-input").value = state.upload.name;
+    }
   });
   $$(".format-opt").forEach(opt=>{
     opt.addEventListener("click", ()=>{
@@ -1487,6 +1595,14 @@ function initUploadWizard(){
   });
   $("#app-password-input").addEventListener("input", e=> state.upload.password = e.target.value);
 
+  // step 4: optional URL switch
+  $("#url-switch").addEventListener("click", ()=>{
+    state.upload.hasUrl = !state.upload.hasUrl;
+    $("#url-switch").classList.toggle("on", state.upload.hasUrl);
+    $("#url-field").hidden = !state.upload.hasUrl;
+  });
+  $("#app-url-input").addEventListener("input", e=> state.upload.url = e.target.value);
+
   function renderReview(){
     const u = state.upload;
     $("#review-summary").innerHTML = `
@@ -1495,6 +1611,7 @@ function initUploadWizard(){
       <div><b>Category:</b> ${escapeHtml(u.category||"Uncategorized")}</div>
       <div><b>Screenshots:</b> ${u.screenshots.length}</div>
       <div><b>Password:</b> ${u.hasPassword ? "Enabled 🔒" : "Not set"}</div>
+      ${u.hasUrl && u.url.trim() ? `<div><b>URL:</b> ${escapeHtml(u.url.trim())}</div>` : ""}
     `.replace("🔒",""); // no emoji — text label only
   }
 
@@ -1557,6 +1674,7 @@ function initUploadWizard(){
         fileId: fileRes.fileId, // used to resolve a FRESH link on every later download
         thumbUrl,
         screenshots: screenshotUrls,
+        downloadUrl: (state.upload.hasUrl && state.upload.url.trim()) ? state.upload.url.trim() : null,
         hasPassword: !!state.upload.hasPassword,
         passwordHash,
         uploaderName: state.username,
@@ -1582,7 +1700,10 @@ function initUploadWizard(){
     }
   }
   function resetUploadForm(){
-    state.upload = { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"" };
+    state.upload = { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"", hasUrl:false, url:"" };
+    $("#url-switch").classList.remove("on");
+    $("#url-field").hidden = true;
+    $("#app-url-input").value = "";
     $("#file-dropzone").className = "dropzone";
     $("#file-dropzone").innerHTML = `<svg><use href="#ic-upload"/></svg><b>Tap to choose a file</b>Supports .apk, .zip, .rar — best under 20MB (see guide.md)`;
     $("#thumb-dropzone").className = "dropzone";
