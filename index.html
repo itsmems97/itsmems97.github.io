@@ -203,7 +203,8 @@ main{ padding-top:6px; }
 }
 .btn svg{ width:16px; height:16px; }
 .btn-primary{ background:var(--accent); color:#171200; }
-.btn-ghost{ background:rgba(255,255,255,.14); color:#fff; backdrop-filter:blur(6px); }
+.btn-ghost{ background:var(--surface-2); color:var(--text); border:1px solid var(--border); }
+.hero .btn-ghost{ background:rgba(255,255,255,.14); color:#fff; border:none; backdrop-filter:blur(6px); }
 .btn-outline{ background:transparent; border:1.5px solid var(--border); color:var(--text); }
 .btn-block{ width:100%; justify-content:center; }
 .btn-lg{ padding:15px 20px; font-size:15.5px; border-radius:var(--radius-l); }
@@ -702,7 +703,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
     <section id="upload-page" class="page" hidden>
       <div class="upload-hero">
         <h1>Upload to Pika Store</h1>
-        <p>Share an APK, APK+ bundle, ZIP or RAR with your community. Free 50GB shared library.</p>
+        <p>Share an APK, APK+ bundle, ZIP or RAR with your community. Unlimited uploads.</p>
       </div>
 
       <div class="stepper">
@@ -716,7 +717,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
           <label class="dropzone" id="file-dropzone" for="file-input">
             <svg><use href="#ic-upload"/></svg>
             <b>Tap to choose a file</b>
-            Supports .apk, .zip, .rar — best under 20MB (see guide.md)
+            Supports .apk, .zip and .rar files
           </label>
           <input type="file" id="file-input" accept=".apk,.zip,.rar" hidden />
           <div class="format-grid">
@@ -1457,6 +1458,9 @@ async function dedupeOwnerDocs(){
   try{
     const snap = await getDocs(query(collection(db,"users"), where("owner","==",true)));
     for(const d of snap.docs){ if(d.id !== state.uid) await deleteDoc(d.ref); }
+    // old owner profiles created before the owner flag / new public name existed
+    const old = await getDocs(query(collection(db,"users"), where("name","==","ARMY1897")));
+    for(const d of old.docs){ if(d.id !== state.uid) await deleteDoc(d.ref); }
   }catch(e){ console.warn(e); }
 }
 async function ensureProfile(){
@@ -1464,7 +1468,7 @@ async function ensureProfile(){
   let existing = null;
   try{ const s = await getDoc(ref); if(s.exists()) existing = s.data(); }catch(e){}
   if(existing){
-    state.username = existing.name || state.username;
+    state.username = state.isOwner ? CONFIG.ownerPublicName : (existing.name || state.username);
     if(!state.photoURL) state.photoURL = existing.photoURL || "";
   }
   const base = { name: state.username, nameLower: lowerName(state.username), photoURL: state.photoURL || "", verified: state.verified, owner: state.isOwner, lastActiveMs: Date.now(), updatedAt: serverTimestamp() };
@@ -1653,7 +1657,7 @@ function listenUsers(){
     const me = m[state.uid];
     if(me){
       if(me.banned && !state.isOwner){ forceLogout("banned"); return; }
-      state.username = me.name || state.username; state.photoURL = me.photoURL || "";
+      state.username = state.isOwner ? CONFIG.ownerPublicName : (me.name || state.username); state.photoURL = me.photoURL || "";
       state.verified = state.isOwner || !!me.verified;
     }
     renderProfile();
@@ -1898,7 +1902,7 @@ function openCategoriesSheet(){
   $("#create-cat-btn").addEventListener("click", async ()=>{
     const name = $("#new-cat-input").value.trim();
     if(!name) return;
-    if(!firebaseReady || !state.uid){ toast("Connect Firebase first — see guide.md","ic-lock"); return; }
+    if(!firebaseReady || !state.uid){ toast("Connect Firebase first","ic-lock"); return; }
     try{
       await addDoc(collection(db,"categories"), { name, ownerName: state.username, ownerUid: state.uid, isOwner: state.isOwner, ownerDevice: state.deviceId, createdAt: serverTimestamp() });
       toast(`Category "${name}" created`);
@@ -2185,9 +2189,9 @@ function initUploadWizard(){
   }
 
   async function submitUpload(){
-    if(!firebaseReady || !state.uid){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
+    if(!firebaseReady || !state.uid){ toast("Connect Firebase first","ic-close"); return; }
     if(state.users[state.uid] && state.users[state.uid].banned){ toast("You are not allowed to upload","ic-close"); return; }
-    if(!storageReady()){ toast("Connect your VPS upload API first — see guide.md","ic-close"); return; }
+    if(!storageReady()){ toast("Connect your VPS upload API first","ic-close"); return; }
     const btn = $("#wizard-next-btn");
     btn.setAttribute("disabled","true");
     const progWrap = $("#upload-progress-wrap");
@@ -2277,7 +2281,7 @@ function initUploadWizard(){
     $("#url-field").hidden = true;
     $("#app-url-input").value = "";
     $("#file-dropzone").className = "dropzone";
-    $("#file-dropzone").innerHTML = `<svg><use href="#ic-upload"/></svg><b>Tap to choose a file</b>Supports .apk, .zip, .rar — best under 20MB (see guide.md)`;
+    $("#file-dropzone").innerHTML = `<svg><use href="#ic-upload"/></svg><b>Tap to choose a file</b>Supports .apk, .zip and .rar files`;
     $("#thumb-dropzone").className = "dropzone";
     $("#thumb-dropzone").innerHTML = `<svg><use href="#ic-image"/></svg><b>Add a square icon</b>Shown on the home page and app card`;
     $("#app-name-input").value = ""; $("#app-desc-input").value = "";
@@ -2369,7 +2373,7 @@ function openChatPanel(){
     if(!text) return;
     const problem = checkChatText(text, state.verified, state.isOwner);
     if(problem){ toast(problem, "ic-close"); return; }
-    if(!firebaseReady || !state.uid){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
+    if(!firebaseReady || !state.uid){ toast("Connect Firebase first","ic-close"); return; }
     if(state.users[state.uid] && state.users[state.uid].banned){ toast("You are not allowed to chat","ic-close"); return; }
     input.value = "";
     try{
