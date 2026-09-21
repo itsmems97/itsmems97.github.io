@@ -553,6 +553,24 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .mini-row.tap:active{ background:var(--surface-2); }
 .danger-note{ margin:22px 18px 0; padding:12px 14px; border-radius:14px; background:rgba(255,92,108,.1); border:1px solid rgba(255,92,108,.3); font-size:12px; line-height:1.55; color:var(--text-dim); }
 .hint-p{ font-size:11.5px; color:var(--text-faint); margin:8px 18px 0; line-height:1.5; }
+
+/* ---- update 3 ---- */
+.sheet-backdrop.dlg{ z-index:105; }
+.btn[disabled]{ opacity:.4; pointer-events:none; }
+.dlg-p{ font-size:13px; color:var(--text-dim); line-height:1.55; margin:0 0 14px; }
+.dlg-name{ font-size:12px; color:var(--text-faint); margin:0 0 10px; }
+.dlg-name span{ color:var(--text-faint); font-weight:600; }
+.dlg-err{ color:var(--danger); font-size:12px; min-height:16px; margin:0 0 8px; }
+.online{ color:#3ddc97 !important; }
+.mono{ font-family:ui-monospace,Menlo,Consolas,monospace; letter-spacing:.04em; }
+#gate-notice{ max-width:300px; margin:0 0 14px; padding:10px 12px; border-radius:12px; background:rgba(255,92,108,.12); border:1px solid rgba(255,92,108,.3); font-size:12.5px; color:var(--text-dim); }
+.topbar .search-box input{ min-width:0; width:100%; font-size:14px; text-overflow:ellipsis; }
+.topbar .search-box svg{ flex-shrink:0; }
+.theme-toggle svg{ fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.deny-banner{ position:fixed; left:12px; right:12px; top:calc(10px + var(--safe-top)); z-index:110; background:var(--surface); border:1px solid rgba(255,92,108,.4); border-radius:18px; padding:12px 14px; box-shadow:var(--shadow); font-size:12.5px; line-height:1.5; }
+.deny-banner ol{ margin:8px 0 0; padding-left:18px; color:var(--text-dim); }
+.deny-banner .row-top{ display:flex; align-items:center; gap:8px; }
+.deny-banner .row-top b{ flex:1; }
 </style>
 </head>
 <body>
@@ -593,6 +611,9 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <symbol id="ic-cube" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z" fill="url(#gradAmber)" opacity=".9"/><path d="M12 3v18M4 7.5 12 12l8-4.5" fill="none" stroke="#171200" stroke-width="1.1" opacity=".35"/></symbol>
 <symbol id="ic-fire" viewBox="0 0 24 24"><path d="M12 2c1 3-3 4-3 8a4 4 0 0 0 8 0c1.5 1.5 2 3.5 2 5a7 7 0 1 1-14 0c0-5 4-8 4-9 1 0 2 2 3 3.5C12.4 6.5 11.5 4 12 2Z" fill="url(#gradAmber)"/></symbol>
 <symbol id="ic-sparkle" viewBox="0 0 24 24"><path d="M12 3c.6 3.4 1.6 4.4 5 5-3.4.6-4.4 1.6-5 5-.6-3.4-1.6-4.4-5-5 3.4-.6 4.4-1.6 5-5Z" fill="url(#gradTeal)"/></symbol>
+<symbol id="ic-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.5 8.5V6.4a2 2 0 0 0-2-2H6.4a2 2 0 0 0-2 2v7.1a2 2 0 0 0 2 2h2.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="ic-sun-line" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></symbol>
+<symbol id="ic-moon-line" viewBox="0 0 24 24"><path d="M20 14.2A8.2 8.2 0 1 1 9.8 4a6.6 6.6 0 0 0 10.2 10.2Z"/></symbol>
 <symbol id="ic-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2.8 19.5c1-3.4 3.3-5 6.2-5s5.2 1.6 6.2 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="9.5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17.5 14.6c2 .3 3.2 1.7 3.9 4.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
 <symbol id="ic-verified" viewBox="0 0 24 24"><path d="M12 1.8l2.5 1.9 3.1-.3 1.2 2.9 2.8 1.4-.6 3.1L22 12l-1.9 2.2.6 3.1-2.8 1.4-1.2 2.9-3.1-.3L12 22.2l-2.5-1.9-3.1.3-1.2-2.9-2.8-1.4.6-3.1L2 12l1.9-2.2-.6-3.1 2.8-1.4 1.2-2.9 3.1.3Z" fill="#1D9BF0"/><path d="m7.8 12.3 3 3 5.6-5.8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
@@ -600,15 +621,16 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <!-- =========================================================
      USERNAME GATE — first screen on app launch
      ========================================================= -->
-<div id="username-gate">
+<div id="username-gate" hidden>
   <img class="gate-logo" alt="Pika Store" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
   <h1>Welcome to Pika Store</h1>
-  <p>Apna naam likhein aur chahein to profile photo lagayein. Agar aapko secret code mila hai to naam ke aakhir mein likh dein (jaise Ahmed16241897). Email ya phone number nahi chahiye.</p>
+  <p>Choose a name and, if you like, a profile photo. No email or phone number needed.</p>
+  <div id="gate-notice" hidden></div>
   <button class="gate-avatar" id="gate-avatar-btn" type="button" aria-label="Choose profile photo"><svg><use href="#ic-image"/></svg></button>
-  <div class="gate-hint" style="margin-bottom:14px">Profile photo (optional) — tap karein</div>
+  <div class="gate-hint" style="margin-bottom:14px">Profile photo (optional)</div>
   <input id="gate-avatar-input" type="file" accept="image/*" hidden />
-  <input id="gate-username-input" type="text" maxlength="34" placeholder="Your name" autocomplete="off" />
-  <div class="gate-hint" id="gate-hint">Suggested name neeche hai — chahein to badal lein.</div>
+  <input id="gate-username-input" type="text" maxlength="15" placeholder="Your name" autocomplete="username" autocapitalize="off" spellcheck="false" />
+  <div class="gate-hint" id="gate-hint">3 to 14 characters. Letters, numbers, spaces and @ - _ . are allowed.</div>
   <button class="btn btn-primary btn-lg btn-block" id="gate-continue-btn">
     <svg><use href="#ic-check"/></svg> Continue
   </button>
@@ -627,11 +649,11 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
     </div>
     <div class="search-box">
       <svg width="16" height="16"><use href="#ic-search"/></svg>
-      <input id="search-input" type="text" placeholder="Search apps, games, files…" />
+      <input id="search-input" type="text" placeholder="Search apps…" />
     </div>
     <button class="theme-toggle" id="theme-toggle-btn" title="Toggle theme">
-      <svg class="i-sun"><use href="#ic-sun"/></svg>
-      <svg class="i-moon"><use href="#ic-moon"/></svg>
+      <svg class="i-sun"><use href="#ic-sun-line"/></svg>
+      <svg class="i-moon"><use href="#ic-moon-line"/></svg>
     </button>
   </header>
 
@@ -648,21 +670,12 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
           <h1 class="hero-title" id="hero-title">No apps yet — be the first!</h1>
           <p class="hero-sub" id="hero-sub">Upload your own APK, ZIP or RAR and share it with your members.</p>
           <div class="hero-actions">
-            <button class="btn btn-primary" id="hero-primary-btn"><svg><use href="#ic-play"/></svg> Open</button>
+            <button class="btn btn-primary" id="hero-primary-btn"><svg><use href="#ic-download"/></svg> Download</button>
             <button class="btn btn-ghost" id="hero-upload-btn"><svg><use href="#ic-upload"/></svg> Upload app</button>
           </div>
         </div>
       </div>
       <div class="hero-dots" id="hero-dots"></div>
-
-      <!-- Categories -->
-      <div class="section">
-        <div class="section-head"><h2>Categories</h2><span class="see-all" id="manage-cats-btn">Manage</span></div>
-        <div class="chip-row" id="category-row">
-          <button class="chip active" data-cat="all"><span class="dot"></span> All</button>
-          <button class="chip chip-add" id="add-category-chip"><svg width="13" height="13"><use href="#ic-plus"/></svg> New category</button>
-        </div>
-      </div>
 
       <!-- Top downloaded -->
       <div class="section">
@@ -806,7 +819,8 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
     <section id="users-page" class="page" hidden>
       <div class="section">
         <div class="section-head"><h2 id="users-count-title">Members</h2></div>
-        <p style="font-size:12.5px;color:var(--text-dim);margin:0 0 12px;">Kisi member par tap karein to uski uploads dikhengi.</p>
+        <p style="font-size:12.5px;color:var(--text-dim);margin:0 0 12px;">Tap a member to see what they uploaded.</p>
+        <div id="users-owner-tools" hidden style="margin-bottom:12px"><button class="btn btn-ghost btn-block" id="manage-codes-btn"><svg><use href="#ic-verified"/></svg> Manage blue-tick codes</button></div>
       </div>
       <div class="settings-list" id="users-list"></div>
       <div style="height:30px"></div>
@@ -817,7 +831,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
       <div class="profile-head">
         <div class="profile-avatar" id="profile-avatar">P</div>
         <div>
-          <h2 style="margin:0 0 3px; font-size:19px;" id="profile-name">—</h2>
+          <h2 style="margin:0 0 3px; font-size:19px; display:flex; align-items:center;" id="profile-name">—</h2>
           <div style="font-size:12px; color:var(--text-faint);" id="profile-role">Member of Pika Store</div>
         </div>
       </div>
@@ -828,15 +842,17 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
       </div>
       <input type="file" id="profile-photo-input" accept="image/*" hidden />
       <div class="settings-list">
-        <div class="row tap" id="row-change-name"><div class="row-left"><svg><use href="#ic-user"/></svg> Change display name</div><span style="font-size:12px;color:var(--text-faint)" id="profile-name-inline"></span></div>
+        <div class="row" id="row-secret"><div class="row-left"><svg><use href="#ic-lock"/></svg> Login code</div><span style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:12.5px;color:var(--text-faint)" id="profile-secret">••••••</span><button class="mini-btn" id="copy-secret-btn" type="button">Copy</button></span></div>
+        <div class="row tap" id="row-change-creds"><div class="row-left"><svg><use href="#ic-user"/></svg> Change name &amp; secret code</div><span style="font-size:12px;color:var(--text-faint)" id="profile-name-inline"></span></div>
         <div class="row tap" id="row-change-photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Change profile photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
-        <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
+        <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
         <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
         <div class="row tap" id="row-verify"><div class="row-left"><svg><use href="#ic-verified"/></svg> Enter blue-tick code</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+        <div class="row tap" id="row-logout"><div class="row-left"><svg><use href="#ic-close"/></svg> Log out</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
       </div>
 
       <div id="danger-zone">
-        <div class="danger-note"><b>Dhyan dein:</b> Agar aap <b>2 mahine (60 din)</b> tak app na kholein to aapka account, saari uploads, chat messages aur profile photo <b>apne aap delete</b> ho jayenge (Oracle server se bhi).</div>
+        <div class="danger-note"><b>Please note:</b> if you do not open the app for <b>2 months (60 days)</b>, your account, all your uploads, chat messages and profile photo are <b>deleted automatically</b> (from the Oracle server too).</div>
         <div class="settings-list" style="margin-top:12px">
           <div class="row tap" id="row-delete-account" style="color:var(--danger)"><div class="row-left" style="color:var(--danger)"><svg style="color:var(--danger)"><use href="#ic-trash"/></svg> Delete account permanently</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         </div>
@@ -844,15 +860,6 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 
       <h3 class="section-title" id="my-uploads-title" style="margin-top:22px">My uploads</h3>
       <div class="settings-list" id="my-uploads-list"></div>
-
-      <div id="owner-panel" hidden>
-        <h3 class="section-title" style="margin-top:22px">Owner panel — Members <svg class="vtick"><use href="#ic-verified"/></svg></h3>
-        <div class="settings-list" id="owner-users-list"></div>
-        <h3 class="section-title" style="margin-top:22px">Blue-tick codes</h3>
-        <div class="settings-list" id="owner-codes-list"></div>
-        <div style="padding:10px 18px 0"><button class="btn btn-primary btn-block" id="add-code-btn"><svg><use href="#ic-plus"/></svg> Add new tick code</button></div>
-        <p class="hint-p">Member naam ke aakhir mein yeh code likhe (jaise ZenXAhmed16241897) to naam alag ho jata hai aur blue tick lag jata hai. Tick wale member sirf apni cheez delete kar sakte hain. Code delete karne se pehle mile hue ticks nahi hatte, wo "Remove tick" se hatate hain.</p>
-      </div>
       <div style="height:30px"></div>
     </section>
   </main>
@@ -946,14 +953,15 @@ const CONFIG = {
     uploadSecret: "2956a61d4fce32814ac5bbea36954f17349ee68c85233a53", // matches UPLOAD_SECRET in .env on the VPS
   },
   // OneSignal → onesignal.com → free account → New Web App
-  oneSignalAppId: "PASTE_YOUR_ONESIGNAL_APP_ID",
+  oneSignalAppId: "feb72b66-1881-4cd0-ab67-cd2f898f8410",
   // Soft cap only used for the storage meter on the Profile page.
   // Raise this to match your real disk size — nothing here enforces a hard
   // stop, it's purely cosmetic for the meter on the Profile page.
   totalStorageGB: 150,
   // Public name + blue tick shown for the owner. The secret owner login name is NOT stored here —
   // it lives only inside your Firestore rules (firestore.rules), so nobody can read it from this file.
-  ownerPublicName: "ARMY1897"
+  ownerPublicName: "PIKAZOOARMY",
+  supportWhatsApp: "923041891897"
 };
 
 /* ---------------------------------------------------------------------
@@ -964,7 +972,7 @@ import {
   initializeFirestore, getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, increment,
   onSnapshot, query, orderBy, limit, serverTimestamp, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 let db = null;
 let auth = null;
@@ -1102,6 +1110,7 @@ const state = {
     return id;
   })(),
   uid: "",             // Firebase anonymous-auth uid (real identity used by security rules)
+  sessionId: "",
   verified: false,     // blue tick: owner OR member who used a secret tick code (NO delete powers)
   codes: [],           // owner only: list of tick codes
   isOwner: false,      // true only after the secret owner name was accepted by Firestore rules
@@ -1134,23 +1143,24 @@ async function sha256(text){
 }
 
 /* ---------------------------------------------------------------------
-   4b. IDENTITY HELPERS — anonymous auth, verified tick, avatars
+   4b. IDENTITY HELPERS
    --------------------------------------------------------------------- */
-function ensureAuth(){
-  return new Promise((resolve, reject)=>{
-    if(!auth) return reject(new Error("Firebase not ready"));
-    const unsub = onAuthStateChanged(auth, async user=>{
-      if(user){ unsub(); resolve(user); return; }
-      try{ const cred = await signInAnonymously(auth); unsub(); resolve(cred.user); }
-      catch(e){ unsub(); reject(e); }
-    });
-  });
-}
+const NAME_MIN = 3, NAME_MAX = 14;
+const EMAIL_DOMAIN = "pika-store.app";
+const emailFor = key => `${key}@${EMAIL_DOMAIN}`;
+const randomKey = () => Array.from(crypto.getRandomValues(new Uint8Array(12))).map(b=>b.toString(16).padStart(2,"0")).join("");
+const lowerName = n => String(n||"").trim().toLowerCase();
+
+async function signInAnon(){ return (await signInAnonymously(auth)).user; }
 function authError(e){
   console.warn(e);
   const code = (e && e.code) || "";
   if(code.includes("operation-not-allowed") || code.includes("admin-restricted")){
-    toast("Firebase Console → Authentication → Sign-in method → Anonymous ko Enable karein", "ic-close");
+    toast("Firebase Console → Authentication → Sign-in method: enable Anonymous AND Email/Password", "ic-close");
+  } else if(code.includes("too-many-requests")){
+    toast("Too many attempts. Please wait a few minutes and try again.", "ic-close");
+  } else if(code.includes("network")){
+    toast("Network problem. Please check your connection.", "ic-close");
   } else {
     toast("Login failed: " + (code || (e && e.message) || "unknown"), "ic-close");
   }
@@ -1179,7 +1189,7 @@ function resizeImage(file, size=256){
       URL.revokeObjectURL(url);
       c.toBlob(b => b ? resolve(b) : reject(new Error("Image resize failed")), "image/jpeg", 0.85);
     };
-    img.onerror = ()=> reject(new Error("Yeh valid image nahi hai"));
+    img.onerror = ()=> reject(new Error("This is not a valid image"));
     img.src = url;
   });
 }
@@ -1198,12 +1208,67 @@ async function uploadAvatar(file){
   }
   return await blobToDataURL(blob);
 }
+async function copyText(t){
+  try{ await navigator.clipboard.writeText(t); return true; }
+  catch(e){
+    try{ const ta = document.createElement("textarea"); ta.value = t; ta.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(ta); ta.select(); const ok = document.execCommand("copy"); ta.remove(); return ok; }
+    catch(_){ return false; }
+  }
+}
+function presenceText(ms){
+  if(!ms) return "Last seen a long time ago";
+  const diff = Date.now() - ms;
+  if(diff < 6*60*1000) return "Online";
+  const m = Math.floor(diff/60000);
+  if(m < 60) return `Last seen ${m} min ago`;
+  const h = Math.floor(m/60);
+  if(h < 24) return `Last seen ${h} hour${h===1?"":"s"} ago`;
+  const d = Math.floor(h/24);
+  if(d === 1) return "Last seen yesterday";
+  if(d < 30) return `Last seen ${d} days ago`;
+  return "Last seen " + new Date(ms).toLocaleDateString();
+}
 
-/** Themed replacements for prompt()/confirm() */
+/* ---------------- chat + name filters ---------------- */
+const LEET = { "0":"o","1":"i","3":"e","4":"a","5":"s","7":"t","@":"a","$":"s","!":"i" };
+const normWord = s => String(s).toLowerCase().replace(/[013457@$!]/g, c=>LEET[c]).replace(/(.)\1+/g, "$1");
+const BAD_SUB = ["fuck","bitch","asshole","bastard","pussy","whore","cunt","motherfucker","nigger","nigga","faggot",
+  "madarchod","maderchod","behenchod","bhenchod","bhosdi","bhosad","chutiya","chutia","gandu","haramzada","haramkhor","kamina","kamini"].map(normWord);
+const BAD_WORD = new Set(["shit","dick","cock","slut","ass","tits","randi","raand","lund","loda","lauda","gaand","gand","chut","kutta","kutti",
+  "harami","saala","mc","bc","bkl","fck","fuk","sex","porn","xxx","nude","nudes","suar","tatti","lodu","lode"].map(normWord));
+function containsAbuse(text){
+  const spaced = normWord(String(text||"").replace(/[^\p{L}\p{N}@$!]+/gu, " "));
+  const tokens = spaced.split(" ").filter(Boolean);
+  if(tokens.some(w=> BAD_WORD.has(w))) return true;
+  const collapsed = spaced.replace(/ /g, "");
+  return BAD_SUB.some(w=> collapsed.includes(w));
+}
+/** Returns an error message, or "" when the text is fine. Members without a blue tick cannot post links, @ mentions or phone numbers. */
+function checkChatText(text, canPostLinks, isOwner){
+  if(!isOwner && containsAbuse(text)) return "Please keep the chat respectful. Abusive language is not allowed.";
+  if(canPostLinks) return "";
+  if(/@/.test(text)) return "@ mentions are not allowed in chat.";
+  if(/(https?:|www\.|\b[a-z0-9-]+\.(com|net|org|io|me|pk|in|co|app|xyz|link|ly|gg|info|biz|tk)\b|t\.me|wa\.me|bit\.ly)/i.test(text)) return "Links are not allowed in chat.";
+  if(/\+\s*\d/.test(text) || /(?:\d[\s().\-]?){9,}/.test(text)) return "Phone numbers are not allowed in chat.";
+  return "";
+}
+function validateName(raw){
+  const s = String(raw||"").trim();
+  if(s.length < NAME_MIN) return `Name is too short (minimum ${NAME_MIN} characters).`;
+  if(s.length > NAME_MAX) return `Name is too long (maximum ${NAME_MAX} characters).`;
+  if(!/^[\p{L}\p{N}@._\- ]+$/u.test(s)) return "Only letters, numbers, spaces and these symbols are allowed: @ - _ .";
+  if(/\s{2,}/.test(s)) return "Please use single spaces only.";
+  if(containsAbuse(s)) return "Please choose a respectful name.";
+  return "";
+}
+const isReservedName = n => !state.isOwner && (lowerName(n).replace(/[^a-z0-9]/g,"").includes("pikazoo"));
+const canManage = uidOfOwner => state.isOwner || (!!uidOfOwner && uidOfOwner === state.uid);
+
+/* ---------------- dialogs ---------------- */
 function askText({ title, value="", placeholder="", max=20, okLabel="Save" }){
   return new Promise(resolve=>{
     const html = `
-    <div class="sheet-backdrop" id="txt-backdrop">
+    <div class="sheet-backdrop dlg" id="txt-backdrop">
       <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
         <h3 style="text-align:center;font-size:17px;margin:0 0 16px;">${escapeHtml(title)}</h3>
         <div class="field" style="margin-bottom:16px;"><input type="text" id="txt-modal-input" maxlength="${max}" placeholder="${escapeHtml(placeholder)}" autocomplete="off" /></div>
@@ -1226,7 +1291,7 @@ function askText({ title, value="", placeholder="", max=20, okLabel="Save" }){
 function confirmSheet(title, message, okLabel="Delete"){
   return new Promise(resolve=>{
     const html = `
-    <div class="sheet-backdrop" id="cf-backdrop">
+    <div class="sheet-backdrop dlg" id="cf-backdrop">
       <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
         <h3 style="text-align:center;font-size:17px;margin:0 0 6px;">${escapeHtml(title)}</h3>
         <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;">${escapeHtml(message)}</p>
@@ -1244,21 +1309,117 @@ function confirmSheet(title, message, okLabel="Delete"){
     bd.addEventListener("click", e=>{ if(e.target===bd) close(false); });
   });
 }
-const isReservedName = n => !state.isOwner && n.trim().toLowerCase() === CONFIG.ownerPublicName.toLowerCase();
-const canManage = uidOfOwner => state.isOwner || (!!uidOfOwner && uidOfOwner === state.uid);
+/** Step 1 — choose the 6-digit secret code. Confirm stays disabled until the person taps Copy. */
+function pinDialog({ mode, name, pin="" }){
+  return new Promise(resolve=>{
+    const editable = mode === "change";
+    const html = `
+    <div class="sheet-backdrop dlg" id="pin-backdrop">
+      <div class="sheet" style="padding:24px 20px calc(24px + var(--safe-bottom));">
+        <h3 style="text-align:center;font-size:18px;margin:0 0 10px;">${editable ? "Change name &amp; secret code" : "Create your secret code"}</h3>
+        <p class="dlg-p">Please add any favorite 6-digit number that you remember. If you want to log in to your old account again, enter your name together with this code, like <b>Ali123456</b>.</p>
+        ${editable
+          ? `<div class="field"><input type="text" id="pin-name" maxlength="${NAME_MAX}" placeholder="Name" autocomplete="off" /></div>`
+          : `<div class="dlg-name">Name: <span id="pin-name-lock"></span></div>`}
+        <div class="field"><input type="text" id="pin-input" inputmode="numeric" maxlength="6" placeholder="6-digit secret code" autocomplete="off" /></div>
+        <div class="dlg-err" id="pin-err"></div>
+        <div id="pin-actions" style="display:none;gap:10px;margin-bottom:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="pin-copy" type="button"><svg><use href="#ic-copy"/></svg> Copy</button>
+          <button class="btn btn-primary" style="flex:1" id="pin-confirm" type="button" disabled>Confirm</button>
+        </div>
+        <button class="btn btn-ghost btn-block" id="pin-back" type="button">${editable ? "Cancel" : "Back"}</button>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML("beforeend", html);
+    const bd = $("#pin-backdrop"), pinEl = $("#pin-input"), err = $("#pin-err"), actions = $("#pin-actions"), okBtn = $("#pin-confirm");
+    const nameEl = editable ? $("#pin-name") : null;
+    if(editable) nameEl.value = name; else $("#pin-name-lock").textContent = name;
+    pinEl.value = pin;
+    let copied = false;
+    const curName = () => editable ? nameEl.value.trim() : name;
+    const refresh = ()=>{
+      const okPin = /^\d{6}$/.test(pinEl.value);
+      actions.style.display = okPin ? "flex" : "none";
+      if(okPin && copied) okBtn.removeAttribute("disabled"); else okBtn.setAttribute("disabled","true");
+    };
+    const reset = ()=>{ copied = false; err.textContent = ""; refresh(); };
+    pinEl.addEventListener("input", ()=>{ pinEl.value = pinEl.value.replace(/\D/g,"").slice(0,6); reset(); });
+    if(nameEl) nameEl.addEventListener("input", reset);
+    $("#pin-copy").addEventListener("click", async ()=>{
+      const n = curName(), e = validateName(n);
+      if(e){ err.textContent = e; return; }
+      const ok = await copyText(n + pinEl.value);
+      copied = true; refresh();
+      toast(ok ? `Copied: ${n}${pinEl.value}` : "Copy failed — please write it down", ok ? "ic-check" : "ic-close");
+    });
+    okBtn.addEventListener("click", ()=>{
+      const n = curName(), e = validateName(n);
+      if(e){ err.textContent = e; return; }
+      bd.remove(); resolve({ name:n, pin:pinEl.value });
+    });
+    $("#pin-back").addEventListener("click", ()=>{ bd.remove(); resolve(null); });
+    refresh(); pinEl.focus();
+  });
+}
+/** Step 2 — final warning. The username/password fields inside a real <form> let Chrome offer to save (or update) the login. */
+function finalDialog({ name, pin, action }){
+  return new Promise(resolve=>{
+    const html = `
+    <div class="sheet-backdrop dlg" id="fin-backdrop">
+      <div class="sheet" style="padding:24px 20px calc(24px + var(--safe-bottom));">
+        <h3 style="text-align:center;font-size:18px;margin:0 0 10px;">Save your login</h3>
+        <p class="dlg-p">Are you sure you copied your name together with your 6-digit secret code? If you forget it, you will not be able to go back to your old account, and that account will be deleted automatically after two months along with all your uploaded data. Please copy your name with the 6-digit code, then press <b>${escapeHtml(action)}</b>.</p>
+        <form id="cred-form" autocomplete="on">
+          <div class="field"><input type="text" name="username" id="cred-user" autocomplete="username" /></div>
+          <div class="field"><input type="password" name="password" id="cred-pass" autocomplete="${action === "LOGIN" ? "new-password" : "new-password"}" /></div>
+          <div style="display:flex;gap:10px;margin-bottom:10px;">
+            <button class="btn btn-ghost" style="flex:1" id="fin-copy" type="button"><svg><use href="#ic-copy"/></svg> Copy</button>
+            <button class="btn btn-primary" style="flex:1" id="fin-go" type="submit">${escapeHtml(action)}</button>
+          </div>
+        </form>
+        <button class="btn btn-ghost btn-block" id="fin-back" type="button">Back</button>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML("beforeend", html);
+    const bd = $("#fin-backdrop");
+    $("#cred-user").value = name; $("#cred-pass").value = pin;
+    $("#fin-copy").addEventListener("click", async ()=>{ const ok = await copyText(name + pin); toast(ok ? `Copied: ${name}${pin}` : "Copy failed — please write it down", ok ? "ic-check" : "ic-close"); });
+    $("#cred-form").addEventListener("submit", e=>{
+      e.preventDefault();
+      $("#fin-go").setAttribute("disabled","true");
+      resolve({ ok:true, close: ()=> bd.remove() });
+    });
+    $("#fin-back").addEventListener("click", ()=>{ bd.remove(); resolve({ ok:false }); });
+  });
+}
+async function storeCredential(name, pin){
+  try{
+    if(window.PasswordCredential && navigator.credentials && navigator.credentials.store){
+      await navigator.credentials.store(new PasswordCredential({ id:name, name:name, password:pin }));
+    }
+  }catch(e){ console.warn("Password manager save skipped", e); }
+}
+function showBannedDialog(){
+  const html = `
+  <div class="sheet-backdrop dlg" id="ban-backdrop">
+    <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+      <h3 style="text-align:center;font-size:19px;margin:0 0 8px;color:var(--danger)">Your Account Was Banned</h3>
+      <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;line-height:1.55">This account has been banned from Pika Store. If you think this is a mistake, contact support.</p>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" style="flex:1" id="ban-close" type="button">Close</button>
+        <button class="btn btn-primary" style="flex:1" id="ban-help" type="button"><svg><use href="#ic-chat"/></svg> Help</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  $("#ban-close").addEventListener("click", ()=> $("#ban-backdrop").remove());
+  $("#ban-help").addEventListener("click", ()=> window.open(`https://wa.me/${CONFIG.supportWhatsApp}`, "_blank", "noopener"));
+}
 
 /* ---------------------------------------------------------------------
-   5. ONBOARDING — name + optional profile photo. The secret owner name is
-   never compared in this file: the app just tries to write it to
-   adminClaims/{uid}; Firestore rules accept it only for the real secret.
+   5. ACCOUNTS — name + 6-digit secret code (Firebase email/password under the hood),
+   one active browser per account, owner login with the secret name only.
    --------------------------------------------------------------------- */
-function suggestUsername(){
-  const remembered = localStorage.getItem("pika_username");
-  if(remembered) return remembered;
-  const adjectives = ["Swift","Bright","Cosmic","Turbo","Pixel","Neon","Lucky","Shadow"];
-  const noun = "Player" + Math.floor(1000 + Math.random()*9000);
-  return adjectives[Math.floor(Math.random()*adjectives.length)] + noun;
-}
 async function tryClaimOwner(code){
   try{ await withTimeout(setDoc(doc(db,"adminClaims",state.uid), { code, at: serverTimestamp() }), 8000, "Owner check"); return true; }
   catch(e){ return false; }
@@ -1267,50 +1428,99 @@ async function tryClaimVerified(code){
   try{ await withTimeout(setDoc(doc(db,"verifiedClaims",state.uid), { code, at: serverTimestamp() }), 8000, "Tick check"); return true; }
   catch(e){ return false; }
 }
-async function checkOwner(){
-  try{ const s = await getDoc(doc(db,"adminClaims",state.uid)); return s.exists(); }catch(e){ return false; }
+async function checkOwner(){ try{ return (await getDoc(doc(db,"adminClaims",state.uid))).exists(); }catch(e){ return false; } }
+async function checkVerified(){ try{ return (await getDoc(doc(db,"verifiedClaims",state.uid))).exists(); }catch(e){ return false; } }
+async function isBannedAccount(uid){ try{ return (await getDoc(doc(db,"bans",uid))).exists(); }catch(e){ return false; } }
+async function findAccount(nameLower){
+  const s = await getDoc(doc(db,"usernames",nameLower));
+  return s.exists() ? s.data() : null;
 }
-async function checkVerified(){
-  try{ const s = await getDoc(doc(db,"verifiedClaims",state.uid)); return s.exists(); }catch(e){ return false; }
-}
-function userPayload(extra={}){
-  return { name: state.username, photoURL: state.photoURL || "", verified: state.verified, deviceId: state.deviceId, lastActiveMs: Date.now(), updatedAt: serverTimestamp(), ...extra };
-}
-/** Returning visitor (name already saved on this device): re-attach identity, owner/tick status, and mark "active today". */
-async function restoreSession(){
-  if(!firebaseReady) return;
-  try{ state.uid = (await ensureAuth()).uid; }catch(e){ authError(e); return; }
-  state.isOwner = await checkOwner();
-  state.verified = state.isOwner || await checkVerified();
+async function createAccount(name, pin){
+  const emailKey = randomKey();
+  const cred = await createUserWithEmailAndPassword(auth, emailFor(emailKey), pin);
+  const user = cred.user;
   try{
-    const ref = doc(db,"users",state.uid);
-    const snap = await getDoc(ref);
-    if(snap.exists()){
-      const d = snap.data();
-      state.username = d.name || state.username;
-      state.photoURL = d.photoURL || "";
-      localStorage.setItem("pika_username", state.username);
-      const stale = !d.lastActiveMs || (Date.now() - d.lastActiveMs) > 6*3600*1000 || !!d.verified !== state.verified;
-      if(stale) await setDoc(ref, { name: state.username, verified: state.verified, lastActiveMs: Date.now() }, { merge:true });
-    } else {
-      await setDoc(ref, userPayload({ joinedAt: serverTimestamp() }));
-    }
+    await setDoc(doc(db,"usernames", lowerName(name)), { uid:user.uid, emailKey, name, nameLower: lowerName(name), at: serverTimestamp() });
+  }catch(e){
+    try{ await deleteUser(user); }catch(_){ try{ await signOut(auth); }catch(__){} }
+    throw new Error("TAKEN");
+  }
+  try{ await updateProfile(user, { displayName: name }); }catch(e){}
+  return user;
+}
+async function startSession(){
+  state.sessionId = randomKey();
+  localStorage.setItem("pika_session", state.sessionId);
+  await setDoc(doc(db,"sessions", state.isOwner ? "owner" : state.uid), { sessionId: state.sessionId, at: serverTimestamp() });
+}
+async function dedupeOwnerDocs(){
+  try{
+    const snap = await getDocs(query(collection(db,"users"), where("owner","==",true)));
+    for(const d of snap.docs){ if(d.id !== state.uid) await deleteDoc(d.ref); }
   }catch(e){ console.warn(e); }
+}
+async function ensureProfile(){
+  const ref = doc(db,"users",state.uid);
+  let existing = null;
+  try{ const s = await getDoc(ref); if(s.exists()) existing = s.data(); }catch(e){}
+  if(existing){
+    state.username = existing.name || state.username;
+    if(!state.photoURL) state.photoURL = existing.photoURL || "";
+  }
+  const base = { name: state.username, nameLower: lowerName(state.username), photoURL: state.photoURL || "", verified: state.verified, owner: state.isOwner, lastActiveMs: Date.now(), updatedAt: serverTimestamp() };
+  try{ await setDoc(ref, existing ? base : { ...base, joinedAt: serverTimestamp() }, { merge:true }); }catch(e){ console.warn(e); }
+  if(state.isOwner) await dedupeOwnerDocs();
+}
+function enterStore(){
+  $("#username-gate").hidden = true;
+  $("#app").hidden = false;
+  boot();
+}
+function showGate(notice){
+  $("#app").hidden = true;
+  $("#username-gate").hidden = false;
+  const msgs = { session:"You were signed out because this account was opened in another browser.", revoked:"You were logged out by the store admin." };
+  const n = $("#gate-notice");
+  if(msgs[notice]){ n.textContent = msgs[notice]; n.hidden = false; } else { n.hidden = true; }
+  if(notice === "banned") showBannedDialog();
+}
+async function forceLogout(reason){
+  sessionStorage.setItem("pika_notice", reason);
+  ["pika_pin","pika_session"].forEach(k=> localStorage.removeItem(k));
+  try{ await signOut(auth); }catch(e){}
+  location.reload();
+}
+/** Runs on every page load: restores a saved login, or shows the login screen. */
+async function initAuth(){
+  const notice = sessionStorage.getItem("pika_notice"); sessionStorage.removeItem("pika_notice");
+  if(!firebaseReady){ showGate(notice); return; }
+  try{ await auth.authStateReady(); }catch(e){}
+  const user = auth.currentUser;
+  if(!user){ showGate(notice); return; }
+  state.uid = user.uid;
+  if(user.isAnonymous){
+    if(!(await checkOwner())){ try{ await signOut(auth); }catch(e){} showGate(notice); return; }
+    state.isOwner = true; state.verified = true; state.username = CONFIG.ownerPublicName;
+  } else {
+    state.isOwner = false;
+    if(await isBannedAccount(user.uid)){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
+    state.verified = await checkVerified();
+    state.username = user.displayName || "Member";
+  }
+  const key = state.isOwner ? "owner" : state.uid;
+  const localSid = localStorage.getItem("pika_session");
+  try{
+    const s = await getDoc(doc(db,"sessions",key));
+    if(s.exists() && s.data().sessionId !== localSid){ try{ await signOut(auth); }catch(e){} showGate(String(s.data().sessionId).startsWith("revoked") ? "revoked" : "session"); return; }
+    if(!s.exists() || !localSid){ await startSession(); } else { state.sessionId = localSid; }
+  }catch(e){ console.warn(e); state.sessionId = localSid || ""; }
+  await ensureProfile();
+  enterStore();
 }
 
 function initOnboarding(){
-  const gate = $("#username-gate");
   const input = $("#gate-username-input");
-  const app = $("#app");
   let pickedAvatar = null;
-
-  if(state.username){
-    gate.hidden = true; app.hidden = false;
-    restoreSession().then(boot);
-    return;
-  }
-  input.value = suggestUsername();
-
   $("#gate-avatar-btn").addEventListener("click", ()=> $("#gate-avatar-input").click());
   $("#gate-avatar-input").addEventListener("change", e=>{
     const f = e.target.files[0]; if(!f) return;
@@ -1318,50 +1528,86 @@ function initOnboarding(){
     $("#gate-avatar-btn").innerHTML = `<img alt="" src="${URL.createObjectURL(f)}" />`;
   });
 
+  async function finish(user, { isNew }){
+    state.uid = user.uid;
+    state.verified = await checkVerified();
+    if(pickedAvatar){
+      try{ state.photoURL = await uploadAvatar(pickedAvatar); }
+      catch(e){ toast("Photo could not be saved. You can add it later from your Profile.", "ic-close"); }
+    }
+    await startSession();
+    await ensureProfile();
+    if(pickedAvatar && state.photoURL){ try{ await setDoc(doc(db,"users",state.uid), { photoURL: state.photoURL, verified: state.verified }, { merge:true }); }catch(e){} }
+    enterStore();
+  }
+
   const btn = $("#gate-continue-btn");
   btn.addEventListener("click", async ()=>{
     const raw = input.value.trim();
     if(!raw){ input.focus(); return; }
-    // Ask for notification permission RIGHT NOW (inside the tap) — browsers only allow it from a user gesture.
-    askNotifPermission();
+    if(!firebaseReady){ toast("Firebase is not connected", "ic-close"); return; }
     btn.setAttribute("disabled","true");
     try{
-      if(!firebaseReady) throw new Error("Firebase connect nahi hua");
-      try{ state.uid = (await ensureAuth()).uid; }catch(e){ authError(e); return; }
-
-      // 1) Owner secret name (whole text)?  2) Otherwise: name + tick code at the end (e.g. ZenXAhmed16241897)?
-      const owner = await tryClaimOwner(raw);
-      state.isOwner = owner;
-      state.verified = owner;
-      let name = raw;
-      if(!owner){
-        const m = raw.match(/(\d+)$/);
-        if(m){
-          for(let L = Math.min(12, m[1].length); L >= 6; L--){
-            const head = raw.slice(0, raw.length - L).trim();
-            if(!head) continue;
-            if(await tryClaimVerified(raw.slice(-L))){ name = head; state.verified = true; toast("Blue tick activate ho gaya"); break; }
-          }
+      // Longer than a normal name: could be the owner's secret name (checked by Firestore rules, never in this file).
+      if(raw.length > NAME_MAX){
+        try{ await signInAnon(); }catch(e){ authError(e); return; }
+        state.uid = auth.currentUser.uid;
+        if(await tryClaimOwner(raw)){
+          state.isOwner = true; state.verified = true; state.username = CONFIG.ownerPublicName;
+          if(pickedAvatar){ try{ state.photoURL = await uploadAvatar(pickedAvatar); }catch(e){} }
+          await startSession(); await ensureProfile(); enterStore();
+          return;
         }
+        try{ await deleteUser(auth.currentUser); }catch(e){ try{ await signOut(auth); }catch(_){} }
+        toast(`Name is too long (maximum ${NAME_MAX} characters).`, "ic-close");
+        return;
       }
-      if(!owner && isReservedName(name)){ toast("Yeh naam reserved hai — koi aur naam chunein", "ic-close"); return; }
-      state.username = (owner ? CONFIG.ownerPublicName : name).slice(0,20);
+      const nameErr = validateName(raw);
+      if(nameErr){ toast(nameErr, "ic-close"); return; }
+      if(isReservedName(raw)){ toast("This name is reserved. Please choose another name.", "ic-close"); return; }
 
-      if(pickedAvatar){
-        try{ state.photoURL = await uploadAvatar(pickedAvatar); }
-        catch(e){ toast("Photo save nahi hui — baad mein Profile se lagayein", "ic-close"); }
+      const r = await pinDialog({ mode:"signup", name: raw });
+      if(!r) return;
+
+      // Name already registered? Then this may be the owner of that account logging in again.
+      const acc = await findAccount(lowerName(r.name));
+      if(acc){
+        let user;
+        try{ user = (await signInWithEmailAndPassword(auth, emailFor(acc.emailKey), r.pin)).user; }
+        catch(e){
+          const c = (e && e.code) || "";
+          if(c.includes("too-many-requests") || c.includes("network")){ authError(e); return; }
+          toast("Someone Already Taken", "ic-close"); return;
+        }
+        if(await isBannedAccount(user.uid)){ try{ await signOut(auth); }catch(e){} showBannedDialog(); return; }
+        state.isOwner = false; state.username = acc.name;
+        localStorage.setItem("pika_pin", r.pin);
+        await finish(user, { isNew:false });
+        toast("Welcome back!");
+        return;
       }
-      localStorage.setItem("pika_username", state.username);
-      try{ await setDoc(doc(db,"users",state.uid), userPayload({ joinedAt: serverTimestamp() }), { merge:true }); }catch(e){ console.warn(e); }
-      gate.style.animation = "fadeIn .3s ease reverse";
-      setTimeout(()=>{ gate.hidden = true; app.hidden = false; boot(); }, 260);
+
+      const fin = await finalDialog({ name: r.name, pin: r.pin, action: "LOGIN" });
+      if(!fin.ok) return;
+      try{
+        const user = await createAccount(r.name, r.pin);
+        state.isOwner = false; state.username = r.name;
+        localStorage.setItem("pika_pin", r.pin);
+        await finish(user, { isNew:true });
+        await storeCredential(r.name, r.pin);
+        fin.close();
+      }catch(e){
+        fin.close();
+        if(e && e.message === "TAKEN") toast("Someone Already Taken", "ic-close"); else authError(e);
+      }
     }catch(e){
-      console.warn(e); toast(e.message || "Something went wrong", "ic-close");
+      console.warn(e); authError(e);
     }finally{
       btn.removeAttribute("disabled");
     }
   });
   input.addEventListener("keydown", e=>{ if(e.key==="Enter") btn.click(); });
+  initAuth();
 }
 
 let booted = false;
@@ -1369,16 +1615,35 @@ function boot(){
   if(booted) return; booted = true;
   renderProfile();
   initOneSignal();
-  initNotifBanner();
+  initNotifFlow();
   initProfileActions();
   initUsersPage();
   listenUsers();
+  listenSession();
   listenApps();
   listenCategories();
   listenChat();
+  startHeartbeat();
   if(state.isOwner){ listenCodes(); toast("Owner control enabled", "ic-check"); }
 }
-
+function listenSession(){
+  if(!firebaseReady) return;
+  onSnapshot(doc(db,"sessions", state.isOwner ? "owner" : state.uid), s=>{
+    if(!s.exists()) return;
+    const sid = s.data().sessionId;
+    if(state.sessionId && sid !== state.sessionId) forceLogout(String(sid).startsWith("revoked") ? "revoked" : "session");
+  }, err=> console.warn("session listener", err));
+}
+function startHeartbeat(){
+  const beat = ()=>{
+    if(!state.uid || document.visibilityState !== "visible") return;
+    updateDoc(doc(db,"users",state.uid), { lastActiveMs: Date.now() }).catch(()=>{});
+  };
+  beat();
+  setInterval(beat, 4*60*1000);
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") beat(); });
+  setInterval(()=> renderUsersPage(), 60*1000);
+}
 function listenUsers(){
   if(!firebaseReady) return;
   onSnapshot(collection(db,"users"), snap=>{
@@ -1386,17 +1651,18 @@ function listenUsers(){
     snap.docs.forEach(d=> m[d.id] = d.data());
     state.users = m;
     const me = m[state.uid];
-    if(me){ state.username = me.name || state.username; state.photoURL = me.photoURL || ""; localStorage.setItem("pika_username", state.username); }
+    if(me){
+      if(me.banned && !state.isOwner){ forceLogout("banned"); return; }
+      state.username = me.name || state.username; state.photoURL = me.photoURL || "";
+      state.verified = state.isOwner || !!me.verified;
+    }
     renderProfile();
     renderUsersPage();
     renderChatLog();
   }, err=> console.warn("users listener", err));
 }
 function listenCodes(){
-  onSnapshot(collection(db,"verifyCodes"), snap=>{
-    state.codes = snap.docs.map(d=>d.id).sort();
-    renderProfile();
-  }, err=> console.warn("codes listener", err));
+  onSnapshot(collection(db,"verifyCodes"), snap=>{ state.codes = snap.docs.map(d=>d.id).sort(); }, err=> console.warn("codes listener", err));
 }
 
 /* ---------------------------------------------------------------------
@@ -1461,19 +1727,9 @@ function listenCategories(){
 }
 
 function renderCategoryChips(){
-  const row = $("#category-row");
-  const addBtn = $("#add-category-chip");
-  $$(".chip[data-cat]", row).forEach(c=>{ if(c.dataset.cat!=="all") c.remove(); });
-  state.categories.forEach(cat=>{
-    const chip = document.createElement("button");
-    chip.className = "chip" + (state.activeCategory===cat.name ? " active" : "");
-    chip.dataset.cat = cat.name;
-    chip.innerHTML = `<span class="dot"></span> ${escapeHtml(cat.name)}`;
-    chip.addEventListener("click", ()=>{ state.activeCategory = cat.name; renderCategoryChips(); renderHome(); });
-    row.insertBefore(chip, addBtn);
-  });
-  // upload wizard category chips reuse same list
+  // (Home categories were removed — categories are only used when uploading.)
   const upRow = $("#upload-cat-row");
+  if(!upRow) return;
   upRow.innerHTML = "";
   state.categories.forEach(cat=>{
     const chip = document.createElement("button");
@@ -1483,9 +1739,10 @@ function renderCategoryChips(){
     chip.addEventListener("click", ()=>{ state.upload.category = cat.name; renderCategoryChips(); });
     upRow.appendChild(chip);
   });
-  if(!state.categories.length){
-    upRow.innerHTML = `<span style="font-size:12px;color:var(--text-faint)">No categories yet — create one from the Categories tab.</span>`;
-  }
+  const add = document.createElement("button");
+  add.type = "button"; add.className = "chip chip-add"; add.textContent = "+ New category";
+  add.addEventListener("click", createCategoryQuick);
+  upRow.appendChild(add);
 }
 
 // --- Hero carousel: cycles the "Featured on Pika" banner through a few
@@ -1497,6 +1754,22 @@ let heroTimer = null;
 function stopHeroCarousel(){
   if(heroTimer){ clearInterval(heroTimer); heroTimer = null; }
   heroApps = [];
+}
+
+/** Direct download from the banner. Password-protected uploads ask for the password (the owner can review them without it). */
+async function quickDownload(app){
+  if(app.hasPassword && !state.isOwner){
+    const entered = await askPassword();
+    if(entered === null) return;
+    if(await sha256(entered) !== app.passwordHash){ toast("Wrong password", "ic-close"); return; }
+  }
+  const url = app.fileUrl;
+  if(!url){ toast("No download link available for this file", "ic-close"); return; }
+  const a = document.createElement("a");
+  a.href = url; a.target = "_blank"; a.rel = "noopener"; a.download = "";
+  document.body.appendChild(a); a.click(); a.remove();
+  if(firebaseReady){ try{ await updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }); }catch(e){} }
+  toast("Download started");
 }
 
 function startHeroCarousel(apps){
@@ -1521,7 +1794,7 @@ function showHeroSlide(i, instant){
     title.textContent = featured.name;
     sub.textContent = (featured.description||"").slice(0,80) || `Uploaded by ${featured.uploaderName||"a member"}`;
     bg.style.backgroundImage = featured.thumbUrl ? `url(${featured.thumbUrl})` : "none";
-    $("#hero-primary-btn").onclick = ()=>openAppDetail(featured.id);
+    $("#hero-primary-btn").onclick = ()=>quickDownload(featured);
     $$("#hero-dots span").forEach((d,idx)=> d.classList.toggle("active", idx===i));
     bg.style.opacity = "0.55";
     title.style.opacity = "1";
@@ -1547,7 +1820,7 @@ function renderHome(){
     $("#hero-title").textContent = "No apps yet — be the first!";
     $("#hero-sub").textContent = "Upload your own APK, ZIP or RAR and share it with your members.";
     $("#hero-bg").style.backgroundImage = "none";
-    $("#hero-primary-btn").onclick = ()=>{ $$(".nav-btn")[2].click(); };
+    $("#hero-primary-btn").onclick = ()=>{ toast("There is nothing to download yet."); };
     $("#hero-dots").innerHTML = "";
   }
   $("#hero-upload-btn").onclick = ()=>{ $$(".nav-btn")[2].click(); };
@@ -1618,7 +1891,7 @@ function openCategoriesSheet(){
   }).join("") || `<div class="row" style="color:var(--text-faint)">No categories yet</div>`;
   list.addEventListener("click", async e=>{
     const b = e.target.closest("[data-del-cat]"); if(!b) return;
-    if(!(await confirmSheet("Delete category?", "Is category ko sab ke liye hata diya jayega.", "Delete"))) return;
+    if(!(await confirmSheet("Delete category?", "This category will be removed for everyone.", "Delete"))) return;
     try{ await deleteDoc(doc(db,"categories",b.dataset.delCat)); toast("Category deleted"); wrap.remove(); }
     catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
   });
@@ -1717,8 +1990,8 @@ function openAppDetail(appId){
       <div class="dl-progress" id="detail-dl-progress" hidden><i id="detail-dl-bar"></i></div>
       <div class="detail-footer">
         <button class="btn btn-primary btn-lg btn-block" id="detail-download-btn">
-          <svg><use href="${app.hasPassword?"ic-lock":"ic-download"}"/></svg>
-          ${app.hasPassword ? "Enter password to download" : "Download"}
+          <svg><use href="${app.hasPassword && !state.isOwner ? "#ic-lock" : "#ic-download"}"/></svg>
+          ${app.hasPassword && !state.isOwner ? "Enter password to download" : (app.hasPassword ? "Download (owner access)" : "Download")}
         </button>
         ${canManage(app.uploaderUid) ? `<button class="btn btn-danger btn-lg btn-block" style="margin-top:10px" id="detail-delete-btn"><svg><use href="#ic-trash"/></svg> Delete this upload</button>` : ""}
         ${app.downloadUrl ? `<a class="btn btn-ghost btn-lg btn-block" style="margin-top:10px" href="${escapeHtml(app.downloadUrl)}" target="_blank" rel="noopener noreferrer"><svg><use href="#ic-chevron"/></svg> Visit link</a>` : ""}
@@ -1736,7 +2009,7 @@ function openAppDetail(appId){
   });
 
   $("#detail-download-btn").addEventListener("click", async ()=>{
-    if(app.hasPassword){
+    if(app.hasPassword && !state.isOwner){
       const entered = await askPassword();
       if(entered===null) return;
       const hash = await sha256(entered);
@@ -1746,7 +2019,7 @@ function openAppDetail(appId){
   });
 }
 async function deleteApp(app){
-  if(!(await confirmSheet(`Delete "${app.name}"?`, "Yeh upload store se hamesha ke liye hat jayega.", "Delete"))) return false;
+  if(!(await confirmSheet(`Delete "${app.name}"?`, "This upload will be removed from the store permanently.", "Delete"))) return false;
   try{ await deleteDoc(doc(db,"apps",app.id)); toast("Upload deleted"); return true; }
   catch(e){ toast("Delete failed: " + (e.code||e.message), "ic-close"); return false; }
 }
@@ -1913,7 +2186,7 @@ function initUploadWizard(){
 
   async function submitUpload(){
     if(!firebaseReady || !state.uid){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
-    if(state.users[state.uid] && state.users[state.uid].banned){ toast("Aap ko upload karne se rok diya gaya hai","ic-close"); return; }
+    if(state.users[state.uid] && state.users[state.uid].banned){ toast("You are not allowed to upload","ic-close"); return; }
     if(!storageReady()){ toast("Connect your VPS upload API first — see guide.md","ic-close"); return; }
     const btn = $("#wizard-next-btn");
     btn.setAttribute("disabled","true");
@@ -2085,7 +2358,7 @@ function openChatPanel(){
   // Delete a message (owner: any message, everyone else: only their own)
   $("#chat-log-el").addEventListener("click", async e=>{
     const b = e.target.closest("[data-del-msg]"); if(!b) return;
-    if(!(await confirmSheet("Delete message?", "Yeh message sab ke liye hat jayega.", "Delete"))) return;
+    if(!(await confirmSheet("Delete message?", "This message will be removed for everyone.", "Delete"))) return;
     try{ await deleteDoc(doc(db,"chat",b.dataset.delMsg)); }
     catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
   });
@@ -2094,8 +2367,10 @@ function openChatPanel(){
     const input = $("#chat-input");
     const text = input.value.trim();
     if(!text) return;
+    const problem = checkChatText(text, state.verified, state.isOwner);
+    if(problem){ toast(problem, "ic-close"); return; }
     if(!firebaseReady || !state.uid){ toast("Connect Firebase first — see guide.md","ic-close"); return; }
-    if(state.users[state.uid] && state.users[state.uid].banned){ toast("Aap ko chat se rok diya gaya hai","ic-close"); return; }
+    if(state.users[state.uid] && state.users[state.uid].banned){ toast("You are not allowed to chat","ic-close"); return; }
     input.value = "";
     try{
       await addDoc(collection(db,"chat"), { name: state.username, uid: state.uid, isOwner: state.isOwner, deviceId: state.deviceId, text: text.slice(0,1000), createdAt: serverTimestamp() });
@@ -2141,15 +2416,48 @@ async function askNotifPermission(){
   updateNotifRow();
   const nb = $(".notif-banner"); if(nb && notifSupported() && Notification.permission !== "default") nb.remove();
 }
-function initNotifBanner(){
+function initNotifFlow(){
   updateNotifRow();
-  if(!notifSupported() || Notification.permission !== "default" || localStorage.getItem("pika_notif_dismissed")) return;
+  if(!notifSupported()) return;
+  if(Notification.permission === "default"){
+    const last = Number(localStorage.getItem("pika_notif_dismissed") || 0);
+    if(Date.now() - last > 24*3600*1000) showNotifModal();
+  } else if(Notification.permission === "denied"){
+    showDeniedBanner();
+  }
+}
+function showNotifModal(){
+  const html = `
+  <div class="sheet-backdrop dlg" id="nf-backdrop">
+    <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+      <h3 style="text-align:center;font-size:19px;margin:0 0 8px;">Enable Notifications</h3>
+      <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;line-height:1.55">Get live chat updates and new uploads instantly, even when the app is closed.</p>
+      <button class="btn btn-primary btn-lg btn-block" id="nf-yes" type="button"><svg><use href="#ic-chat"/></svg> Enable Notifications</button>
+      <button class="btn btn-ghost btn-block" id="nf-no" type="button" style="margin-top:10px">Not now</button>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  $("#nf-yes").addEventListener("click", async ()=>{
+    $("#nf-backdrop").remove();
+    await askNotifPermission();          // opens the native browser prompt
+    if(notifSupported() && Notification.permission === "denied") showDeniedBanner();
+  });
+  $("#nf-no").addEventListener("click", ()=>{ localStorage.setItem("pika_notif_dismissed", String(Date.now())); $("#nf-backdrop").remove(); });
+}
+function showDeniedBanner(){
+  if(sessionStorage.getItem("pika_denied_hide") || $(".deny-banner")) return;
   const b = document.createElement("div");
-  b.className = "notif-banner";
-  b.innerHTML = `<div><b>Notifications ON karein</b><small>Group chat ke naye messages miss na hon</small></div><button class="btn btn-primary" id="nb-yes">Allow</button><button class="nb-x" id="nb-no"><svg width="14" height="14"><use href="#ic-close"/></svg></button>`;
+  b.className = "deny-banner";
+  b.innerHTML = `<div class="row-top"><b>Notifications are blocked</b><button class="mini-btn" id="dn-how" type="button">How to fix</button><button class="nb-x" id="dn-x" type="button" aria-label="Dismiss"><svg width="14" height="14"><use href="#ic-close"/></svg></button></div>
+    <ol id="dn-steps" hidden>
+      <li>Tap the lock / settings icon next to the site address (<b>${escapeHtml(location.host)}</b>) at the top of the browser.</li>
+      <li>Open <b>Site settings → Permissions → Notifications</b>.</li>
+      <li>Change the setting from <b>Block</b> to <b>Allow</b>.</li>
+      <li>Refresh this page.</li>
+    </ol>`;
   document.body.appendChild(b);
-  $("#nb-yes").addEventListener("click", askNotifPermission);
-  $("#nb-no").addEventListener("click", ()=>{ localStorage.setItem("pika_notif_dismissed","1"); b.remove(); });
+  $("#dn-how").addEventListener("click", ()=>{ const s = $("#dn-steps"); s.hidden = !s.hidden; });
+  $("#dn-x").addEventListener("click", ()=>{ sessionStorage.setItem("pika_denied_hide","1"); b.remove(); });
 }
 async function initOneSignal(){
   // Inside the AppMint/WebView APK the native OneSignal SDK handles push, so the web SDK is skipped there.
@@ -2184,8 +2492,12 @@ function renderProfile(){
   $("#profile-downloads-count").textContent = fmtCount(mine.reduce((s,a)=> s + (a.downloadCount||0), 0));
   $("#row-verify").hidden = state.verified;
   $("#danger-zone").hidden = state.isOwner;
+  $("#row-secret").hidden = state.isOwner;
+  $("#row-change-creds").hidden = state.isOwner;
+  const pin = localStorage.getItem("pika_pin") || "";
+  $("#profile-secret").textContent = pin ? `${state.username}${pin}` : "Not saved on this device";
+  $("#copy-secret-btn").hidden = !pin;
 
-  // Uploads list: members see their own, the owner sees everything (and can delete any)
   const list = state.isOwner ? state.apps : mine;
   $("#my-uploads-title").textContent = state.isOwner ? "All uploads (Owner)" : "My uploads";
   $("#my-uploads-list").innerHTML = list.length ? list.map(a=>{
@@ -2195,42 +2507,62 @@ function renderProfile(){
       <div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • ${fmtCount(a.downloadCount||0)} downloads${state.isOwner ? " • " + escapeHtml(u.name) : ""}</small></div>
       <button class="icon-del" data-del-app="${a.id}" title="Delete"><svg><use href="#ic-trash"/></svg></button>
     </div>`;
-  }).join("") : `<div class="mini-row" style="color:var(--text-faint)">Abhi koi upload nahi.</div>`;
-
-  // Owner panel — members + tick codes
-  $("#owner-panel").hidden = !state.isOwner;
-  if(state.isOwner){
-    const entries = Object.entries(state.users).sort((a,b)=> String(a[1].name||"").localeCompare(String(b[1].name||"")));
-    $("#owner-users-list").innerHTML = entries.map(([uid,u])=>`
-      <div class="mini-row" style="flex-wrap:wrap">
-        ${avatarHtml(u.name, u.photoURL, "lg")}
-        <div class="mini-main"><b>${escapeHtml(u.name||"—")}${tick(u.verified)}</b><small>${u.banned ? "BANNED • " : ""}${uid.slice(0,6)}</small></div>
-        <button class="mini-btn" data-u-rename="${uid}">Rename</button>
-        ${u.photoURL ? `<button class="mini-btn" data-u-nophoto="${uid}">No photo</button>` : ""}
-        ${uid === state.uid ? "" : (u.verified ? `<button class="mini-btn" data-u-untick="${uid}">Remove tick</button>` : `<button class="mini-btn" data-u-tick="${uid}">Give tick</button>`)}
-        ${u.verified ? "" : `<button class="mini-btn red" data-u-ban="${uid}">${u.banned ? "Unban" : "Ban"}</button>`}
-      </div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
-    $("#owner-codes-list").innerHTML = state.codes.map(c=>`
-      <div class="mini-row"><div class="mini-main"><b>${escapeHtml(c)}</b></div><button class="icon-del" data-del-code="${escapeHtml(c)}" title="Delete"><svg><use href="#ic-trash"/></svg></button></div>`
-    ).join("") || `<div class="mini-row" style="color:var(--text-faint)">Abhi koi code nahi.</div>`;
-  }
+  }).join("") : `<div class="mini-row" style="color:var(--text-faint)">No uploads yet.</div>`;
 }
 
-async function changeMyName(){
-  const v = await askText({ title:"Change display name", value: state.username, placeholder:"Your name" });
-  if(v === null) return;
-  const name = v.trim();
-  if(!name || name === state.username) return;
-  if(isReservedName(name)){ toast("Yeh naam reserved hai", "ic-close"); return; }
+/* Change name and/or secret code — same two-step pattern as signing up. */
+async function changeCredentials(){
+  if(state.isOwner){ toast("The owner logs in with the secret name only."); return; }
+  const user = auth.currentUser;
+  if(!user || user.isAnonymous){ toast("Please log in again.", "ic-close"); return; }
+  const oldName = state.username;
+  const oldPin = localStorage.getItem("pika_pin") || "";
+  const r = await pinDialog({ mode:"change", name: oldName, pin: oldPin });
+  if(!r) return;
+  if(r.name === oldName && r.pin === oldPin){ toast("Nothing changed."); return; }
+  const nameChanged = r.name !== oldName;
+  const pinChanged = r.pin !== oldPin;
+  if(nameChanged && lowerName(r.name) !== lowerName(oldName)){
+    if(isReservedName(r.name)){ toast("This name is reserved. Please choose another name.", "ic-close"); return; }
+    if(await findAccount(lowerName(r.name))){ toast("Someone Already Taken", "ic-close"); return; }
+  }
+  const fin = await finalDialog({ name: r.name, pin: r.pin, action: "UPDATE" });
+  if(!fin.ok) return;
   try{
-    await setDoc(doc(db,"users",state.uid), { name, verified: state.verified, updatedAt: serverTimestamp() }, { merge:true });
-    state.username = name; localStorage.setItem("pika_username", name);
-    toast("Name updated"); renderProfile();
-  }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+    // Re-check identity with the current code (Firebase requires a recent login for these changes)
+    let current = oldPin;
+    if(!current){
+      const v = await askText({ title:"Enter your current secret code", placeholder:"6-digit code", max:6, okLabel:"OK" });
+      if(v === null){ fin.close(); return; }
+      current = v.trim();
+    }
+    try{ await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, current)); }
+    catch(e){ fin.close(); toast("Your current secret code is wrong.", "ic-close"); return; }
+
+    if(nameChanged){
+      const emailKey = user.email.split("@")[0];
+      const oldLower = lowerName(oldName), newLower = lowerName(r.name);
+      if(oldLower === newLower){
+        await deleteDoc(doc(db,"usernames",oldLower));
+        await setDoc(doc(db,"usernames",newLower), { uid:user.uid, emailKey, name:r.name, nameLower:newLower, at: serverTimestamp() });
+      } else {
+        await setDoc(doc(db,"usernames",newLower), { uid:user.uid, emailKey, name:r.name, nameLower:newLower, at: serverTimestamp() });
+        await deleteDoc(doc(db,"usernames",oldLower)).catch(()=>{});
+      }
+      await setDoc(doc(db,"users",state.uid), { name:r.name, nameLower:newLower, verified: state.verified, updatedAt: serverTimestamp() }, { merge:true });
+      try{ await updateProfile(user, { displayName: r.name }); }catch(e){}
+      state.username = r.name;
+    }
+    if(pinChanged){ await updatePassword(user, r.pin); }
+    localStorage.setItem("pika_pin", r.pin);
+    await storeCredential(r.name, r.pin);
+    fin.close();
+    toast("Name and secret code updated"); renderProfile();
+  }catch(e){ fin.close(); console.warn(e); toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
 async function changeMyPhoto(file){
   if(!file) return;
-  toast("Photo upload ho rahi hai…", "ic-upload");
+  toast("Uploading photo…", "ic-upload");
   try{
     const url = await uploadAvatar(file);
     await setDoc(doc(db,"users",state.uid), { photoURL: url, verified: state.verified, updatedAt: serverTimestamp() }, { merge:true });
@@ -2238,16 +2570,22 @@ async function changeMyPhoto(file){
   }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
 async function enterTickCode(){
-  const v = await askText({ title:"Blue-tick code", placeholder:"Code (sirf numbers)", max:12, okLabel:"Verify" });
+  const v = await askText({ title:"Blue-tick code", placeholder:"Enter your code", max:12, okLabel:"Verify" });
   if(v === null) return;
   const code = v.trim();
-  if(!/^\d{6,12}$/.test(code)){ toast("Code 6 se 12 numbers ka hota hai", "ic-close"); return; }
+  if(!/^\d{6,12}$/.test(code)){ toast("That code is not valid.", "ic-close"); return; }
   if(await tryClaimVerified(code)){
     try{ await setDoc(doc(db,"users",state.uid), { verified: true, updatedAt: serverTimestamp() }, { merge:true }); }catch(e){ console.warn(e); }
-    state.verified = true; toast("Blue tick activate ho gaya"); renderProfile();
+    state.verified = true; toast("Blue tick activated"); renderProfile();
   } else {
-    toast("Code galat hai", "ic-close");
+    toast("Wrong code.", "ic-close");
   }
+}
+async function logoutSelf(){
+  if(!(await confirmSheet("Log out?", state.isOwner ? "You will need to enter the owner secret name again." : "You can log back in with your name and 6-digit secret code.", "Log out"))) return;
+  ["pika_pin","pika_session"].forEach(k=> localStorage.removeItem(k));
+  try{ await signOut(auth); }catch(e){}
+  location.reload();
 }
 
 /* Permanent account deletion. Content is removed from Firestore here; the notifier service on the
@@ -2258,12 +2596,12 @@ async function deleteWhere(colName, field, uid){
   return snap.size;
 }
 async function deleteMyAccount(){
-  if(state.isOwner){ toast("Owner account yahan se delete nahi hota", "ic-lock"); return; }
-  if(!state.uid){ toast("Pehle login ho jayein", "ic-close"); return; }
-  const ok = await confirmSheet("Account permanently delete?",
-    "Aapki saari uploads, chat messages, categories, profile aur photo hamesha ke liye delete ho jayengi — Oracle server se bhi. Yeh wapas nahi ho sakta.", "Continue");
+  if(state.isOwner){ toast("The owner account cannot be deleted from here.", "ic-lock"); return; }
+  if(!state.uid){ toast("Please log in first.", "ic-close"); return; }
+  const ok = await confirmSheet("Delete account permanently?",
+    "All your uploads, chat messages, categories, profile and photo will be deleted forever — from the Oracle server too. This cannot be undone.", "Continue");
   if(!ok) return;
-  const t = await askText({ title:"Confirm karne ke liye DELETE likhein", placeholder:"DELETE", max:10, okLabel:"Delete forever" });
+  const t = await askText({ title:"Type DELETE to confirm", placeholder:"DELETE", max:10, okLabel:"Delete forever" });
   if(!t || t.trim().toUpperCase() !== "DELETE"){ toast("Cancelled"); return; }
   toast("Deleting…", "ic-trash");
   try{
@@ -2271,43 +2609,70 @@ async function deleteMyAccount(){
     await deleteWhere("apps", "uploaderUid", uid);
     await deleteWhere("chat", "uid", uid);
     await deleteWhere("categories", "ownerUid", uid);
+    await deleteDoc(doc(db,"usernames", lowerName(state.username))).catch(()=>{});
+    await deleteDoc(doc(db,"sessions", uid)).catch(()=>{});
     await deleteDoc(doc(db,"users",uid));
-    try{ await deleteUser(auth.currentUser); }catch(e){ try{ await signOut(auth); }catch(_){} }
-    ["pika_username","pika_notif_dismissed"].forEach(k=> localStorage.removeItem(k));
-    toast("Account delete ho gaya");
+    const u = auth.currentUser;
+    try{ await deleteUser(u); }
+    catch(e){
+      try{
+        const pin = localStorage.getItem("pika_pin");
+        if(pin && u.email){ await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, pin)); await deleteUser(u); }
+        else await signOut(auth);
+      }catch(_){ try{ await signOut(auth); }catch(__){} }
+    }
+    ["pika_pin","pika_session","pika_notif_dismissed"].forEach(k=> localStorage.removeItem(k));
+    toast("Account deleted");
     setTimeout(()=> location.reload(), 900);
   }catch(e){ console.warn(e); toast("Delete failed: " + (e.code||e.message), "ic-close"); }
 }
 
 /* ---------------------------------------------------------------------
-   12d. USERS PAGE — how many members joined, tap one to see their uploads
+   12d. USERS PAGE — members, last seen, tap a member for their uploads (+ owner controls)
    --------------------------------------------------------------------- */
-function joinedMs(u){ return u && u.joinedAt && u.joinedAt.toMillis ? u.joinedAt.toMillis() : 0; }
 function renderUsersPage(){
   const list = $("#users-list"); if(!list) return;
-  const entries = Object.entries(state.users);
+  $("#users-owner-tools").hidden = !state.isOwner;
+  let entries = Object.entries(state.users);
+  if(!state.isOwner) entries = entries.filter(([,u])=> !u.banned);
   $("#users-count-title").textContent = `${entries.length} member${entries.length === 1 ? "" : "s"} joined`;
   const counts = {};
   state.apps.forEach(a=>{ if(a.uploaderUid) counts[a.uploaderUid] = (counts[a.uploaderUid]||0) + 1; });
-  entries.sort((a,b)=> (b[1].verified?1:0) - (a[1].verified?1:0) || joinedMs(b[1]) - joinedMs(a[1]));
-  list.innerHTML = entries.map(([uid,u])=>`
-    <div class="mini-row tap" data-user-open="${uid}">
+  const rank = u => u.banned ? 2 : (u.verified ? 0 : 1);          // blue tick first, normal members below, banned last (owner only)
+  entries.sort((a,b)=> rank(a[1]) - rank(b[1]) || (b[1].lastActiveMs||0) - (a[1].lastActiveMs||0));
+  list.innerHTML = entries.map(([uid,u])=>{
+    const status = presenceText(u.lastActiveMs);
+    const n = counts[uid]||0;
+    return `<div class="mini-row tap" data-user-open="${uid}">
       ${avatarHtml(u.name, u.photoURL, "lg")}
-      <div class="mini-main"><b>${escapeHtml(u.name||"—")}${tick(u.verified)}</b><small>${counts[uid]||0} upload${(counts[uid]||0)===1?"":"s"}</small></div>
+      <div class="mini-main"><b>${escapeHtml(u.name||"—")}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
+        <small class="${status==="Online" ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small></div>
       <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
-    </div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">Abhi koi member nahi.</div>`;
+    </div>`;
+  }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
 }
 function initUsersPage(){
   $("#users-list").addEventListener("click", e=>{
     const r = e.target.closest("[data-user-open]");
     if(r) openUserSheet(r.dataset.userOpen);
   });
+  $("#manage-codes-btn").addEventListener("click", openCodesSheet);
 }
+function joinedMs(u){ return u && u.joinedAt && u.joinedAt.toMillis ? u.joinedAt.toMillis() : 0; }
 function openUserSheet(uid){
-  const u = userView(uid, (state.users[uid]||{}).name, false);
+  const raw = state.users[uid] || {};
+  const u = userView(uid, raw.name, false);
   const apps = state.apps.filter(a=> a.uploaderUid === uid);
   const dl = apps.reduce((s,a)=> s + (a.downloadCount||0), 0);
-  const jm = joinedMs(state.users[uid]);
+  const jm = joinedMs(raw);
+  const controls = (state.isOwner && uid !== state.uid && !raw.owner) ? `
+      <h3 class="section-title">Owner controls</h3>
+      <div class="settings-list" style="margin-bottom:20px" id="owner-actions">
+        <div class="mini-row tap" data-act="rename"><div class="mini-main"><b>Rename</b><small>Change an inappropriate name</small></div></div>
+        <div class="mini-row tap" data-act="${u.verified ? "untick" : "tick"}"><div class="mini-main"><b>${u.verified ? "Remove blue tick" : "Give blue tick"}</b></div></div>
+        <div class="mini-row tap" data-act="${raw.banned ? "unban" : "ban"}"><div class="mini-main"><b style="color:var(--danger)">${raw.banned ? "Unban user" : "Ban user"}</b><small>${raw.banned ? "Allow this account to log in again" : "Logs them out; their data stays; they see a banned message on login"}</small></div></div>
+        <div class="mini-row tap" data-act="logout"><div class="mini-main"><b>Log out from their browser</b><small>Removes them from the Users list until they log in again</small></div></div>
+      </div>` : "";
   const html = `
   <div class="sheet-backdrop" id="user-backdrop">
     <div class="sheet">
@@ -2316,35 +2681,123 @@ function openUserSheet(uid){
       <div style="display:flex;align-items:center;gap:14px;padding:24px 18px 14px;">
         ${avatarHtml(u.name, u.photo, "xl")}
         <div><h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center">${escapeHtml(u.name)}${tick(u.verified)}</h2>
-        <div style="font-size:12px;color:var(--text-faint)">${jm ? "Joined " + new Date(jm).toLocaleDateString() : "Member of Pika Store"}</div></div>
+        <div class="${presenceText(raw.lastActiveMs)==="Online" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw.lastActiveMs)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div></div>
       </div>
       <div class="profile-stats"><div class="stat"><b>${apps.length}</b><span>Uploads</span></div><div class="stat"><b>${fmtCount(dl)}</b><span>Downloads</span></div></div>
+      ${controls}
       <div class="settings-list" style="margin-bottom:24px" id="user-apps-list">
         ${apps.length ? apps.map(a=>`
           <div class="mini-row tap" data-open-app="${a.id}">
             <img class="thumb" alt="" src="${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}" />
             <div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • ${fmtCount(a.downloadCount||0)} downloads</small></div>
-          </div>`).join("") : `<div class="mini-row" style="color:var(--text-faint)">Is member ne abhi kuch upload nahi kiya.</div>`}
+          </div>`).join("") : `<div class="mini-row" style="color:var(--text-faint)">This member has not uploaded anything yet.</div>`}
       </div>
     </div>
   </div>`;
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#user-backdrop");
-  wrap.addEventListener("click", e=>{
+  wrap.addEventListener("click", async e=>{
     if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
     const r = e.target.closest("[data-open-app]");
-    if(r){ wrap.remove(); openAppDetail(r.dataset.openApp); }
+    if(r){ wrap.remove(); openAppDetail(r.dataset.openApp); return; }
+    const act = e.target.closest("[data-act]");
+    if(act){ const done = await ownerAction(act.dataset.act, uid); if(done) wrap.remove(); }
+  });
+}
+async function ownerAction(act, uid){
+  if(!state.isOwner) return false;
+  const raw = state.users[uid] || {};
+  try{
+    if(act === "rename"){
+      const v = await askText({ title:"Rename member", value: raw.name || "", placeholder:"New name", max:NAME_MAX });
+      if(v === null) return false;
+      const nn = v.trim(), e = validateName(nn);
+      if(e){ toast(e, "ic-close"); return false; }
+      const oldLower = raw.nameLower || lowerName(raw.name);
+      const newLower = lowerName(nn);
+      if(newLower !== oldLower){
+        if(await findAccount(newLower)){ toast("Someone Already Taken", "ic-close"); return false; }
+        const os = await getDoc(doc(db,"usernames",oldLower));
+        if(os.exists() && os.data().uid === uid){
+          await setDoc(doc(db,"usernames",newLower), { uid, emailKey: os.data().emailKey, name: nn, nameLower: newLower, at: serverTimestamp() });
+          await deleteDoc(doc(db,"usernames",oldLower));
+        }
+      }
+      await updateDoc(doc(db,"users",uid), { name: nn, nameLower: newLower, updatedAt: serverTimestamp() });
+      toast("Name changed"); return true;
+    }
+    if(act === "tick"){
+      await setDoc(doc(db,"verifiedClaims",uid), { code:"owner", at: serverTimestamp() });
+      await updateDoc(doc(db,"users",uid), { verified: true, updatedAt: serverTimestamp() });
+      toast("Blue tick given"); return true;
+    }
+    if(act === "untick"){
+      await deleteDoc(doc(db,"verifiedClaims",uid));
+      await updateDoc(doc(db,"users",uid), { verified: false, updatedAt: serverTimestamp() });
+      toast("Blue tick removed"); return true;
+    }
+    if(act === "ban"){
+      if(!(await confirmSheet(`Ban ${raw.name||"member"}?`, "They will be logged out and cannot log in again. Their data is kept.", "Ban"))) return false;
+      await setDoc(doc(db,"bans",uid), { name: raw.name || "", at: serverTimestamp() });
+      await updateDoc(doc(db,"users",uid), { banned: true, updatedAt: serverTimestamp() });
+      await setDoc(doc(db,"sessions",uid), { sessionId: "revoked-" + randomKey(), at: serverTimestamp() });
+      toast("Member banned"); return true;
+    }
+    if(act === "unban"){
+      await deleteDoc(doc(db,"bans",uid));
+      await updateDoc(doc(db,"users",uid), { banned: false, updatedAt: serverTimestamp() });
+      toast("Member unbanned"); return true;
+    }
+    if(act === "logout"){
+      if(!(await confirmSheet(`Log out ${raw.name||"member"}?`, "They are logged out of their browser and disappear from the Users list until they log in again.", "Log out"))) return false;
+      await setDoc(doc(db,"sessions",uid), { sessionId: "revoked-" + randomKey(), at: serverTimestamp() });
+      await deleteDoc(doc(db,"users",uid));
+      toast("User logged out"); return true;
+    }
+  }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+  return false;
+}
+function openCodesSheet(){
+  const render = ()=> state.codes.map(c=>`<div class="mini-row"><div class="mini-main"><b class="mono">${escapeHtml(c)}</b></div><button class="icon-del" data-del-code="${escapeHtml(c)}"><svg><use href="#ic-trash"/></svg></button></div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No codes yet.</div>`;
+  const html = `
+  <div class="sheet-backdrop" id="codes-backdrop">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <h3 style="padding:22px 18px 6px;margin:0;font-size:17px">Blue-tick codes</h3>
+      <p class="hint-p" style="margin-bottom:12px">A member enters a code in Profile → Enter blue-tick code and gets the blue tick (no extra powers). Deleting a code does not remove ticks already given.</p>
+      <div class="settings-list" id="codes-list">${render()}</div>
+      <div style="padding:12px 18px 24px"><button class="btn btn-primary btn-block" id="codes-add"><svg><use href="#ic-plus"/></svg> Add new code</button></div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#codes-backdrop");
+  const refresh = ()=>{ const l = $("#codes-list"); if(l) l.innerHTML = render(); };
+  const t = setInterval(()=>{ if(!document.body.contains(wrap)) clearInterval(t); else refresh(); }, 800);
+  wrap.addEventListener("click", async e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
+    const d = e.target.closest("[data-del-code]");
+    if(d){ try{ await deleteDoc(doc(db,"verifyCodes",d.dataset.delCode)); toast("Code deleted"); }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); } return; }
+    if(e.target.closest("#codes-add")){
+      const v = await askText({ title:"New blue-tick code (6-12 digits)", placeholder:"Digits only", max:12, okLabel:"Add" });
+      if(v === null) return;
+      const code = v.trim();
+      if(!/^\d{6,12}$/.test(code)){ toast("Use 6 to 12 digits.", "ic-close"); return; }
+      try{ await setDoc(doc(db,"verifyCodes",code), { createdAt: serverTimestamp() }); toast("Code added"); }
+      catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+    }
   });
 }
 
-/* Anyone can create a category from the home screen. */
+/* Category creation (used from the upload screen). */
 async function createCategoryQuick(){
-  if(!firebaseReady || !state.uid){ toast("Pehle login ho jayein", "ic-close"); return; }
-  const v = await askText({ title:"New category", placeholder:"e.g. Games, Tools, Mods", max:24, okLabel:"Create" });
+  if(!firebaseReady || !state.uid){ toast("Please log in first.", "ic-close"); return; }
+  const v = await askText({ title:"New category", placeholder:"e.g. Games, Tools", max:24, okLabel:"Create" });
   if(v === null) return;
   const name = v.trim();
   if(!name) return;
-  if(state.categories.some(c=> (c.name||"").toLowerCase() === name.toLowerCase())){ toast("Yeh category pehle se hai", "ic-close"); return; }
+  if(containsAbuse(name)){ toast("Please choose a respectful name.", "ic-close"); return; }
+  if(state.categories.some(c=> (c.name||"").toLowerCase() === name.toLowerCase())){ toast("This category already exists.", "ic-close"); return; }
   try{
     await addDoc(collection(db,"categories"), { name, ownerName: state.username, ownerUid: state.uid, isOwner: state.isOwner, ownerDevice: state.deviceId, createdAt: serverTimestamp() });
     toast(`Category "${name}" created`);
@@ -2352,77 +2805,30 @@ async function createCategoryQuick(){
 }
 
 function initProfileActions(){
-  $("#row-change-name").addEventListener("click", changeMyName);
+  $("#row-change-creds").addEventListener("click", changeCredentials);
   $("#row-change-photo").addEventListener("click", ()=> $("#profile-photo-input").click());
   $("#profile-avatar").addEventListener("click", ()=> $("#profile-photo-input").click());
   $("#profile-photo-input").addEventListener("change", e=>{ changeMyPhoto(e.target.files[0]); e.target.value = ""; });
   $("#row-theme").addEventListener("click", ()=> $("#theme-toggle-btn").click());
   $("#row-verify").addEventListener("click", enterTickCode);
+  $("#row-logout").addEventListener("click", logoutSelf);
   $("#row-delete-account").addEventListener("click", deleteMyAccount);
-  $("#row-notif").addEventListener("click", async ()=>{
-    if(!notifSupported()){ toast("Notifications is app ki settings se manage hoti hain"); return; }
-    if(Notification.permission === "denied"){ toast("Phone/browser settings mein Pika Store ke notifications allow karein", "ic-close"); return; }
-    await askNotifPermission();
-    toast(Notification.permission === "granted" ? "Notifications ON" : "Notifications abhi bhi off hain");
+  $("#copy-secret-btn").addEventListener("click", async ()=>{
+    const pin = localStorage.getItem("pika_pin") || "";
+    if(!pin) return;
+    const ok = await copyText(state.username + pin);
+    toast(ok ? "Copied" : "Copy failed", ok ? "ic-check" : "ic-close");
   });
-
-  // Delete an upload from the profile list
+  $("#row-notif").addEventListener("click", async ()=>{
+    if(!notifSupported()){ toast("Notifications are managed in the app settings."); return; }
+    if(Notification.permission === "denied"){ sessionStorage.removeItem("pika_denied_hide"); showDeniedBanner(); return; }
+    await askNotifPermission();
+    toast(Notification.permission === "granted" ? "Notifications ON" : "Notifications are still off");
+  });
   $("#my-uploads-list").addEventListener("click", async e=>{
     const b = e.target.closest("[data-del-app]"); if(!b) return;
     const app = state.apps.find(a=>a.id === b.dataset.delApp);
     if(app) await deleteApp(app);
-  });
-
-  // Owner panel actions (Firestore rules reject all of these for non-owners)
-  $("#owner-users-list").addEventListener("click", async e=>{
-    if(!state.isOwner) return;
-    const ren = e.target.closest("[data-u-rename]");
-    const nop = e.target.closest("[data-u-nophoto]");
-    const ban = e.target.closest("[data-u-ban]");
-    const tk  = e.target.closest("[data-u-tick]");
-    const utk = e.target.closest("[data-u-untick]");
-    try{
-      if(ren){
-        const uid = ren.dataset.uRename;
-        const v = await askText({ title:"Rename member", value: (state.users[uid]||{}).name || "", placeholder:"New name" });
-        if(v === null || !v.trim()) return;
-        await updateDoc(doc(db,"users",uid), { name: v.trim(), updatedAt: serverTimestamp() });
-        toast("Name changed");
-      } else if(nop){
-        await updateDoc(doc(db,"users",nop.dataset.uNophoto), { photoURL: "", updatedAt: serverTimestamp() });
-        toast("Photo removed");
-      } else if(tk){
-        const uid = tk.dataset.uTick;
-        await setDoc(doc(db,"verifiedClaims",uid), { code:"owner", at: serverTimestamp() });
-        await updateDoc(doc(db,"users",uid), { verified: true, updatedAt: serverTimestamp() });
-        toast("Blue tick de diya");
-      } else if(utk){
-        const uid = utk.dataset.uUntick;
-        await deleteDoc(doc(db,"verifiedClaims",uid));
-        await updateDoc(doc(db,"users",uid), { verified: false, updatedAt: serverTimestamp() });
-        toast("Blue tick hata diya");
-      } else if(ban){
-        const uid = ban.dataset.uBan;
-        const u = state.users[uid] || {};
-        if(!u.banned && !(await confirmSheet(`Ban ${u.name||"member"}?`, "Yeh member chat, upload aur category nahi bana sakega.", "Ban"))) return;
-        await updateDoc(doc(db,"users",uid), { banned: !u.banned, updatedAt: serverTimestamp() });
-        toast(u.banned ? "Member unbanned" : "Member banned");
-      }
-    }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
-  });
-  $("#add-code-btn").addEventListener("click", async ()=>{
-    if(!state.isOwner) return;
-    const v = await askText({ title:"New tick code (6-12 numbers)", placeholder:"e.g. 16241897", max:12, okLabel:"Add" });
-    if(v === null) return;
-    const code = v.trim();
-    if(!/^\d{6,12}$/.test(code)){ toast("Code sirf 6 se 12 numbers ka ho", "ic-close"); return; }
-    try{ await setDoc(doc(db,"verifyCodes",code), { createdAt: serverTimestamp() }); toast("Code add ho gaya"); }
-    catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
-  });
-  $("#owner-codes-list").addEventListener("click", async e=>{
-    const b = e.target.closest("[data-del-code]"); if(!b || !state.isOwner) return;
-    try{ await deleteDoc(doc(db,"verifyCodes",b.dataset.delCode)); toast("Code delete ho gaya"); }
-    catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
   });
 }
 
@@ -2445,8 +2851,6 @@ document.addEventListener("contextmenu", e=> e.preventDefault());
 /* ---------------------------------------------------------------------
    BOOTSTRAP
    --------------------------------------------------------------------- */
-$("#manage-cats-btn").addEventListener("click", ()=> openCategoriesSheet());
-$("#add-category-chip").addEventListener("click", createCategoryQuick);
 initTheme();
 initNav();
 initUploadWizard();
