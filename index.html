@@ -572,6 +572,37 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .deny-banner ol{ margin:8px 0 0; padding-left:18px; color:var(--text-dim); }
 .deny-banner .row-top{ display:flex; align-items:center; gap:8px; }
 .deny-banner .row-top b{ flex:1; }
+
+/* ---- update 5 ---- */
+#splash{ position:fixed; inset:0; z-index:200; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:var(--bg); transition:opacity .3s; }
+#splash .logo{ width:72px; height:72px; border-radius:22px; background:#FFC61A; color:#0B0E14; font-size:44px; font-weight:900; display:flex; align-items:center; justify-content:center; }
+#splash p, #loading-overlay p{ margin:0; font-size:13px; color:var(--text-dim); }
+.spinner{ width:34px; height:34px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:pkspin .8s linear infinite; }
+@keyframes pkspin{ to{ transform:rotate(360deg); } }
+#loading-overlay{ position:fixed; inset:0; z-index:300; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:rgba(0,0,0,.55); backdrop-filter:blur(3px); }
+#loading-overlay p{ color:#fff; }
+#search-panel{ position:fixed; left:0; right:0; bottom:0; z-index:60; overflow-y:auto; background:var(--bg); padding:8px 0 100px; }
+#search-panel h4{ margin:14px 18px 6px; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--text-faint); }
+#search-panel .settings-list{ margin:0 14px; }
+.chip-copy{ display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:rgba(0,0,0,.12); margin-left:2px; }
+.quote{ border-left:3px solid var(--accent-2); background:rgba(0,0,0,.14); border-radius:8px; padding:5px 8px; margin:0 0 6px; font-size:12px; cursor:pointer; }
+.quote b{ display:block; font-size:11.5px; }
+.msg.me .quote{ background:rgba(0,0,0,.12); }
+.msg{ transition:transform .12s; }
+.share-card{ display:flex; align-items:center; gap:10px; cursor:pointer; min-width:190px; }
+.share-card img{ width:44px; height:44px; border-radius:11px; object-fit:cover; background:var(--surface); flex-shrink:0; }
+.share-card b{ display:block; font-size:13.5px; }
+.share-card small{ font-size:11px; opacity:.75; }
+.reply-bar{ display:flex; align-items:center; gap:8px; padding:8px 14px; border-top:1px solid var(--border); background:var(--surface-2); font-size:12px; }
+.reply-bar div{ flex:1; min-width:0; }
+.reply-bar span{ display:block; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.reply-bar button{ width:28px; height:28px; padding:0; color:var(--text-faint); }
+.chat-attach{ width:44px; height:44px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text); }
+.chat-attach svg{ width:18px; height:18px; }
+.dl-bubble{ position:fixed; z-index:120; width:60px; height:60px; border-radius:50%; background:var(--surface); box-shadow:0 8px 24px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; touch-action:none; user-select:none; }
+.dl-bubble svg.ring{ position:absolute; inset:0; width:60px; height:60px; transform:rotate(-90deg); }
+.dl-bubble .pct{ font-size:12px; font-weight:800; position:relative; }
+.dl-bubble.busy svg.ring{ animation:pkspin 1s linear infinite; }
 </style>
 </head>
 <body>
@@ -622,6 +653,8 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <!-- =========================================================
      USERNAME GATE — first screen on app launch
      ========================================================= -->
+<div id="splash"><div class="logo">P</div><div class="spinner"></div><p>Please wait…</p></div>
+
 <div id="username-gate" hidden>
   <img class="gate-logo" alt="Pika Store" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
   <h1>Welcome to Pika Store</h1>
@@ -677,6 +710,11 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
         </div>
       </div>
       <div class="hero-dots" id="hero-dots"></div>
+
+      <section class="section" id="home-cats-section" hidden>
+        <div class="section-head"><h2>Categories</h2></div>
+        <div class="chip-row" id="category-row"></div>
+      </section>
 
       <!-- Top downloaded -->
       <div class="section">
@@ -738,7 +776,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
             <b>Add a square icon</b>
             Shown on the home page and app card
           </label>
-          <input type="file" id="thumb-input" accept="image/*" hidden />
+          <input type="file" id="thumb-input" accept=".png,.jpg,.jpeg,.webp" hidden />
         </div>
         <div class="card">
           <h3><svg><use href="#ic-sparkle"/></svg> Screenshots (up to 3)</h3>
@@ -788,15 +826,15 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
           <div class="switch-row" style="margin-top:14px">
             <div class="lbl">
               <svg><use href="#ic-download"/></svg>
-              <div>Add an external URL
-                <small>Optional — shown as an extra link on the app's download page</small>
+              <div>Add a WhatsApp number
+                <small>Optional — people tap "Get Password" to message you on WhatsApp</small>
               </div>
             </div>
             <div class="switch" id="url-switch"><i></i></div>
           </div>
           <div class="field" id="url-field" style="margin-top:12px" hidden>
-            <label>URL</label>
-            <input type="url" id="app-url-input" placeholder="https://example.com" />
+            <label>WhatsApp number (with country code)</label>
+            <input type="tel" id="app-url-input" placeholder="Phone number with country code" inputmode="tel" autocomplete="off" />
           </div>
         </div>
         <div class="card" id="review-card">
@@ -845,6 +883,8 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
       <div class="settings-list">
         <div class="row" id="row-secret"><div class="row-left"><svg><use href="#ic-lock"/></svg> Login code</div><span style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:12.5px;color:var(--text-faint)" id="profile-secret">••••••</span><button class="mini-btn" id="copy-secret-btn" type="button">Copy</button></span></div>
         <div class="row tap" id="row-change-creds"><div class="row-left"><svg><use href="#ic-user"/></svg> Change name &amp; secret code</div><span style="font-size:12px;color:var(--text-faint)" id="profile-name-inline"></span></div>
+        <div class="row tap" id="row-phone"><div class="row-left"><svg><use href="#ic-chat"/></svg> WhatsApp number</div><span style="font-size:12px;color:var(--text-faint)" id="profile-phone">Not set</span></div>
+        <div class="row tap" id="row-messages"><div class="row-left"><svg><use href="#ic-chat"/></svg> Private messages</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         <div class="row tap" id="row-change-photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Change profile photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
         <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
@@ -896,6 +936,8 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
     <div class="meta"><svg width="11" height="11"><use href="#ic-download"/></svg><span></span></div>
   </div>
 </template>
+
+<div id="search-panel" hidden></div>
 
 <script type="module">
 /* =====================================================================
@@ -1090,7 +1132,7 @@ async function downloadInsideStore(url, filename, onProgress){
     if(done) break;
     chunks.push(value);
     received += value.length;
-    if(total) onProgress && onProgress(Math.round((received/total)*100));
+    if(total) onProgress && onProgress(Math.round((received/total)*100)); else if(onProgress) onProgress(null);
   }
   const blob = new Blob(chunks);
   const blobUrl = URL.createObjectURL(blob);
@@ -1121,6 +1163,10 @@ const state = {
   apps: [],            // live from Firestore 'apps' collection
   categories: [],       // live from Firestore 'categories' collection
   activeCategory: "all",
+  phone: "",
+  replyTo: null,
+  pendingApp: null,
+  pendingCat: null,
   heroIndex: 0,
   upload: { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"", hasUrl:false, url:"" }
 };
@@ -1473,14 +1519,27 @@ async function ensureProfile(){
   }
   const base = { name: state.username, nameLower: lowerName(state.username), photoURL: state.photoURL || "", verified: state.verified, owner: state.isOwner, lastActiveMs: Date.now(), updatedAt: serverTimestamp() };
   try{ await setDoc(ref, existing ? base : { ...base, joinedAt: serverTimestamp() }, { merge:true }); }catch(e){ console.warn(e); }
-  if(state.isOwner) await dedupeOwnerDocs();
+  if(state.isOwner){ await dedupeOwnerDocs(); migrateOwnerContent(); }
 }
+async function migrateOwnerContent(){
+  try{
+    const a = await getDocs(query(collection(db,"apps"), where("isOwner","==",true)));
+    for(const d of a.docs){ if(d.data().uploaderUid !== "owner") await updateDoc(d.ref, { uploaderUid:"owner" }); }
+    const c = await getDocs(query(collection(db,"categories"), where("isOwner","==",true)));
+    for(const d of c.docs){ if(d.data().ownerUid !== "owner") await updateDoc(d.ref, { ownerUid:"owner" }); }
+  }catch(e){ console.warn("owner content migration", e); }
+}
+function hideSplash(){ const s = document.getElementById("splash"); if(!s) return; s.style.opacity = "0"; setTimeout(()=> s.remove(), 350); }
+function showLoading(msg){ hideLoading(); const d = document.createElement("div"); d.id = "loading-overlay"; d.innerHTML = `<div class="spinner"></div><p>${escapeHtml(msg || "Please wait…")}</p>`; document.body.appendChild(d); }
+function hideLoading(){ const d = document.getElementById("loading-overlay"); if(d) d.remove(); }
 function enterStore(){
+  hideLoading(); hideSplash();
   $("#username-gate").hidden = true;
   $("#app").hidden = false;
   boot();
 }
 function showGate(notice){
+  hideSplash();
   $("#app").hidden = true;
   $("#username-gate").hidden = false;
   const msgs = { session:"You were signed out because this account was opened in another browser.", revoked:"You were logged out by the store admin." };
@@ -1505,6 +1564,7 @@ async function initAuth(){
   if(user.isAnonymous){
     if(!(await checkOwner())){ try{ await signOut(auth); }catch(e){} showGate(notice); return; }
     state.isOwner = true; state.verified = true; state.username = CONFIG.ownerPublicName;
+    state.uid = "owner";          // one permanent id, so uploads never get lost between logins
   } else {
     state.isOwner = false;
     if(await isBannedAccount(user.uid)){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
@@ -1558,6 +1618,7 @@ function initOnboarding(){
         state.uid = auth.currentUser.uid;
         if(await tryClaimOwner(raw)){
           state.isOwner = true; state.verified = true; state.username = CONFIG.ownerPublicName;
+          state.uid = "owner";
           if(pickedAvatar){ try{ state.photoURL = await uploadAvatar(pickedAvatar); }catch(e){} }
           await startSession(); await ensureProfile(); enterStore();
           return;
@@ -1574,8 +1635,11 @@ function initOnboarding(){
       if(!r) return;
 
       // Name already registered? Then this may be the owner of that account logging in again.
-      const acc = await findAccount(lowerName(r.name));
+      showLoading("Checking your name…");
+      let acc;
+      try{ acc = await findAccount(lowerName(r.name)); }finally{ hideLoading(); }
       if(acc){
+        showLoading("Logging you in…");
         let user;
         try{ user = (await signInWithEmailAndPassword(auth, emailFor(acc.emailKey), r.pin)).user; }
         catch(e){
@@ -1593,6 +1657,7 @@ function initOnboarding(){
 
       const fin = await finalDialog({ name: r.name, pin: r.pin, action: "LOGIN" });
       if(!fin.ok) return;
+      showLoading("Creating your account…");
       try{
         const user = await createAccount(r.name, r.pin);
         state.isOwner = false; state.username = r.name;
@@ -1607,10 +1672,12 @@ function initOnboarding(){
     }catch(e){
       console.warn(e); authError(e);
     }finally{
+      hideLoading();
       btn.removeAttribute("disabled");
     }
   });
   input.addEventListener("keydown", e=>{ if(e.key==="Enter") btn.click(); });
+  setTimeout(hideSplash, 12000);   // safety: never leave the splash screen stuck
   initAuth();
 }
 
@@ -1622,6 +1689,8 @@ function boot(){
   initNotifFlow();
   initProfileActions();
   initUsersPage();
+  initHomeCategories();
+  loadMyPhone();
   listenUsers();
   listenSession();
   listenApps();
@@ -1663,7 +1732,7 @@ function listenUsers(){
     renderProfile();
     renderUsersPage();
     renderChatLog();
-  }, err=> console.warn("users listener", err));
+  }, err=>{ console.warn("users listener", err); toast(`Users sync error: ${err.code || ""} ${err.message || err}`, "ic-close"); });
 }
 function listenCodes(){
   onSnapshot(collection(db,"verifyCodes"), snap=>{ state.codes = snap.docs.map(d=>d.id).sort(); }, err=> console.warn("codes listener", err));
@@ -1712,6 +1781,7 @@ function listenApps(){
     renderHome();
     renderProfile();
     renderUsersPage();
+    applyDeepLink();
   }, err=>{
     console.warn(err);
     toast(`Firestore connection error: ${err.code || ""} ${err.message || err}`, "ic-close");
@@ -1763,17 +1833,11 @@ function stopHeroCarousel(){
 /** Direct download from the banner. Password-protected uploads ask for the password (the owner can review them without it). */
 async function quickDownload(app){
   if(app.hasPassword && !state.isOwner){
-    const entered = await askPassword();
+    const entered = await askPassword(app);
     if(entered === null) return;
     if(await sha256(entered) !== app.passwordHash){ toast("Wrong password", "ic-close"); return; }
   }
-  const url = app.fileUrl;
-  if(!url){ toast("No download link available for this file", "ic-close"); return; }
-  const a = document.createElement("a");
-  a.href = url; a.target = "_blank"; a.rel = "noopener"; a.download = "";
-  document.body.appendChild(a); a.click(); a.remove();
-  if(firebaseReady){ try{ await updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }); }catch(e){} }
-  toast("Download started");
+  startDownloadJob(app);
 }
 
 function startHeroCarousel(apps){
@@ -1812,9 +1876,10 @@ function showHeroSlide(i, instant){
 }
 
 function renderHome(){
+  renderHomeCategories();
   const list = state.activeCategory === "all"
     ? state.apps
-    : state.apps.filter(a=>a.category === state.activeCategory);
+    : state.apps.filter(a=>a.uploaderUid === state.activeCategory);
 
   // Hero: auto-rotate through the most recently uploaded apps
   if(list.length){
@@ -1833,6 +1898,41 @@ function renderHome(){
   renderAppRow("#new-releases-row", [...list].sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0)).slice(0,20), false);
 }
 
+function appLink(id){ return `${location.origin}${location.pathname}?app=${encodeURIComponent(id)}`; }
+function catLink(id){ return `${location.origin}${location.pathname}?cat=${encodeURIComponent(id)}`; }
+function renderHomeCategories(){
+  const row = $("#category-row"); if(!row) return;
+  const counts = {};
+  state.apps.forEach(a=>{ if(a.uploaderUid) counts[a.uploaderUid] = (counts[a.uploaderUid]||0) + 1; });
+  const ids = Object.entries(state.users).filter(([id,u])=> u.verified && !u.banned && counts[id]).sort((a,b)=> counts[b[0]] - counts[a[0]]);
+  $("#home-cats-section").hidden = ids.length === 0;
+  row.innerHTML = `<button class="chip ${state.activeCategory==="all" ? "active" : ""}" data-cat="all" type="button">All</button>` +
+    ids.map(([id,u])=>`
+    <button class="chip ${state.activeCategory===id ? "active" : ""}" data-cat="${escapeHtml(id)}" type="button" style="display:inline-flex;align-items:center;gap:6px">
+      ${avatarHtml(u.name, u.photoURL)}${escapeHtml(u.name)}${tick(true)}<span class="chip-copy" data-copy-cat="${escapeHtml(id)}" title="Copy category link"><svg width="13" height="13"><use href="#ic-copy"/></svg></span>
+    </button>`).join("");
+}
+function initHomeCategories(){
+  $("#category-row").addEventListener("click", async e=>{
+    const cp = e.target.closest("[data-copy-cat]");
+    if(cp){ e.stopPropagation(); const ok = await copyText(catLink(cp.dataset.copyCat)); toast(ok ? "Category link copied" : "Copy failed", ok ? "ic-check" : "ic-close"); return; }
+    const c = e.target.closest("[data-cat]");
+    if(c){ state.activeCategory = c.dataset.cat; heroApps = []; renderHome(); }
+  });
+}
+let deepLinkDone = false;
+function applyDeepLink(){
+  if(deepLinkDone) return;
+  deepLinkDone = true;
+  const qs = new URLSearchParams(location.search);
+  const cat = qs.get("cat"), appId = qs.get("app");
+  if(cat){ state.activeCategory = cat; heroApps = []; renderHome(); $$(".nav-btn")[0].click(); }
+  if(appId){
+    if(state.apps.some(a=>a.id===appId)) openAppDetail(appId);
+    else toast("This item is no longer available.", "ic-close");
+  }
+  if(cat || appId){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
+}
 function renderAppRow(selector, apps, showRank){
   const row = $(selector);
   if(!apps.length){
@@ -1858,15 +1958,79 @@ function placeholderIcon(name=""){
   return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231E2430'/%3E%3Ctext x='50' y='62' font-size='42' text-anchor='middle' font-family='Arial' font-weight='800' fill='%23FFC61A'%3E${letter}%3C/text%3E%3C/svg%3E`;
 }
 
-/* Search (client-side filter over the live list) */
-$("#search-input").addEventListener("input", e=>{
-  const term = e.target.value.trim().toLowerCase();
-  const section = $("#search-results-section");
-  if(!term){ section.hidden = true; return; }
-  section.hidden = false;
-  const results = state.apps.filter(a => a.name.toLowerCase().includes(term));
-  renderAppRow("#search-results-row", results, false);
+/* ---------------------------------------------------------------------
+   SEARCH — finds apps and members even when the spelling is a bit wrong
+   --------------------------------------------------------------------- */
+function normStr(s){ return String(s||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9\u0600-\u06ff\u0900-\u097f\s]/g," ").replace(/\s+/g," ").trim(); }
+function lev(a, b){
+  const m = a.length, n = b.length;
+  if(!m) return n; if(!n) return m;
+  let prev = Array.from({length:n+1}, (_,i)=>i);
+  for(let i=1;i<=m;i++){
+    const cur = [i];
+    for(let j=1;j<=n;j++){
+      cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a[i-1]===b[j-1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+function fuzzyScore(query, target){
+  const q = normStr(query), t = normStr(target);
+  if(!q || !t) return 0;
+  if(t === q) return 100;
+  if(t.startsWith(q)) return 90;
+  if(t.includes(q)) return 80;
+  const qc = q.replace(/ /g,""), tc = t.replace(/ /g,"");
+  if(tc.includes(qc)) return 75;
+  const qt = q.split(" "), tt = t.split(" ");
+  let total = 0;
+  for(const w of qt){
+    let best = 0;
+    for(const x of tt){
+      if(x.startsWith(w) || x.includes(w)){ best = Math.max(best, 70); continue; }
+      const tol = w.length <= 3 ? 0 : (w.length <= 5 ? 1 : 2);
+      const cands = [x, x.slice(0, w.length), x.slice(0, w.length + 1), x.slice(0, Math.max(1, w.length - 1))];
+      for(const c of cands){ const d = lev(w, c); if(d <= tol) best = Math.max(best, 60 - d*8); }
+    }
+    if(!best){
+      // whole query typed without spaces, or with one wrong letter
+      if(qc.length >= 4 && lev(qc, tc.slice(0, qc.length)) <= Math.floor(qc.length/4)) return 50;
+      return 0;
+    }
+    total += best;
+  }
+  return total / qt.length;
+}
+function closeSearchPanel(){ const p = $("#search-panel"); if(p) p.hidden = true; }
+function renderSearch(term){
+  const panel = $("#search-panel");
+  const q = term.trim();
+  if(!q){ panel.hidden = true; return; }
+  const apps = state.apps.map(a=>({ a, s: Math.max(fuzzyScore(q, a.name), fuzzyScore(q, a.uploaderName||"")*0.6) })).filter(x=>x.s >= 40).sort((x,y)=>y.s-x.s).slice(0,20);
+  const members = Object.entries(state.users).filter(([,u])=> !u.banned || state.isOwner).map(([id,u])=>({ id, u, s: fuzzyScore(q, u.name) })).filter(x=>x.s >= 40).sort((x,y)=>y.s-x.s).slice(0,15);
+  const top = document.querySelector(".topbar").getBoundingClientRect().bottom;
+  panel.style.top = top + "px";
+  panel.hidden = false;
+  panel.innerHTML = (apps.length ? `<h4>Apps &amp; files</h4><div class="settings-list">${apps.map(({a})=>`
+      <div class="mini-row tap" data-s-app="${a.id}">
+        <img class="thumb" alt="" src="${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}" />
+        <div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • by ${escapeHtml(userView(a.uploaderUid, a.uploaderName, a.isOwner).name)}</small></div>
+      </div>`).join("")}</div>` : "")
+    + (members.length ? `<h4>Members</h4><div class="settings-list">${members.map(({id,u})=>`
+      <div class="mini-row tap" data-s-user="${escapeHtml(id)}">
+        ${avatarHtml(u.name, u.photoURL, "lg")}
+        <div class="mini-main"><b>${escapeHtml(u.name)}${tick(u.verified)}</b><small>${presenceText(u.lastActiveMs)}</small></div>
+      </div>`).join("")}</div>` : "")
+    + ((!apps.length && !members.length) ? `<div class="empty-row" style="margin:24px 18px">No results for "${escapeHtml(q)}".</div>` : "");
+}
+$("#search-input").addEventListener("input", e=> renderSearch(e.target.value));
+$("#search-panel").addEventListener("click", e=>{
+  const a = e.target.closest("[data-s-app]"), u = e.target.closest("[data-s-user]");
+  if(a){ closeSearchPanel(); openAppDetail(a.dataset.sApp); }
+  else if(u){ closeSearchPanel(); openUserSheet(u.dataset.sUser); }
 });
+$$(".nav-btn").forEach(b=> b.addEventListener("click", ()=>{ closeSearchPanel(); $("#search-input").value = ""; }));
 
 /* Categories management sheet */
 function openCategoriesSheet(){
@@ -1915,19 +2079,21 @@ function openCategoriesSheet(){
    9. APP DETAIL SHEET
    --------------------------------------------------------------------- */
 /** Themed replacement for the native prompt() — matches the app's own bottom-sheet look. Resolves with the entered string, or null if cancelled. */
-function askPassword(){
+function askPassword(app){
   return new Promise(resolve=>{
+    const phone = app && app.contactPhone ? String(app.contactPhone).replace(/\D/g,"") : "";
     const html = `
-    <div class="sheet-backdrop" id="pw-backdrop">
+    <div class="sheet-backdrop dlg" id="pw-backdrop">
       <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
         <div style="width:52px;height:52px;border-radius:16px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
           <svg width="24" height="24" style="color:var(--accent-2)"><use href="#ic-lock"/></svg>
         </div>
         <h3 style="text-align:center;font-size:17px;margin:0 0 4px;">Password protected</h3>
         <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;">Enter the password to download this file.</p>
-        <div class="field" style="margin-bottom:16px;">
+        <div class="field" style="margin-bottom:12px;">
           <input type="password" id="pw-modal-input" placeholder="Password" autocomplete="off" />
         </div>
+        ${phone ? `<button class="btn btn-ghost btn-block" id="pw-get" type="button" style="margin-bottom:12px"><svg><use href="#ic-chat"/></svg> Get Password</button>` : ""}
         <div style="display:flex;gap:10px;">
           <button class="btn btn-ghost" style="flex:1" id="pw-modal-cancel" type="button">Cancel</button>
           <button class="btn btn-primary" style="flex:1" id="pw-modal-ok" type="button">Unlock</button>
@@ -1941,6 +2107,8 @@ function askPassword(){
     const close = val => { backdrop.remove(); resolve(val); };
     $("#pw-modal-cancel").addEventListener("click", ()=> close(null));
     $("#pw-modal-ok").addEventListener("click", ()=> close(input.value));
+    const g = $("#pw-get");
+    if(g) g.addEventListener("click", ()=> window.open(`https://wa.me/${phone}?text=${encodeURIComponent("Hi, please share the password for " + (app.name||"your file"))}`, "_blank", "noopener"));
     input.addEventListener("keydown", e=>{
       if(e.key === "Enter") close(input.value);
       if(e.key === "Escape") close(null);
@@ -1997,6 +2165,7 @@ function openAppDetail(appId){
           <svg><use href="${app.hasPassword && !state.isOwner ? "#ic-lock" : "#ic-download"}"/></svg>
           ${app.hasPassword && !state.isOwner ? "Enter password to download" : (app.hasPassword ? "Download (owner access)" : "Download")}
         </button>
+        <button class="btn btn-ghost btn-lg btn-block" style="margin-top:10px" id="detail-copy-btn" type="button"><svg><use href="#ic-copy"/></svg> Copy link</button>
         ${canManage(app.uploaderUid) ? `<button class="btn btn-danger btn-lg btn-block" style="margin-top:10px" id="detail-delete-btn"><svg><use href="#ic-trash"/></svg> Delete this upload</button>` : ""}
         ${app.downloadUrl ? `<a class="btn btn-ghost btn-lg btn-block" style="margin-top:10px" href="${escapeHtml(app.downloadUrl)}" target="_blank" rel="noopener noreferrer"><svg><use href="#ic-chevron"/></svg> Visit link</a>` : ""}
       </div>
@@ -2007,6 +2176,7 @@ function openAppDetail(appId){
   const wrap = $("#detail-backdrop");
   wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")) wrap.remove(); });
 
+  $("#detail-copy-btn").addEventListener("click", async ()=>{ const ok = await copyText(appLink(app.id)); toast(ok ? "Link copied" : "Copy failed", ok ? "ic-check" : "ic-close"); });
   const delBtn = $("#detail-delete-btn");
   if(delBtn) delBtn.addEventListener("click", async ()=>{
     if(await deleteApp(app)) wrap.remove();
@@ -2014,7 +2184,7 @@ function openAppDetail(appId){
 
   $("#detail-download-btn").addEventListener("click", async ()=>{
     if(app.hasPassword && !state.isOwner){
-      const entered = await askPassword();
+      const entered = await askPassword(app);
       if(entered===null) return;
       const hash = await sha256(entered);
       if(hash !== app.passwordHash){ toast("Wrong password", "ic-close"); return; }
@@ -2034,42 +2204,117 @@ function renderStars(rating){
   }
   return out;
 }
-async function startDownload(app){
-  const progressWrap = $("#detail-dl-progress");
-  const bar = $("#detail-dl-bar");
-  progressWrap.hidden = false;
-  $("#detail-download-btn").setAttribute("disabled","true");
-  try{
-    // fileUrl is a permanent static link served straight off your VPS disk
-    // by Caddy — no expiry, no re-resolving needed before each download.
-    const url = app.fileUrl;
-    if(!url){ toast("No download link available for this file","ic-close"); return; }
+/* A floating, draggable circle shows live download progress, and keeps going after you leave the app page. */
+const dlActive = new Set();
+let dlBubbleCount = 0;
+function createDlBubble(app){
+  const el = document.createElement("div");
+  el.className = "dl-bubble";
+  const R = 26, C = 2*Math.PI*R;
+  el.innerHTML = `<svg class="ring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="${R}" fill="none" stroke="var(--border)" stroke-width="4"/><circle class="arc" cx="30" cy="30" r="${R}" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}"/></svg><span class="pct">0%</span>`;
+  el.style.right = "14px"; el.style.bottom = (110 + dlBubbleCount*70) + "px"; dlBubbleCount++;
+  document.body.appendChild(el);
+  // drag anywhere on screen
+  let drag = false, ox = 0, oy = 0;
+  el.addEventListener("pointerdown", e=>{ drag = true; const r = el.getBoundingClientRect(); ox = e.clientX - r.left; oy = e.clientY - r.top; el.setPointerCapture(e.pointerId); });
+  el.addEventListener("pointermove", e=>{
+    if(!drag) return;
+    el.style.left = Math.max(0, Math.min(innerWidth-60, e.clientX - ox)) + "px";
+    el.style.top = Math.max(0, Math.min(innerHeight-60, e.clientY - oy)) + "px";
+    el.style.right = "auto"; el.style.bottom = "auto";
+  });
+  el.addEventListener("pointerup", ()=>{ drag = false; });
+  el.addEventListener("click", ()=> toast(`Downloading "${app.name}"`));
+  const arc = el.querySelector(".arc"), label = el.querySelector(".pct");
+  return {
+    set(pct){
+      if(pct === null || pct === undefined){ el.classList.add("busy"); arc.style.strokeDashoffset = C*0.75; label.textContent = "…"; return; }
+      el.classList.remove("busy");
+      arc.style.strokeDashoffset = C * (1 - pct/100);
+      label.textContent = pct + "%";
+    },
+    remove(){ el.remove(); dlBubbleCount = Math.max(0, dlBubbleCount-1); }
+  };
+}
+function startDownloadJob(app){
+  const url = app.fileUrl;
+  if(!url){ toast("No download link available for this file", "ic-close"); return; }
+  if(dlActive.has(app.id)){ toast("This file is already downloading"); return; }
+  dlActive.add(app.id);
+  const bubble = createDlBubble(app);
+  const filename = `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`;
+  toast("Download started");
+  (async ()=>{
     try{
-      await downloadInsideStore(url, `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`, pct=>{ bar.style.width = pct+"%"; });
-      toast("Download complete");
-    }catch(inAppErr){
-      // In-app progress download can fail for reasons that have nothing to
-      // do with the file being missing — e.g. a CORS setting on the bucket.
-      // Falling back to a plain browser download (a normal navigation, not
-      // a JS fetch) sidesteps that.
-      console.warn("In-app download failed, falling back to direct link:", inAppErr);
+      await downloadInsideStore(url, filename, pct=>{ bubble.set(pct); const b = $("#detail-dl-bar"); if(b && pct !== null) b.style.width = pct + "%"; });
+      bubble.set(100);
+      toast(`"${app.name}" downloaded`);
+    }catch(err){
+      // Plain browser download when in-app streaming is blocked (e.g. the file server has no CORS header)
+      console.warn("In-app download failed, falling back to direct link:", err);
       const a = document.createElement("a");
       a.href = url; a.target = "_blank"; a.rel = "noopener";
       document.body.appendChild(a); a.click(); a.remove();
-      toast("Opening download in browser…");
+      toast("Download opened in your browser");
     }
-    if(firebaseReady){ await updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }); }
-  }catch(e){
-    console.warn(e);
-    toast(e && e.message ? e.message : "Download failed — check the file URL","ic-close");
-  }finally{
-    $("#detail-download-btn").removeAttribute("disabled");
-  }
+    if(firebaseReady){ try{ await updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }); }catch(e){} }
+    setTimeout(()=> bubble.remove(), 2500);
+    dlActive.delete(app.id);
+  })();
 }
+async function startDownload(app){ startDownloadJob(app); }
 
 /* ---------------------------------------------------------------------
    10. UPLOAD WIZARD (4 steps)
    --------------------------------------------------------------------- */
+/** Pull the launcher icon out of the chosen APK (an APK is a zip). Works for most apps; if nothing suitable is found you can still pick an icon yourself. */
+async function loadJSZip(){
+  if(window.JSZip) return window.JSZip;
+  await new Promise((res, rej)=>{ const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"; s.onload = res; s.onerror = ()=> rej(new Error("JSZip failed to load")); document.head.appendChild(s); });
+  return window.JSZip;
+}
+async function autoIconFromApk(file){
+  if(state.upload.thumb || file.size > 250*1024*1024) return;
+  try{
+    const JSZip = await loadJSZip();
+    const zip = await JSZip.loadAsync(file);
+    const cands = [];
+    zip.forEach((path, entry)=>{
+      if(entry.dir || !/^res\/.+\.(png|webp|jpg|jpeg)$/i.test(path)) return;
+      const low = path.toLowerCase();
+      let score = 0;
+      if(/ic_launcher/.test(low)) score += 50;
+      if(/round/.test(low)) score -= 10;
+      if(/foreground|background|monochrome/.test(low)) score -= 15;
+      if(/(^|\/)mipmap/.test(low)) score += 20;
+      if(/icon|logo/.test(low)) score += 10;
+      if(/xxxhdpi/.test(low)) score += 8; else if(/xxhdpi/.test(low)) score += 6; else if(/xhdpi/.test(low)) score += 4; else if(/hdpi/.test(low)) score += 2;
+      cands.push({ path, entry, score });
+    });
+    cands.sort((a,b)=> b.score - a.score);
+    const named = cands.filter(c=> c.score > 0).slice(0, 12);
+    const pool = named.length ? named : cands.filter(c=> /mipmap|drawable/.test(c.path.toLowerCase())).slice(0, 40);
+    let best = null, bestVal = -1;
+    for(const c of pool){
+      const ext = c.path.split(".").pop().toLowerCase();
+      const mime = ext === "webp" ? "image/webp" : (ext === "png" ? "image/png" : "image/jpeg");
+      const blob = new Blob([await c.entry.async("arraybuffer")], { type: mime });
+      const bmp = await createImageBitmap(blob).catch(()=> null);
+      if(!bmp) continue;
+      const w = bmp.width, h = bmp.height; if(bmp.close) bmp.close();
+      if(w < 64 || Math.abs(w-h) > w*0.15) continue;
+      const val = c.score*10 + Math.min(w, 512);
+      if(val > bestVal){ bestVal = val; best = { blob, ext }; }
+    }
+    if(!best || state.upload.thumb) return;
+    const f = new File([best.blob], "icon." + best.ext, { type: best.blob.type });
+    state.upload.thumb = f;
+    const dz = $("#thumb-dropzone");
+    dz.classList.add("filled");
+    dz.innerHTML = `<img class="file-thumb" src="${URL.createObjectURL(f)}" alt=""/><div><b>Icon detected automatically</b></div>`;
+    toast("App icon detected automatically");
+  }catch(e){ console.warn("Automatic icon detection failed", e); }
+}
 function initUploadWizard(){
   let step = 1;
   const total = 4;
@@ -2115,6 +2360,7 @@ function initUploadWizard(){
       state.upload.name = f.name.replace(/\.[a-z0-9]+$/i,"");
       $("#app-name-input").value = state.upload.name;
     }
+    if(ext === "apk") autoIconFromApk(f);
   });
   $$(".format-opt").forEach(opt=>{
     opt.addEventListener("click", ()=>{
@@ -2168,13 +2414,23 @@ function initUploadWizard(){
   });
   $("#app-password-input").addEventListener("input", e=> state.upload.password = e.target.value);
 
-  // step 4: optional URL switch
+  // step 4: optional WhatsApp number (remembered for the next upload)
+  const phoneOn = on => {
+    state.upload.hasUrl = on;
+    $("#url-switch").classList.toggle("on", on);
+    $("#url-field").hidden = !on;
+  };
+  const applySavedPhone = ()=>{
+    const saved = state.phone || localStorage.getItem("pika_contact") || "";
+    if(saved){ state.upload.url = saved; $("#app-url-input").value = saved; phoneOn(true); }
+  };
   $("#url-switch").addEventListener("click", ()=>{
-    state.upload.hasUrl = !state.upload.hasUrl;
-    $("#url-switch").classList.toggle("on", state.upload.hasUrl);
-    $("#url-field").hidden = !state.upload.hasUrl;
+    phoneOn(!state.upload.hasUrl);
+    if(state.upload.hasUrl && !$("#app-url-input").value) applySavedPhone();
   });
   $("#app-url-input").addEventListener("input", e=> state.upload.url = e.target.value);
+  window.__applySavedPhone = applySavedPhone;
+  applySavedPhone();
 
   function renderReview(){
     const u = state.upload;
@@ -2184,7 +2440,7 @@ function initUploadWizard(){
       <div><b>Category:</b> ${escapeHtml(u.category||"Uncategorized")}</div>
       <div><b>Screenshots:</b> ${u.screenshots.length}</div>
       <div><b>Password:</b> ${u.hasPassword ? "Enabled 🔒" : "Not set"}</div>
-      ${u.hasUrl && u.url.trim() ? `<div><b>URL:</b> ${escapeHtml(u.url.trim())}</div>` : ""}
+      ${u.hasUrl && u.url.trim() ? `<div><b>WhatsApp:</b> ${escapeHtml(u.url.trim().slice(0,4))}••••</div>` : ""}
     `.replace("🔒",""); // no emoji — text label only
   }
 
@@ -2232,6 +2488,12 @@ function initUploadWizard(){
       setPct(90);
 
       const passwordHash = state.upload.hasPassword ? await sha256(state.upload.password) : null;
+      let contactPhone = null;
+      if(state.upload.hasUrl && state.upload.url.trim()){
+        contactPhone = normPhone(state.upload.url);
+        if(!isPhone(contactPhone)) throw new Error("Enter the WhatsApp number with the country code, starting with +");
+        localStorage.setItem("pika_contact", contactPhone);
+      }
 
       // Firestore doc uses the SAME id as the folder name the files were
       // saved under on the VPS disk, so the database record and the files
@@ -2248,7 +2510,8 @@ function initUploadWizard(){
         filePath: fileRes.path, // relative path on disk, kept for reference/cleanup
         thumbUrl,
         screenshots: screenshotUrls,
-        downloadUrl: (state.upload.hasUrl && state.upload.url.trim()) ? state.upload.url.trim() : null,
+        downloadUrl: null,
+        contactPhone,
         hasPassword: !!state.upload.hasPassword,
         passwordHash,
         uploaderName: state.username,
@@ -2280,6 +2543,7 @@ function initUploadWizard(){
     $("#url-switch").classList.remove("on");
     $("#url-field").hidden = true;
     $("#app-url-input").value = "";
+    if(window.__applySavedPhone) window.__applySavedPhone();
     $("#file-dropzone").className = "dropzone";
     $("#file-dropzone").innerHTML = `<svg><use href="#ic-upload"/></svg><b>Tap to choose a file</b>Supports .apk, .zip and .rar files`;
     $("#thumb-dropzone").className = "dropzone";
@@ -2323,6 +2587,7 @@ function updateChatBadge(){
   if(chatUnread>0){ badge.hidden=false; badge.textContent = chatUnread>9?"9+":chatUnread; }
   else{ badge.hidden = true; }
 }
+function safeImg(u){ return (typeof u === "string" && (u.startsWith("https://") || u.startsWith("data:image/"))) ? u : ""; }
 function renderChatLog(){
   const log = document.getElementById("chat-log-el");
   if(!log) return;
@@ -2332,9 +2597,64 @@ function renderChatLog(){
     const canDel = state.isOwner || (!!m.uid && m.uid === state.uid); // old messages (no uid) can only be removed by the owner
     const del = canDel ? `<button class="msg-del" data-del-msg="${m.id}" title="Delete"><svg><use href="#ic-trash"/></svg></button>` : "";
     const who = `<div class="who">${avatarHtml(u.name, u.photo)}${escapeHtml(u.name)}${tick(u.verified)}</div>`;
-    return `<div class="msg ${mine ? "me" : "other"}${canDel ? " has-del" : ""}">${del}${who}${escapeHtml(m.text)}</div>`;
+    const quote = m.replyTo ? `<div class="quote" data-jump="${escapeHtml(m.replyTo.id||"")}"><b>${escapeHtml(m.replyTo.name||"")}</b>${escapeHtml(m.replyTo.text||"")}</div>` : "";
+    const body = m.appId
+      ? `<div class="share-card" data-open-app="${escapeHtml(m.appId)}"><img alt="" src="${escapeHtml(safeImg(m.appThumb) || placeholderIcon(m.appName||"A"))}" /><div><b>${escapeHtml(m.appName||"App")}</b><small>Tap to view or download</small></div></div>`
+      : escapeHtml(m.text);
+    return `<div class="msg ${mine ? "me" : "other"}${canDel ? " has-del" : ""}" data-mid="${m.id}">${del}${who}${quote}${body}</div>`;
   }).join("");
   log.scrollTop = log.scrollHeight;
+}
+function setReply(id){
+  const m = state.chat.find(x=>x.id === id); if(!m) return;
+  const u = userView(m.uid, m.name, m.isOwner);
+  state.replyTo = { id, name: u.name, text: (m.appId ? "Shared an app: " + (m.appName||"") : (m.text||"")).slice(0,80) };
+  updateReplyBar();
+  const i = $("#chat-input"); if(i) i.focus();
+}
+function updateReplyBar(){
+  const bar = $("#reply-bar"); if(!bar) return;
+  if(!state.replyTo){ bar.hidden = true; bar.innerHTML = ""; return; }
+  bar.hidden = false;
+  bar.innerHTML = `<div><b>Replying to ${escapeHtml(state.replyTo.name)}</b><span>${escapeHtml(state.replyTo.text)}</span></div><button id="reply-x" type="button"><svg width="14" height="14"><use href="#ic-close"/></svg></button>`;
+  $("#reply-x").addEventListener("click", ()=>{ state.replyTo = null; updateReplyBar(); });
+}
+async function postChat(text, extra={}){
+  const problem = checkChatText(text, state.verified, state.isOwner);
+  if(problem){ toast(problem, "ic-close"); return false; }
+  if(!firebaseReady || !state.uid){ toast("Connect Firebase first","ic-close"); return false; }
+  if(state.users[state.uid] && state.users[state.uid].banned){ toast("You are not allowed to chat","ic-close"); return false; }
+  const payload = { name: state.username, uid: state.uid, isOwner: state.isOwner, deviceId: state.deviceId, text: text.slice(0,1000), createdAt: serverTimestamp(), ...extra };
+  if(state.replyTo) payload.replyTo = state.replyTo;
+  try{ await addDoc(collection(db,"chat"), payload); state.replyTo = null; updateReplyBar(); return true; }
+  catch(err){ toast("Send failed: " + (err.code||err.message), "ic-close"); return false; }
+}
+/** Sheet with search — pick one of the store's uploads. */
+function openAppPicker(onPick){
+  const html = `
+  <div class="sheet-backdrop dlg" id="pick-backdrop">
+    <div class="sheet" style="max-height:80vh;display:flex;flex-direction:column">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <h3 style="padding:22px 18px 8px;margin:0;font-size:17px">Send an app to the group</h3>
+      <div class="field" style="margin:0 18px 10px"><input type="text" id="pick-search" placeholder="Search apps…" autocomplete="off" /></div>
+      <div class="settings-list" id="pick-list" style="margin:0 14px 20px;overflow-y:auto"></div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#pick-backdrop"), list = $("#pick-list");
+  const draw = ()=>{
+    const q = $("#pick-search").value.trim();
+    const items = q ? state.apps.map(a=>({a, s:fuzzyScore(q,a.name)})).filter(x=>x.s>=40).sort((x,y)=>y.s-x.s).map(x=>x.a) : state.apps;
+    list.innerHTML = items.map(a=>`<div class="mini-row tap" data-pick="${a.id}"><img class="thumb" alt="" src="${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}" /><div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • ${fmtCount(a.downloadCount||0)} downloads</small></div></div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No apps found.</div>`;
+  };
+  draw();
+  $("#pick-search").addEventListener("input", draw);
+  wrap.addEventListener("click", e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
+    const r = e.target.closest("[data-pick]");
+    if(r){ const app = state.apps.find(a=>a.id===r.dataset.pick); wrap.remove(); if(app) onPick(app); }
+  });
 }
 function openChatPanel(){
   chatPanelOpen = true; chatUnread = 0; updateChatBadge();
@@ -2344,11 +2664,13 @@ function openChatPanel(){
       <div class="sheet-handle"></div>
       <div class="chat-header">
         <div class="av"><svg><use href="#ic-chat"/></svg></div>
-        <div><b>Pika Group Chat</b><small>Everyone in the store can see this</small></div>
+        <div><b>Pika Group Chat</b><small>Swipe a message right to reply</small></div>
         <button class="sheet-close" data-close style="position:static; margin-left:auto; float:none;"><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       </div>
       <div class="chat-log" id="chat-log-el"></div>
+      <div class="reply-bar" id="reply-bar" hidden></div>
       <div class="chat-input-row">
+        <button class="chat-attach" id="chat-attach-btn" type="button" aria-label="Send an app"><svg><use href="#ic-cube"/></svg></button>
         <input type="text" id="chat-input" placeholder="Message as ${escapeHtml(state.username)}…" />
         <button class="chat-send" id="chat-send-btn"><svg><use href="#ic-play"/></svg></button>
       </div>
@@ -2357,31 +2679,59 @@ function openChatPanel(){
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#chat-backdrop");
   wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")){ wrap.remove(); chatPanelOpen=false; } });
-  renderChatLog();
+  renderChatLog(); updateReplyBar();
+  const log = $("#chat-log-el");
 
-  // Delete a message (owner: any message, everyone else: only their own)
-  $("#chat-log-el").addEventListener("click", async e=>{
-    const b = e.target.closest("[data-del-msg]"); if(!b) return;
-    if(!(await confirmSheet("Delete message?", "This message will be removed for everyone.", "Delete"))) return;
-    try{ await deleteDoc(doc(db,"chat",b.dataset.delMsg)); }
-    catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
+  // Swipe a message to the right to reply (like WhatsApp)
+  let sx = 0, sy = 0, el = null, dx = 0;
+  log.addEventListener("touchstart", e=>{
+    const m = e.target.closest(".msg"); if(!m) return;
+    el = m; sx = e.touches[0].clientX; sy = e.touches[0].clientY; dx = 0;
+  }, { passive:true });
+  log.addEventListener("touchmove", e=>{
+    if(!el) return;
+    const x = e.touches[0].clientX - sx, y = e.touches[0].clientY - sy;
+    if(Math.abs(y) > Math.abs(x) + 6){ el.style.transform = ""; el = null; return; }
+    dx = Math.max(0, Math.min(70, x));
+    el.style.transform = `translateX(${dx}px)`;
+  }, { passive:true });
+  log.addEventListener("touchend", ()=>{
+    if(!el) return;
+    el.style.transform = "";
+    if(dx > 45) setReply(el.dataset.mid);
+    el = null; dx = 0;
+  });
+
+  log.addEventListener("click", async e=>{
+    const b = e.target.closest("[data-del-msg]");
+    if(b){
+      if(!(await confirmSheet("Delete message?", "This message will be removed for everyone.", "Delete"))) return;
+      try{ await deleteDoc(doc(db,"chat",b.dataset.delMsg)); }
+      catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
+      return;
+    }
+    const card = e.target.closest("[data-open-app]");
+    if(card){
+      if(state.apps.some(a=>a.id === card.dataset.openApp)) openAppDetail(card.dataset.openApp);
+      else toast("This app is no longer available.", "ic-close");
+      return;
+    }
+    const q = e.target.closest("[data-jump]");
+    if(q){ const t = log.querySelector(`[data-mid="${q.dataset.jump}"]`); if(t) t.scrollIntoView({ block:"center", behavior:"smooth" }); }
   });
 
   const send = async ()=>{
     const input = $("#chat-input");
     const text = input.value.trim();
     if(!text) return;
-    const problem = checkChatText(text, state.verified, state.isOwner);
-    if(problem){ toast(problem, "ic-close"); return; }
-    if(!firebaseReady || !state.uid){ toast("Connect Firebase first","ic-close"); return; }
-    if(state.users[state.uid] && state.users[state.uid].banned){ toast("You are not allowed to chat","ic-close"); return; }
     input.value = "";
-    try{
-      await addDoc(collection(db,"chat"), { name: state.username, uid: state.uid, isOwner: state.isOwner, deviceId: state.deviceId, text: text.slice(0,1000), createdAt: serverTimestamp() });
-    }catch(err){ toast("Send failed: " + (err.code||err.message), "ic-close"); }
+    if(!(await postChat(text))) input.value = text;
   };
   $("#chat-send-btn").addEventListener("click", send);
   $("#chat-input").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
+  $("#chat-attach-btn").addEventListener("click", ()=>{
+    openAppPicker(app=> postChat("Shared an app", { appId: app.id, appName: app.name, appThumb: app.thumbUrl || "" }));
+  });
 }
 $("#chat-fab-btn").addEventListener("click", openChatPanel);
 
@@ -2471,7 +2821,13 @@ async function initOneSignal(){
   window.OneSignalDeferred.push(async function(OneSignal){
     if(CONFIG.oneSignalAppId.startsWith("PASTE_")) return; // not configured yet
     try{
-      await OneSignal.init({ appId: CONFIG.oneSignalAppId, notifyButton: { enable:false } });
+      const base = location.pathname.replace(/[^/]*$/, "");   // e.g. /pika-store-files/
+      await OneSignal.init({
+        appId: CONFIG.oneSignalAppId,
+        notifyButton: { enable:false },
+        serviceWorkerPath: base.replace(/^\//, "") + "OneSignalSDKWorker.js",
+        serviceWorkerParam: { scope: base }
+      });
       window.__pikaOneSignal = OneSignal;
       try{ await OneSignal.login(state.uid || state.deviceId); }catch(e){}
       try{ if(notifSupported() && Notification.permission === "granted") await OneSignal.User.PushSubscription.optIn(); }catch(e){}
@@ -2501,6 +2857,7 @@ function renderProfile(){
   const pin = localStorage.getItem("pika_pin") || "";
   $("#profile-secret").textContent = pin ? `${state.username}${pin}` : "Not saved on this device";
   $("#copy-secret-btn").hidden = !pin;
+  $("#profile-phone").textContent = state.phone ? state.phone.slice(0,4) + "••••" + state.phone.slice(-2) : "Not set";
 
   const list = state.isOwner ? state.apps : mine;
   $("#my-uploads-title").textContent = state.isOwner ? "All uploads (Owner)" : "My uploads";
@@ -2669,6 +3026,11 @@ function openUserSheet(uid){
   const apps = state.apps.filter(a=> a.uploaderUid === uid);
   const dl = apps.reduce((s,a)=> s + (a.downloadCount||0), 0);
   const jm = joinedMs(raw);
+  const contactBtns = (u.verified && uid !== state.uid) ? `
+      <div style="display:flex;gap:10px;padding:0 18px 16px">
+        <button class="btn btn-primary" style="flex:1" id="us-wa" type="button" hidden><svg><use href="#ic-chat"/></svg> WhatsApp</button>
+        <button class="btn btn-ghost" style="flex:1" id="us-dm" type="button"><svg><use href="#ic-chat"/></svg> Private chat</button>
+      </div>` : "";
   const controls = (state.isOwner && uid !== state.uid && !raw.owner) ? `
       <h3 class="section-title">Owner controls</h3>
       <div class="settings-list" style="margin-bottom:20px" id="owner-actions">
@@ -2688,6 +3050,7 @@ function openUserSheet(uid){
         <div class="${presenceText(raw.lastActiveMs)==="Online" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw.lastActiveMs)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div></div>
       </div>
       <div class="profile-stats"><div class="stat"><b>${apps.length}</b><span>Uploads</span></div><div class="stat"><b>${fmtCount(dl)}</b><span>Downloads</span></div></div>
+      ${contactBtns}
       ${controls}
       <div class="settings-list" style="margin-bottom:24px" id="user-apps-list">
         ${apps.length ? apps.map(a=>`
@@ -2700,6 +3063,15 @@ function openUserSheet(uid){
   </div>`;
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#user-backdrop");
+  if(u.verified && uid !== state.uid){
+    getDoc(doc(db,"contacts",uid)).then(s=>{
+      const ph = s.exists() ? s.data().phone : "";
+      const b = $("#us-wa");
+      if(b && ph){ b.hidden = false; b.addEventListener("click", ()=> window.open(`https://wa.me/${ph.replace(/\D/g,"")}`, "_blank", "noopener")); }
+    }).catch(()=>{});
+    const d = $("#us-dm");
+    if(d) d.addEventListener("click", ()=>{ wrap.remove(); openDmPanel(uid); });
+  }
   wrap.addEventListener("click", async e=>{
     if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
     const r = e.target.closest("[data-open-app]");
@@ -2793,6 +3165,113 @@ function openCodesSheet(){
   });
 }
 
+/* ---------------------------------------------------------------------
+   12e. WHATSAPP NUMBER + PRIVATE CHAT (one-to-one, only with blue-tick members)
+   --------------------------------------------------------------------- */
+const normPhone = v => String(v||"").replace(/[\s()-]/g,"");
+const isPhone = v => /^\+\d{8,15}$/.test(v);
+async function loadMyPhone(){
+  try{
+    const s = await getDoc(doc(db,"contacts",state.uid));
+    if(s.exists()){ state.phone = s.data().phone || ""; if(state.phone) localStorage.setItem("pika_contact", state.phone); }
+    else if(localStorage.getItem("pika_contact")){ state.phone = localStorage.getItem("pika_contact"); }
+  }catch(e){}
+  renderProfile();
+}
+async function setMyPhone(){
+  const v = await askText({ title:"Your WhatsApp number", value: state.phone || "", placeholder:"+ country code and number", max:20, okLabel:"Save" });
+  if(v === null) return;
+  const p = normPhone(v);
+  if(!p){
+    try{ await deleteDoc(doc(db,"contacts",state.uid)); }catch(e){}
+    state.phone = ""; localStorage.removeItem("pika_contact"); renderProfile(); toast("Number removed"); return;
+  }
+  if(!isPhone(p)){ toast("Enter the number with the country code, starting with +", "ic-close"); return; }
+  try{
+    await setDoc(doc(db,"contacts",state.uid), { phone: p, at: serverTimestamp() });
+    state.phone = p; localStorage.setItem("pika_contact", p); renderProfile();
+    toast(state.verified ? "Number saved. Visitors can reach you on WhatsApp." : "Number saved.");
+  }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+}
+const threadIdFor = (a,b)=> [a,b].sort().join("__");
+function openDmPanel(otherId){
+  if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return; }
+  const o = userView(otherId, (state.users[otherId]||{}).name, false);
+  const tid = threadIdFor(state.uid, otherId);
+  const html = `
+  <div class="sheet-backdrop" id="dm-backdrop">
+    <div class="sheet chat-sheet">
+      <div class="sheet-handle"></div>
+      <div class="chat-header">
+        ${avatarHtml(o.name, o.photo, "lg")}
+        <div><b style="display:flex;align-items:center">${escapeHtml(o.name)}${tick(o.verified)}</b><small>Private chat</small></div>
+        <button class="sheet-close" data-close style="position:static; margin-left:auto; float:none;"><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      </div>
+      <div class="chat-log" id="dm-log"></div>
+      <div class="chat-input-row">
+        <input type="text" id="dm-input" placeholder="Message ${escapeHtml(o.name)}…" />
+        <button class="chat-send" id="dm-send" type="button"><svg><use href="#ic-play"/></svg></button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#dm-backdrop"), log = $("#dm-log");
+  let msgs = [];
+  const render = ()=>{
+    msgs.sort((a,b)=> (a.createdAtMs||0) - (b.createdAtMs||0));
+    log.innerHTML = msgs.map(m=>`<div class="msg ${m.from === state.uid ? "me" : "other"}">${escapeHtml(m.text)}</div>`).join("") || `<div class="empty-row">Say hello to ${escapeHtml(o.name)}.</div>`;
+    log.scrollTop = log.scrollHeight;
+  };
+  render();
+  const unsub = onSnapshot(query(collection(db,"dmMessages"), where("participants","array-contains", state.uid), where("threadId","==", tid)),
+    snap=>{ msgs = snap.docs.map(d=>({ id:d.id, ...d.data() })); render(); },
+    err=>{ console.warn(err); toast("Could not load messages: " + (err.code||""), "ic-close"); });
+  wrap.addEventListener("click", e=>{ if(e.target === wrap || e.target.closest("[data-close]")){ unsub(); wrap.remove(); } });
+  const send = async ()=>{
+    const input = $("#dm-input"), text = input.value.trim();
+    if(!text) return;
+    const problem = checkChatText(text, state.verified, state.isOwner);
+    if(problem){ toast(problem, "ic-close"); return; }
+    input.value = "";
+    try{
+      await addDoc(collection(db,"dmMessages"), { threadId: tid, participants: [state.uid, otherId], from: state.uid, to: otherId, fromName: state.username, text: text.slice(0,1000), createdAt: serverTimestamp(), createdAtMs: Date.now() });
+    }catch(err){ input.value = text; toast("Send failed: " + (err.code||err.message), "ic-close"); }
+  };
+  $("#dm-send").addEventListener("click", send);
+  $("#dm-input").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
+}
+function openInbox(){
+  if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return; }
+  const html = `
+  <div class="sheet-backdrop" id="inbox-backdrop">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <h3 style="padding:22px 18px 10px;margin:0;font-size:17px">Private messages</h3>
+      <div class="settings-list" id="inbox-list" style="margin:0 14px 24px"><div class="mini-row" style="color:var(--text-faint)">Loading…</div></div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#inbox-backdrop");
+  const unsub = onSnapshot(query(collection(db,"dmMessages"), where("participants","array-contains", state.uid)), snap=>{
+    const threads = {};
+    snap.docs.forEach(d=>{
+      const m = d.data(); const other = m.from === state.uid ? m.to : m.from;
+      if(!threads[other] || (m.createdAtMs||0) > (threads[other].createdAtMs||0)) threads[other] = m;
+    });
+    const rows = Object.entries(threads).sort((a,b)=> (b[1].createdAtMs||0) - (a[1].createdAtMs||0));
+    $("#inbox-list").innerHTML = rows.map(([other,m])=>{
+      const u = userView(other, m.from === other ? m.fromName : "", false);
+      return `<div class="mini-row tap" data-dm="${escapeHtml(other)}">${avatarHtml(u.name, u.photo, "lg")}<div class="mini-main"><b>${escapeHtml(u.name)}${tick(u.verified)}</b><small>${escapeHtml(m.text)}</small></div></div>`;
+    }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No private messages yet. Open a blue-tick member's profile in Users and tap Private chat.</div>`;
+  }, err=>{ console.warn(err); });
+  wrap.addEventListener("click", e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ unsub(); wrap.remove(); return; }
+    const r = e.target.closest("[data-dm]");
+    if(r){ unsub(); wrap.remove(); openDmPanel(r.dataset.dm); }
+  });
+}
+
 /* Category creation (used from the upload screen). */
 async function createCategoryQuick(){
   if(!firebaseReady || !state.uid){ toast("Please log in first.", "ic-close"); return; }
@@ -2815,6 +3294,8 @@ function initProfileActions(){
   $("#profile-photo-input").addEventListener("change", e=>{ changeMyPhoto(e.target.files[0]); e.target.value = ""; });
   $("#row-theme").addEventListener("click", ()=> $("#theme-toggle-btn").click());
   $("#row-verify").addEventListener("click", enterTickCode);
+  $("#row-phone").addEventListener("click", setMyPhone);
+  $("#row-messages").addEventListener("click", openInbox);
   $("#row-logout").addEventListener("click", logoutSelf);
   $("#row-delete-account").addEventListener("click", deleteMyAccount);
   $("#copy-secret-btn").addEventListener("click", async ()=>{
