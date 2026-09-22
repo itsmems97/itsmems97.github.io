@@ -10,6 +10,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0B0E14" />
 <title>Pika Store</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
 <link rel="manifest" href="pika-manifest.json" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
 
@@ -575,7 +576,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 
 /* ---- update 5 ---- */
 #splash{ position:fixed; inset:0; z-index:200; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:var(--bg); transition:opacity .3s; }
-#splash .logo{ width:72px; height:72px; border-radius:22px; background:#FFC61A; color:#0B0E14; font-size:44px; font-weight:900; display:flex; align-items:center; justify-content:center; }
+#splash .logo{ width:72px; height:72px; border-radius:22px; object-fit:cover; background:#FFC61A; }
 #splash p, #loading-overlay p{ margin:0; font-size:13px; color:var(--text-dim); }
 .spinner{ width:34px; height:34px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:pkspin .8s linear infinite; }
 @keyframes pkspin{ to{ transform:rotate(360deg); } }
@@ -603,6 +604,14 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .dl-bubble svg.ring{ position:absolute; inset:0; width:60px; height:60px; transform:rotate(-90deg); }
 .dl-bubble .pct{ font-size:12px; font-weight:800; position:relative; }
 .dl-bubble.busy svg.ring{ animation:pkspin 1s linear infinite; }
+.dl-dismiss-target{
+  position:fixed; z-index:119; left:50%; bottom:28px; transform:translateX(-50%) scale(.6);
+  width:64px; height:64px; border-radius:50%; background:rgba(20,20,24,.55); backdrop-filter:blur(6px);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .18s, transform .18s, background .15s;
+}
+.dl-dismiss-target.show{ opacity:1; transform:translateX(-50%) scale(1); }
+.dl-dismiss-target.armed{ background:var(--danger, #e5484d); transform:translateX(-50%) scale(1.12); }
 
 .msg .dm-meta{ display:inline-flex; margin-left:6px; vertical-align:-2px; }
 .dm-tick{ width:15px; height:11px; }
@@ -662,10 +671,10 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <!-- =========================================================
      USERNAME GATE — first screen on app launch
      ========================================================= -->
-<div id="splash"><div class="logo">P</div><div class="spinner"></div><p>Please wait…</p></div>
+<div id="splash"><img class="logo" alt="Pika" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" /><div class="spinner"></div><p>Please wait…</p></div>
 
 <div id="username-gate" hidden>
-  <img class="gate-logo" alt="Pika Store" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
+  <img class="gate-logo" alt="Pika Store" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
   <h1>Welcome to Pika Store</h1>
   <p>Choose a name and, if you like, a profile photo. No email or phone number needed.</p>
   <div id="gate-notice" hidden></div>
@@ -687,7 +696,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
   <!-- Top bar -->
   <header class="topbar">
     <div class="brand">
-      <img class="mark" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
+      <img class="mark" alt="" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
       <span>Pika</span>
     </div>
     <div class="search-box">
@@ -1123,32 +1132,51 @@ function withTimeout(promise, ms, label){
   });
 }
 
-/* Download a file INSIDE Pika Store (no browser tab), with a live progress bar. */
-async function downloadInsideStore(url, filename, onProgress){
-  const res = await fetch(url);
-  if(!res.ok){
-    // Without this check, a 404/error response body (a few dozen bytes of
-    // JSON) would silently get saved AS the file — exactly the "55 byte
-    // fake APK" bug. Fail loudly instead.
-    throw new Error(`Download failed (HTTP ${res.status}) — the file link may be broken`);
-  }
-  const total = Number(res.headers.get("content-length")) || 0;
-  const reader = res.body.getReader();
-  let received = 0;
-  const chunks = [];
-  while(true){
-    const { done, value } = await reader.read();
-    if(done) break;
-    chunks.push(value);
-    received += value.length;
-    if(total) onProgress && onProgress(Math.round((received/total)*100)); else if(onProgress) onProgress(null);
-  }
-  const blob = new Blob(chunks);
-  const blobUrl = URL.createObjectURL(blob);
+/* Download a file INSIDE Pika Store (no browser tab), with a live progress bar.
+   IMPORTANT — do not go back to building a Blob + blob: URL here. That
+   version worked in a normal browser, but inside the wrapped Android app the
+   WebView template intercepts blob: downloads by base64-encoding the whole
+   file in JS, sending it through window.prompt(), then Base64-decoding it a
+   second time natively — see WebViewActivity.smali. That double copy of a
+   big file is exactly what threw OutOfMemoryError at 100%. The fix: watch
+   progress with fetch() but throw every chunk away immediately (never kept
+   in memory), then hand the *real* https:// URL to a plain <a download>
+   click, so the OS/WebView's own download handling streams it straight to
+   disk — no blob, no base64, no JS-side buffer, for a file of any size. */
+async function downloadInsideStore(url, filename, onProgress, signal){
+  let total = 0;
+  try{
+    const head = await fetch(url, { method: "HEAD", signal });
+    total = Number(head.headers.get("content-length")) || 0;
+  }catch(e){ /* HEAD not supported by every static file server — progress just becomes indeterminate */ }
+  if(total){
+    try{
+      const res = await fetch(url, { signal });
+      if(!res.ok){
+        // Without this check, a 404/error response body (a few dozen bytes of
+        // JSON) would silently get saved AS the file — exactly the "55 byte
+        // fake APK" bug. Fail loudly instead.
+        throw new Error(`Download failed (HTTP ${res.status}) — the file link may be broken`);
+      }
+      const reader = res.body.getReader();
+      let received = 0;
+      while(true){
+        const { done, value } = await reader.read();
+        if(done) break;
+        received += value.length; // counted, never stored
+        onProgress && onProgress(Math.min(99, Math.round((received/total)*100)));
+      }
+    }catch(e){
+      if(e && e.name === "AbortError") throw e; // real cancel — bubble up, don't fall through to saving
+      // Progress-watching failed for some other reason (CORS, network blip) —
+      // that's cosmetic, the real save below still goes ahead.
+    }
+  } else if(onProgress) onProgress(null);
+  if(signal && signal.aborted){ const err = new Error("cancelled"); err.name = "AbortError"; throw err; }
+  onProgress && onProgress(100);
   const a = document.createElement("a");
-  a.href = blobUrl; a.download = filename;
+  a.href = url; a.download = filename; a.rel = "noopener";
   document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(blobUrl), 8000);
 }
 
 /* ---------------------------------------------------------------------
@@ -1180,6 +1208,7 @@ const state = {
   upload: { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"", hasUrl:false, url:"" }
 };
 
+const PIKA_LOGO_URL = "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png";
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
@@ -1724,7 +1753,10 @@ function startHeartbeat(){
   };
   beat();
   setInterval(beat, 4*60*1000);
-  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") beat(); });
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.visibilityState === "visible") beat();
+    else if(state.uid) updateDoc(doc(db,"users",state.uid), { activeThreadId: null }).catch(()=>{});
+  });
   setInterval(()=> renderUsersPage(), 60*1000);
 }
 function listenUsers(){
@@ -1909,6 +1941,24 @@ function renderHome(){
 }
 
 function appLink(id){ return `${location.origin}${location.pathname}?app=${encodeURIComponent(id)}`; }
+/** Share a single upload. On Android (inside the app or in Chrome) this opens
+ *  the native "Share to…" sheet with the app name, format/size and uploader
+ *  baked into the message, next to the link, exactly like a Play Store share.
+ *  Falls back to copying the link to the clipboard where Web Share isn't
+ *  available (desktop browsers, older WebViews). */
+async function shareApp(app, up){
+  const link = appLink(app.id);
+  const bits = [app.format || "APK"];
+  if(app.sizeLabel) bits.push(app.sizeLabel);
+  const text = `${app.name} (${bits.join(" • ")}) — uploaded by ${up.name}\n${link}`;
+  if(navigator.share){
+    try{ await navigator.share({ title: app.name, text, url: link }); }
+    catch(e){ if(e && e.name !== "AbortError") toast("Share failed", "ic-close"); }
+    return;
+  }
+  const ok = await copyText(text);
+  toast(ok ? "Link copied" : "Copy failed", ok ? "ic-check" : "ic-close");
+}
 function catLink(id){ return `${location.origin}${location.pathname}?cat=${encodeURIComponent(id)}`; }
 // A random (but stable-for-this-visit) order, so whoever uploaded first doesn't always sit at the top.
 // Re-shuffles once per page load/refresh, not on every re-render, so it doesn't jump around while browsing.
@@ -2153,6 +2203,15 @@ function openAppDetail(appId){
           <div class="dev" style="display:flex;align-items:center">${avatarHtml(up.name, up.photo)}${escapeHtml(up.name)}${tick(up.verified)}</div>
         </div>
       </div>
+      <div class="detail-actions" style="display:flex;gap:8px;padding:0 18px 6px">
+        <button class="btn btn-primary" style="flex:2" id="detail-download-btn">
+          <svg><use href="${app.hasPassword && !state.isOwner ? "#ic-lock" : "#ic-download"}"/></svg>
+          ${app.hasPassword && !state.isOwner ? "Enter password" : (app.hasPassword ? "Download (owner)" : "Download")}
+        </button>
+        <button class="btn btn-ghost" style="flex:1" id="detail-copy-btn" type="button" title="Share"><svg><use href="#ic-copy"/></svg> Share</button>
+        ${canManage(app.uploaderUid) ? `<button class="btn btn-danger" id="detail-delete-btn" title="Delete this upload"><svg><use href="#ic-trash"/></svg></button>` : ""}
+      </div>
+      <div class="dl-progress" id="detail-dl-progress-top" hidden><i id="detail-dl-bar-top"></i></div>
       ${app.category ? `<div class="cat-pill"><svg width="11" height="11"><use href="#ic-grid"/></svg> ${escapeHtml(app.category)}</div>` : ""}
       <div class="detail-stats">
         <div class="stat"><b>${fmtCount(app.downloadCount||0)}</b><span>Downloads</span></div>
@@ -2174,16 +2233,7 @@ function openAppDetail(appId){
           <div class="body">Format: ${app.format||"APK"}${app.sizeLabel? " • "+app.sizeLabel:""}\nUploaded by: ${escapeHtml(up.name)}\nCategory: ${escapeHtml(app.category||"Uncategorized")}</div>
         </details>
       </div>
-      <div class="dl-progress" id="detail-dl-progress" hidden><i id="detail-dl-bar"></i></div>
-      <div class="detail-footer">
-        <button class="btn btn-primary btn-lg btn-block" id="detail-download-btn">
-          <svg><use href="${app.hasPassword && !state.isOwner ? "#ic-lock" : "#ic-download"}"/></svg>
-          ${app.hasPassword && !state.isOwner ? "Enter password to download" : (app.hasPassword ? "Download (owner access)" : "Download")}
-        </button>
-        <button class="btn btn-ghost btn-lg btn-block" style="margin-top:10px" id="detail-copy-btn" type="button"><svg><use href="#ic-copy"/></svg> Copy link</button>
-        ${canManage(app.uploaderUid) ? `<button class="btn btn-danger btn-lg btn-block" style="margin-top:10px" id="detail-delete-btn"><svg><use href="#ic-trash"/></svg> Delete this upload</button>` : ""}
-        ${app.downloadUrl ? `<a class="btn btn-ghost btn-lg btn-block" style="margin-top:10px" href="${escapeHtml(app.downloadUrl)}" target="_blank" rel="noopener noreferrer"><svg><use href="#ic-chevron"/></svg> Visit link</a>` : ""}
-      </div>
+      ${app.downloadUrl ? `<div class="detail-footer"><a class="btn btn-ghost btn-lg btn-block" href="${escapeHtml(app.downloadUrl)}" target="_blank" rel="noopener noreferrer"><svg><use href="#ic-chevron"/></svg> Visit link</a></div>` : ""}
       <div style="height:20px"></div>
     </div>
   </div>`;
@@ -2191,7 +2241,7 @@ function openAppDetail(appId){
   const wrap = $("#detail-backdrop");
   wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")) wrap.remove(); });
 
-  $("#detail-copy-btn").addEventListener("click", async ()=>{ const ok = await copyText(appLink(app.id)); toast(ok ? "Link copied" : "Copy failed", ok ? "ic-check" : "ic-close"); });
+  $("#detail-copy-btn").addEventListener("click", async ()=>{ await shareApp(app, up); });
   const delBtn = $("#detail-delete-btn");
   if(delBtn) delBtn.addEventListener("click", async ()=>{
     if(await deleteApp(app)) wrap.remove();
@@ -2204,7 +2254,10 @@ function openAppDetail(appId){
       const hash = await sha256(entered);
       if(hash !== app.passwordHash){ toast("Wrong password", "ic-close"); return; }
     }
+    const progWrap = $("#detail-dl-progress-top"), bar = $("#detail-dl-bar-top");
+    if(progWrap){ progWrap.hidden = false; if(bar) bar.style.width = "0%"; }
     await startDownload(app);
+    setTimeout(()=>{ if(progWrap) progWrap.hidden = true; }, 1500);
   });
 }
 async function deleteApp(app){
@@ -2222,24 +2275,51 @@ function renderStars(rating){
 /* A floating, draggable circle shows live download progress, and keeps going after you leave the app page. */
 const dlActive = new Set();
 let dlBubbleCount = 0;
-function createDlBubble(app){
+function dismissTarget(){
+  let el = $("#dl-dismiss-target");
+  if(el) return el;
+  el = document.createElement("div");
+  el.id = "dl-dismiss-target";
+  el.className = "dl-dismiss-target";
+  el.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>`;
+  document.body.appendChild(el);
+  return el;
+}
+function createDlBubble(app, onCancel){
   const el = document.createElement("div");
   el.className = "dl-bubble";
   const R = 26, C = 2*Math.PI*R;
   el.innerHTML = `<svg class="ring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="${R}" fill="none" stroke="var(--border)" stroke-width="4"/><circle class="arc" cx="30" cy="30" r="${R}" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}"/></svg><span class="pct">0%</span>`;
   el.style.right = "14px"; el.style.bottom = (110 + dlBubbleCount*70) + "px"; dlBubbleCount++;
   document.body.appendChild(el);
-  // drag anywhere on screen
-  let drag = false, ox = 0, oy = 0;
-  el.addEventListener("pointerdown", e=>{ drag = true; const r = el.getBoundingClientRect(); ox = e.clientX - r.left; oy = e.clientY - r.top; el.setPointerCapture(e.pointerId); });
+  // drag anywhere on screen; dragging reveals a dismiss target at the
+  // bottom — drop the bubble there to cancel the download.
+  let drag = false, ox = 0, oy = 0, cancelled = false;
+  const target = dismissTarget();
+  const overTarget = (x,y)=>{
+    const r = target.getBoundingClientRect();
+    return x >= r.left-16 && x <= r.right+16 && y >= r.top-16 && y <= r.bottom+16;
+  };
+  el.addEventListener("pointerdown", e=>{
+    drag = true; const r = el.getBoundingClientRect(); ox = e.clientX - r.left; oy = e.clientY - r.top;
+    el.setPointerCapture(e.pointerId);
+    target.classList.add("show");
+  });
   el.addEventListener("pointermove", e=>{
     if(!drag) return;
     el.style.left = Math.max(0, Math.min(innerWidth-60, e.clientX - ox)) + "px";
     el.style.top = Math.max(0, Math.min(innerHeight-60, e.clientY - oy)) + "px";
     el.style.right = "auto"; el.style.bottom = "auto";
+    target.classList.toggle("armed", overTarget(e.clientX, e.clientY));
   });
-  el.addEventListener("pointerup", ()=>{ drag = false; });
-  el.addEventListener("click", ()=> toast(`Downloading "${app.name}"`));
+  el.addEventListener("pointerup", e=>{
+    if(!drag) return;
+    drag = false;
+    const armed = overTarget(e.clientX, e.clientY);
+    target.classList.remove("show","armed");
+    if(armed){ cancelled = true; onCancel && onCancel(); }
+  });
+  el.addEventListener("click", ()=>{ if(!cancelled) toast(`Downloading "${app.name}"`); });
   const arc = el.querySelector(".arc"), label = el.querySelector(".pct");
   return {
     set(pct){
@@ -2248,7 +2328,7 @@ function createDlBubble(app){
       arc.style.strokeDashoffset = C * (1 - pct/100);
       label.textContent = pct + "%";
     },
-    remove(){ el.remove(); dlBubbleCount = Math.max(0, dlBubbleCount-1); }
+    remove(){ el.remove(); dlBubbleCount = Math.max(0, dlBubbleCount-1); if(!$(".dl-bubble")) target.classList.remove("show","armed"); }
   };
 }
 function startDownloadJob(app){
@@ -2256,24 +2336,31 @@ function startDownloadJob(app){
   if(!url){ toast("No download link available for this file", "ic-close"); return; }
   if(dlActive.has(app.id)){ toast("This file is already downloading"); return; }
   dlActive.add(app.id);
-  const bubble = createDlBubble(app);
+  const controller = new AbortController();
+  const bubble = createDlBubble(app, ()=> controller.abort());
   const filename = `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`;
   toast("Download started");
   (async ()=>{
+    let cancelled = false;
     try{
-      await downloadInsideStore(url, filename, pct=>{ bubble.set(pct); const b = $("#detail-dl-bar"); if(b && pct !== null) b.style.width = pct + "%"; });
+      await downloadInsideStore(url, filename, pct=>{ bubble.set(pct); const b = $("#detail-dl-bar-top"); if(b && pct !== null) b.style.width = pct + "%"; }, controller.signal);
       bubble.set(100);
       toast(`"${app.name}" downloaded`);
     }catch(err){
-      // Plain browser download when in-app streaming is blocked (e.g. the file server has no CORS header)
-      console.warn("In-app download failed, falling back to direct link:", err);
-      const a = document.createElement("a");
-      a.href = url; a.target = "_blank"; a.rel = "noopener";
-      document.body.appendChild(a); a.click(); a.remove();
-      toast("Download opened in your browser");
+      if(err && err.name === "AbortError"){
+        cancelled = true;
+        toast("Download cancelled");
+      } else {
+        // Plain browser download when in-app streaming is blocked (e.g. the file server has no CORS header)
+        console.warn("In-app download failed, falling back to direct link:", err);
+        const a = document.createElement("a");
+        a.href = url; a.target = "_blank"; a.rel = "noopener";
+        document.body.appendChild(a); a.click(); a.remove();
+        toast("Download opened in your browser");
+      }
     }
-    if(firebaseReady){ try{ await updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }); }catch(e){} }
-    setTimeout(()=> bubble.remove(), 2500);
+    if(!cancelled && firebaseReady){ try{ await updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }); }catch(e){} }
+    bubble.remove();
     dlActive.delete(app.id);
   })();
 }
@@ -3209,11 +3296,16 @@ async function setMyPhone(){
   }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
 const threadIdFor = (a,b)=> [a,b].sort().join("__");
-const ONLINE_WINDOW_MS = 3*60*1000;
+const ONLINE_WINDOW_MS = 6*60*1000; // > the 4-min heartbeat interval, so people don't flicker "offline" between beats
 function isOnlineUid(uid){ const u = state.users[uid]; return !!(u && u.lastActiveMs && (Date.now()-u.lastActiveMs) < ONLINE_WINDOW_MS); }
-function dmTickIcon(m, otherId){
+/* Three tick states, escalating only (never downgrades once reached, same as WhatsApp):
+   - single pink  = app closed / not opened recently ("outside the app")
+   - double pink  = app open right now, but not looking at THIS conversation
+   - double green = has this exact conversation open right now (or has already seen the message) */
+function isViewingThread(uid, tid){ const u = state.users[uid]; return isOnlineUid(uid) && u && u.activeThreadId === tid; }
+function dmTickIcon(m, otherId, tid){
   if(m.from !== state.uid) return "";                       // ticks are only shown on messages I sent
-  if(m.seenAt) return `<svg class="dm-tick seen"><use href="#ic-check2"/></svg>`;
+  if(m.seenAt || isViewingThread(otherId, tid)) return `<svg class="dm-tick seen"><use href="#ic-check2"/></svg>`;
   if(isOnlineUid(otherId)) return `<svg class="dm-tick delivered"><use href="#ic-check2"/></svg>`;
   return `<svg class="dm-tick sent"><use href="#ic-check1"/></svg>`;
 }
@@ -3241,6 +3333,8 @@ function openDmPanel(otherId){
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#dm-backdrop"), log = $("#dm-log");
   let msgs = [];
+  if(firebaseReady) updateDoc(doc(db,"users",state.uid), { activeThreadId: tid, lastActiveMs: Date.now() }).catch(()=>{});
+  const clearActiveThread = ()=>{ if(firebaseReady) updateDoc(doc(db,"users",state.uid), { activeThreadId: null }).catch(()=>{}); };
   const markSeen = ()=>{
     msgs.filter(m=> m.to === state.uid && !m.seenAt).forEach(m=>{
       updateDoc(doc(db,"dmMessages",m.id), { seenAt: serverTimestamp() }).catch(()=>{});
@@ -3254,7 +3348,7 @@ function openDmPanel(otherId){
       return `<div class="msg ${mine ? "me" : "other"}${canDel ? " has-del" : ""}">
         ${canDel ? `<button class="msg-del" data-del-dm="${m.id}" title="Delete"><svg><use href="#ic-trash"/></svg></button>` : ""}
         ${escapeHtml(m.text)}
-        <span class="dm-meta">${dmTickIcon(m, otherId)}</span>
+        <span class="dm-meta">${dmTickIcon(m, otherId, tid)}</span>
       </div>`;
     }).join("") || `<div class="empty-row">Say hello to ${escapeHtml(o.name)}.</div>`;
     log.scrollTop = log.scrollHeight;
@@ -3279,7 +3373,7 @@ function openDmPanel(otherId){
     typingTimer = setTimeout(stopTyping, 4000);
   };
   wrap.addEventListener("click", e=>{
-    if(e.target === wrap || e.target.closest("[data-close]")){ unsub(); typingUnsub(); stopTyping(); wrap.remove(); return; }
+    if(e.target === wrap || e.target.closest("[data-close]")){ unsub(); typingUnsub(); stopTyping(); clearActiveThread(); wrap.remove(); return; }
     const del = e.target.closest("[data-del-dm]");
     if(del){ deleteDoc(doc(db,"dmMessages",del.dataset.delDm)).catch(err=> toast("Delete failed: "+(err.code||err.message), "ic-close")); }
   });
