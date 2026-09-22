@@ -640,6 +640,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="ic-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5Z" fill="currentColor"/></symbol>
 <symbol id="ic-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-send-app" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="ic-cube" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z" fill="url(#gradAmber)" opacity=".9"/><path d="M12 3v18M4 7.5 12 12l8-4.5" fill="none" stroke="#171200" stroke-width="1.1" opacity=".35"/></symbol>
 <symbol id="ic-fire" viewBox="0 0 24 24"><path d="M12 2c1 3-3 4-3 8a4 4 0 0 0 8 0c1.5 1.5 2 3.5 2 5a7 7 0 1 1-14 0c0-5 4-8 4-9 1 0 2 2 3 3.5C12.4 6.5 11.5 4 12 2Z" fill="url(#gradAmber)"/></symbol>
 <symbol id="ic-sparkle" viewBox="0 0 24 24"><path d="M12 3c.6 3.4 1.6 4.4 5 5-3.4.6-4.4 1.6-5 5-.6-3.4-1.6-4.4-5-5 3.4-.6 4.4-1.6 5-5Z" fill="url(#gradTeal)"/></symbol>
@@ -1518,7 +1519,8 @@ async function ensureProfile(){
     if(!state.photoURL) state.photoURL = existing.photoURL || "";
   }
   const base = { name: state.username, nameLower: lowerName(state.username), photoURL: state.photoURL || "", verified: state.verified, owner: state.isOwner, lastActiveMs: Date.now(), updatedAt: serverTimestamp() };
-  try{ await setDoc(ref, existing ? base : { ...base, joinedAt: serverTimestamp() }, { merge:true }); }catch(e){ console.warn(e); }
+  try{ await setDoc(ref, existing ? base : { ...base, joinedAt: serverTimestamp() }, { merge:true }); }
+  catch(e){ console.warn(e); toast(`Profile save error: ${e.code||e.message} — please republish firestore.rules`, "ic-close"); }
   if(state.isOwner){ await dedupeOwnerDocs(); migrateOwnerContent(); }
 }
 async function migrateOwnerContent(){
@@ -1900,11 +1902,15 @@ function renderHome(){
 
 function appLink(id){ return `${location.origin}${location.pathname}?app=${encodeURIComponent(id)}`; }
 function catLink(id){ return `${location.origin}${location.pathname}?cat=${encodeURIComponent(id)}`; }
+// A random (but stable-for-this-visit) order, so whoever uploaded first doesn't always sit at the top.
+// Re-shuffles once per page load/refresh, not on every re-render, so it doesn't jump around while browsing.
+const categoryShuffleWeight = {};
+function shuffleWeight(id){ if(!(id in categoryShuffleWeight)) categoryShuffleWeight[id] = Math.random(); return categoryShuffleWeight[id]; }
 function renderHomeCategories(){
   const row = $("#category-row"); if(!row) return;
   const counts = {};
   state.apps.forEach(a=>{ if(a.uploaderUid) counts[a.uploaderUid] = (counts[a.uploaderUid]||0) + 1; });
-  const ids = Object.entries(state.users).filter(([id,u])=> u.verified && !u.banned && counts[id]).sort((a,b)=> counts[b[0]] - counts[a[0]]);
+  const ids = Object.entries(state.users).filter(([id,u])=> u.verified && !u.banned && counts[id]).sort((a,b)=> shuffleWeight(a[0]) - shuffleWeight(b[0]));
   $("#home-cats-section").hidden = ids.length === 0;
   row.innerHTML = `<button class="chip ${state.activeCategory==="all" ? "active" : ""}" data-cat="all" type="button">All</button>` +
     ids.map(([id,u])=>`
@@ -2670,7 +2676,7 @@ function openChatPanel(){
       <div class="chat-log" id="chat-log-el"></div>
       <div class="reply-bar" id="reply-bar" hidden></div>
       <div class="chat-input-row">
-        <button class="chat-attach" id="chat-attach-btn" type="button" aria-label="Send an app"><svg><use href="#ic-cube"/></svg></button>
+        <button class="chat-attach" id="chat-attach-btn" type="button" aria-label="Send an app"><svg><use href="#ic-send-app"/></svg></button>
         <input type="text" id="chat-input" placeholder="Message as ${escapeHtml(state.username)}…" />
         <button class="chat-send" id="chat-send-btn"><svg><use href="#ic-play"/></svg></button>
       </div>
