@@ -603,6 +603,12 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .dl-bubble svg.ring{ position:absolute; inset:0; width:60px; height:60px; transform:rotate(-90deg); }
 .dl-bubble .pct{ font-size:12px; font-weight:800; position:relative; }
 .dl-bubble.busy svg.ring{ animation:pkspin 1s linear infinite; }
+
+.msg .dm-meta{ display:inline-flex; margin-left:6px; vertical-align:-2px; }
+.dm-tick{ width:15px; height:11px; }
+.dm-tick.sent{ color:#ff8fc7; }
+.dm-tick.delivered{ color:#ff8fc7; }
+.dm-tick.seen{ color:#20c56b; }
 </style>
 </head>
 <body>
@@ -640,6 +646,8 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="ic-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5Z" fill="currentColor"/></symbol>
 <symbol id="ic-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-check1" viewBox="0 0 20 14"><path d="M2 7.5 6.5 12 18 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-check2" viewBox="0 0 20 14"><path d="M1 7.5 5 11.5 12.5 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 7.5 11.5 11.5 19 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="ic-send-app" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="ic-cube" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z" fill="url(#gradAmber)" opacity=".9"/><path d="M12 3v18M4 7.5 12 12l8-4.5" fill="none" stroke="#171200" stroke-width="1.1" opacity=".35"/></symbol>
 <symbol id="ic-fire" viewBox="0 0 24 24"><path d="M12 2c1 3-3 4-3 8a4 4 0 0 0 8 0c1.5 1.5 2 3.5 2 5a7 7 0 1 1-14 0c0-5 4-8 4-9 1 0 2 2 3 3.5C12.4 6.5 11.5 4 12 2Z" fill="url(#gradAmber)"/></symbol>
@@ -1931,13 +1939,14 @@ function applyDeepLink(){
   if(deepLinkDone) return;
   deepLinkDone = true;
   const qs = new URLSearchParams(location.search);
-  const cat = qs.get("cat"), appId = qs.get("app");
+  const cat = qs.get("cat"), appId = qs.get("app"), dm = qs.get("dm");
   if(cat){ state.activeCategory = cat; heroApps = []; renderHome(); $$(".nav-btn")[0].click(); }
   if(appId){
     if(state.apps.some(a=>a.id===appId)) openAppDetail(appId);
     else toast("This item is no longer available.", "ic-close");
   }
-  if(cat || appId){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
+  if(dm && state.uid) openDmPanel(dm);
+  if(cat || appId || dm){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
 }
 function renderAppRow(selector, apps, showRank){
   const row = $(selector);
@@ -3200,17 +3209,26 @@ async function setMyPhone(){
   }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
 const threadIdFor = (a,b)=> [a,b].sort().join("__");
+const ONLINE_WINDOW_MS = 3*60*1000;
+function isOnlineUid(uid){ const u = state.users[uid]; return !!(u && u.lastActiveMs && (Date.now()-u.lastActiveMs) < ONLINE_WINDOW_MS); }
+function dmTickIcon(m, otherId){
+  if(m.from !== state.uid) return "";                       // ticks are only shown on messages I sent
+  if(m.seenAt) return `<svg class="dm-tick seen"><use href="#ic-check2"/></svg>`;
+  if(isOnlineUid(otherId)) return `<svg class="dm-tick delivered"><use href="#ic-check2"/></svg>`;
+  return `<svg class="dm-tick sent"><use href="#ic-check1"/></svg>`;
+}
 function openDmPanel(otherId){
   if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return; }
   const o = userView(otherId, (state.users[otherId]||{}).name, false);
   const tid = threadIdFor(state.uid, otherId);
+  const canDelAny = state.isOwner;
   const html = `
   <div class="sheet-backdrop" id="dm-backdrop">
     <div class="sheet chat-sheet">
       <div class="sheet-handle"></div>
       <div class="chat-header">
         ${avatarHtml(o.name, o.photo, "lg")}
-        <div><b style="display:flex;align-items:center">${escapeHtml(o.name)}${tick(o.verified)}</b><small>Private chat</small></div>
+        <div><b style="display:flex;align-items:center">${escapeHtml(o.name)}${tick(o.verified)}</b><small id="dm-substatus">Private chat</small></div>
         <button class="sheet-close" data-close style="position:static; margin-left:auto; float:none;"><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       </div>
       <div class="chat-log" id="dm-log"></div>
@@ -3223,28 +3241,61 @@ function openDmPanel(otherId){
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#dm-backdrop"), log = $("#dm-log");
   let msgs = [];
+  const markSeen = ()=>{
+    msgs.filter(m=> m.to === state.uid && !m.seenAt).forEach(m=>{
+      updateDoc(doc(db,"dmMessages",m.id), { seenAt: serverTimestamp() }).catch(()=>{});
+    });
+  };
   const render = ()=>{
     msgs.sort((a,b)=> (a.createdAtMs||0) - (b.createdAtMs||0));
-    log.innerHTML = msgs.map(m=>`<div class="msg ${m.from === state.uid ? "me" : "other"}">${escapeHtml(m.text)}</div>`).join("") || `<div class="empty-row">Say hello to ${escapeHtml(o.name)}.</div>`;
+    log.innerHTML = msgs.map(m=>{
+      const mine = m.from === state.uid;
+      const canDel = mine || canDelAny;
+      return `<div class="msg ${mine ? "me" : "other"}${canDel ? " has-del" : ""}">
+        ${canDel ? `<button class="msg-del" data-del-dm="${m.id}" title="Delete"><svg><use href="#ic-trash"/></svg></button>` : ""}
+        ${escapeHtml(m.text)}
+        <span class="dm-meta">${dmTickIcon(m, otherId)}</span>
+      </div>`;
+    }).join("") || `<div class="empty-row">Say hello to ${escapeHtml(o.name)}.</div>`;
     log.scrollTop = log.scrollHeight;
+    markSeen();
   };
   render();
   const unsub = onSnapshot(query(collection(db,"dmMessages"), where("participants","array-contains", state.uid), where("threadId","==", tid)),
     snap=>{ msgs = snap.docs.map(d=>({ id:d.id, ...d.data() })); render(); },
     err=>{ console.warn(err); toast("Could not load messages: " + (err.code||""), "ic-close"); });
-  wrap.addEventListener("click", e=>{ if(e.target === wrap || e.target.closest("[data-close]")){ unsub(); wrap.remove(); } });
+  // typing indicator (best-effort; failures are silent and never block chat)
+  const typingUnsub = onSnapshot(doc(db,"typing",tid), s=>{
+    const sub = $("#dm-substatus"); if(!sub) return;
+    const d = s.exists() ? s.data() : null;
+    const isOther = d && d.byUid === otherId && d.at && d.at.toMillis && (Date.now()-d.at.toMillis()) < 6000;
+    sub.textContent = isOther ? "typing…" : "Private chat";
+  }, ()=>{});
+  let typingTimer = null;
+  const stopTyping = ()=>{ if(typingTimer){ clearTimeout(typingTimer); typingTimer=null; } setDoc(doc(db,"typing",tid), { byUid: state.uid, at: serverTimestamp(), typing:false }).catch(()=>{}); };
+  const pingTyping = ()=>{
+    setDoc(doc(db,"typing",tid), { byUid: state.uid, at: serverTimestamp() }).catch(()=>{});
+    if(typingTimer) clearTimeout(typingTimer);
+    typingTimer = setTimeout(stopTyping, 4000);
+  };
+  wrap.addEventListener("click", e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ unsub(); typingUnsub(); stopTyping(); wrap.remove(); return; }
+    const del = e.target.closest("[data-del-dm]");
+    if(del){ deleteDoc(doc(db,"dmMessages",del.dataset.delDm)).catch(err=> toast("Delete failed: "+(err.code||err.message), "ic-close")); }
+  });
   const send = async ()=>{
     const input = $("#dm-input"), text = input.value.trim();
     if(!text) return;
     const problem = checkChatText(text, state.verified, state.isOwner);
     if(problem){ toast(problem, "ic-close"); return; }
-    input.value = "";
+    input.value = ""; if(typingTimer) clearTimeout(typingTimer);
+    setDoc(doc(db,"typing",tid), { byUid: state.uid, at: serverTimestamp(), typing:false }).catch(()=>{});
     try{
       await addDoc(collection(db,"dmMessages"), { threadId: tid, participants: [state.uid, otherId], from: state.uid, to: otherId, fromName: state.username, text: text.slice(0,1000), createdAt: serverTimestamp(), createdAtMs: Date.now() });
     }catch(err){ input.value = text; toast("Send failed: " + (err.code||err.message), "ic-close"); }
   };
   $("#dm-send").addEventListener("click", send);
-  $("#dm-input").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
+  $("#dm-input").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); else pingTyping(); });
 }
 function openInbox(){
   if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return; }
