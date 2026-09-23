@@ -1034,7 +1034,7 @@ const CONFIG = {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   initializeFirestore, getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, increment,
-  onSnapshot, query, orderBy, limit, serverTimestamp, where, persistentLocalCache, persistentMultipleTabManager,
+  onSnapshot, query, orderBy, limit, serverTimestamp, where,
   enableNetwork, disableNetwork
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -1045,8 +1045,7 @@ let firebaseReady = false;
 try{
   const fbApp = initializeApp(CONFIG.firebase);
   db = initializeFirestore(fbApp, {
-    experimentalAutoDetectLongPolling: true,
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    experimentalAutoDetectLongPolling: true
   });
   auth = getAuth(fbApp);
   firebaseReady = true;
@@ -1726,7 +1725,22 @@ function initOnboarding(){
     }
   });
   input.addEventListener("keydown", e=>{ if(e.key==="Enter") btn.click(); });
-  setTimeout(hideSplash, 12000);   // safety: never leave the splash screen stuck
+  setTimeout(()=>{
+    hideSplash();
+    // If neither the app nor the login gate ended up visible, something hung during boot —
+    // show a clear way out instead of leaving a blank white screen.
+    setTimeout(()=>{
+      const appVisible = !$("#app").hidden;
+      const gateVisible = !$("#username-gate").hidden;
+      if(!appVisible && !gateVisible && !document.getElementById("boot-stuck")){
+        document.body.insertAdjacentHTML("beforeend", `
+          <div id="boot-stuck" style="position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
+            <p style="margin:0;color:var(--text-dim);font-size:14px">This is taking longer than it should.</p>
+            <button class="btn btn-primary" onclick="location.reload()">Reload</button>
+          </div>`);
+      }
+    }, 400);
+  }, 12000);   // safety: never leave the splash screen stuck
   initAuth();
 }
 
@@ -1759,16 +1773,17 @@ function listenSession(){
   }, err=> console.warn("session listener", err));
 }
 function watchConnectivity(){
+  const bootedAt = Date.now();
   let reconnecting = false;
   const kick = async ()=>{
     if(reconnecting || !firebaseReady) return;
+    if(Date.now() - bootedAt < 8000) return; // never touch the network while the app is still starting up
     reconnecting = true;
     try{ await disableNetwork(db); await enableNetwork(db); }catch(e){}
     reconnecting = false;
   };
   document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") kick(); });
   window.addEventListener("online", kick);
-  window.addEventListener("pageshow", kick);
 }
 function startHeartbeat(){
   const goOffline = ()=>{ if(state.uid) updateDoc(doc(db,"users",state.uid), { lastActiveMs: 0, activeThreadId: null }).catch(()=>{}); };
