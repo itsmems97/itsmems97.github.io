@@ -3416,6 +3416,17 @@ function openDmPanel(otherId){
   const unsub = onSnapshot(query(collection(db,"dmMessages"), where("participants","array-contains", state.uid), where("threadId","==", tid)),
     snap=>{ msgs = snap.docs.map(d=>({ id:d.id, ...d.data() })); render(); },
     err=>{ console.warn(err); toast("Could not load messages: " + (err.code||""), "ic-close"); });
+  // Safety net: the realtime listener above can silently stall (backgrounded tab,
+  // flaky mobile network) without ever throwing an error. This plain re-fetch
+  // catches anything it missed every few seconds, so messages never depend on
+  // the user closing and reopening the chat to "unstick" it.
+  const pollTimer = setInterval(async ()=>{
+    try{
+      const snap = await getDocs(query(collection(db,"dmMessages"), where("participants","array-contains", state.uid), where("threadId","==", tid)));
+      const fresh = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      if(fresh.length !== msgs.length || fresh.some(f=> !msgs.find(m=> m.id===f.id && m.seenAt===f.seenAt))){ msgs = fresh; render(); }
+    }catch(e){ /* best-effort only */ }
+  }, 5000);
   // typing indicator (best-effort; failures are silent and never block chat)
   const typingUnsub = onSnapshot(doc(db,"typing",tid), s=>{
     const sub = $("#dm-substatus"); if(!sub) return;
@@ -3431,7 +3442,7 @@ function openDmPanel(otherId){
     typingTimer = setTimeout(stopTyping, 4000);
   };
   wrap.addEventListener("click", e=>{
-    if(e.target === wrap || e.target.closest("[data-close]")){ unsub(); typingUnsub(); stopTyping(); clearActiveThread(); wrap.remove(); return; }
+    if(e.target === wrap || e.target.closest("[data-close]")){ unsub(); clearInterval(pollTimer); typingUnsub(); stopTyping(); clearActiveThread(); wrap.remove(); return; }
     const del = e.target.closest("[data-del-dm]");
     if(del){ deleteDoc(doc(db,"dmMessages",del.dataset.delDm)).catch(err=> toast("Delete failed: "+(err.code||err.message), "ic-close")); }
   });
