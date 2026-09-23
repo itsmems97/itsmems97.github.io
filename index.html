@@ -426,6 +426,10 @@ html[data-theme="light"] .sheet-close{ background:rgba(0,0,0,.25); }
   position:absolute; top:-2px; right:-2px; background:var(--danger); color:#fff; font-size:10px; font-weight:800;
   min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;
 }
+.dm-badge{
+  background:#20c56b; color:#fff; font-size:11px; font-weight:800; min-width:20px; height:20px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center; padding:0 6px; flex-shrink:0; margin-right:2px;
+}
 .chat-sheet{ height:88vh; display:flex; flex-direction:column; }
 .chat-header{ display:flex; align-items:center; gap:10px; padding:6px 18px 12px; border-bottom:1px solid var(--border); }
 .chat-header .av{ width:36px; height:36px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; }
@@ -902,7 +906,6 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
         <div class="row" id="row-secret"><div class="row-left"><svg><use href="#ic-lock"/></svg> Login code</div><span style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:12.5px;color:var(--text-faint)" id="profile-secret">••••••</span><button class="mini-btn" id="copy-secret-btn" type="button">Copy</button></span></div>
         <div class="row tap" id="row-change-creds"><div class="row-left"><svg><use href="#ic-user"/></svg> Change name &amp; secret code</div><span style="font-size:12px;color:var(--text-faint)" id="profile-name-inline"></span></div>
         <div class="row tap" id="row-phone"><div class="row-left"><svg><use href="#ic-chat"/></svg> WhatsApp number</div><span style="font-size:12px;color:var(--text-faint)" id="profile-phone">Not set</span></div>
-        <div class="row tap" id="row-messages"><div class="row-left"><svg><use href="#ic-chat"/></svg> Private messages</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         <div class="row tap" id="row-change-photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Change profile photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
         <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
@@ -1205,6 +1208,7 @@ const state = {
   pendingApp: null,
   pendingCat: null,
   heroIndex: 0,
+  dmUnread: {},         // {otherUid: unreadCount} — messages addressed to me, not yet seen
   upload: { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"", hasUrl:false, url:"" }
 };
 
@@ -1303,7 +1307,7 @@ async function copyText(t){
 function presenceText(ms){
   if(!ms) return "Last seen a long time ago";
   const diff = Date.now() - ms;
-  if(diff < 6*60*1000) return "Online";
+  if(diff < ONLINE_WINDOW_MS) return "Online";
   const m = Math.floor(diff/60000);
   if(m < 60) return `Last seen ${m} min ago`;
   const h = Math.floor(m/60);
@@ -1735,6 +1739,7 @@ function boot(){
   listenApps();
   listenCategories();
   listenChat();
+  listenDmUnread();
   startHeartbeat();
   if(state.isOwner){ listenCodes(); toast("Owner control enabled", "ic-check"); }
 }
@@ -1747,17 +1752,17 @@ function listenSession(){
   }, err=> console.warn("session listener", err));
 }
 function startHeartbeat(){
+  const goOffline = ()=>{ if(state.uid) updateDoc(doc(db,"users",state.uid), { lastActiveMs: 0, activeThreadId: null }).catch(()=>{}); };
   const beat = ()=>{
     if(!state.uid || document.visibilityState !== "visible") return;
     updateDoc(doc(db,"users",state.uid), { lastActiveMs: Date.now() }).catch(()=>{});
   };
   beat();
-  setInterval(beat, 4*60*1000);
-  document.addEventListener("visibilitychange", ()=>{
-    if(document.visibilityState === "visible") beat();
-    else if(state.uid) updateDoc(doc(db,"users",state.uid), { activeThreadId: null }).catch(()=>{});
-  });
-  setInterval(()=> renderUsersPage(), 60*1000);
+  setInterval(beat, 25*1000);
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") beat(); else goOffline(); });
+  window.addEventListener("pagehide", goOffline);
+  window.addEventListener("beforeunload", goOffline);
+  setInterval(()=> renderUsersPage(), 20*1000);
 }
 function listenUsers(){
   if(!firebaseReady) return;
@@ -3106,10 +3111,12 @@ function renderUsersPage(){
   list.innerHTML = entries.map(([uid,u])=>{
     const status = presenceText(u.lastActiveMs);
     const n = counts[uid]||0;
+    const unread = (state.dmUnread && state.dmUnread[uid]) || 0;
     return `<div class="mini-row tap" data-user-open="${uid}">
       ${avatarHtml(u.name, u.photoURL, "lg")}
       <div class="mini-main"><b>${escapeHtml(u.name||"—")}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
         <small class="${status==="Online" ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small></div>
+      ${unread ? `<span class="dm-badge">${unread>99?"99+":unread}</span>` : ""}
       <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
     </div>`;
   }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
@@ -3128,9 +3135,17 @@ function openUserSheet(uid){
   const apps = state.apps.filter(a=> a.uploaderUid === uid);
   const dl = apps.reduce((s,a)=> s + (a.downloadCount||0), 0);
   const jm = joinedMs(raw);
-  const contactBtns = (u.verified && uid !== state.uid) ? `
+  // A DM is allowed by the security rules whenever EITHER side is ticked (or
+  // the viewer is the owner) — isAdmin() || isTicked(from) || isTicked(to).
+  // The old check here only looked at the viewed person's tick, so the owner
+  // (and any verified member) could never open a first DM with someone who
+  // didn't have a blue tick yet — exactly the "my message never reaches a
+  // non-blue-tick member" bug, because the button never even appeared.
+  const canDm = uid !== state.uid && (u.verified || state.verified || state.isOwner);
+  const canWa = uid !== state.uid && (u.verified || state.isOwner);
+  const contactBtns = canDm ? `
       <div style="display:flex;gap:10px;padding:0 18px 16px">
-        <button class="btn btn-primary" style="flex:1" id="us-wa" type="button" hidden><svg><use href="#ic-chat"/></svg> WhatsApp</button>
+        ${canWa ? `<button class="btn btn-primary" style="flex:1" id="us-wa" type="button" hidden><svg><use href="#ic-chat"/></svg> WhatsApp</button>` : ""}
         <button class="btn btn-ghost" style="flex:1" id="us-dm" type="button"><svg><use href="#ic-chat"/></svg> Private chat</button>
       </div>` : "";
   const controls = (state.isOwner && uid !== state.uid && !raw.owner) ? `
@@ -3165,12 +3180,14 @@ function openUserSheet(uid){
   </div>`;
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#user-backdrop");
-  if(u.verified && uid !== state.uid){
+  if(canWa){
     getDoc(doc(db,"contacts",uid)).then(s=>{
       const ph = s.exists() ? s.data().phone : "";
       const b = $("#us-wa");
       if(b && ph){ b.hidden = false; b.addEventListener("click", ()=> window.open(`https://wa.me/${ph.replace(/\D/g,"")}`, "_blank", "noopener")); }
     }).catch(()=>{});
+  }
+  if(canDm){
     const d = $("#us-dm");
     if(d) d.addEventListener("click", ()=>{ wrap.remove(); openDmPanel(uid); });
   }
@@ -3296,7 +3313,7 @@ async function setMyPhone(){
   }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
 const threadIdFor = (a,b)=> [a,b].sort().join("__");
-const ONLINE_WINDOW_MS = 6*60*1000; // > the 4-min heartbeat interval, so people don't flicker "offline" between beats
+const ONLINE_WINDOW_MS = 45*1000; // > the 25s heartbeat interval, short enough that "offline" shows up fast
 function isOnlineUid(uid){ const u = state.users[uid]; return !!(u && u.lastActiveMs && (Date.now()-u.lastActiveMs) < ONLINE_WINDOW_MS); }
 /* Three tick states, escalating only (never downgrades once reached, same as WhatsApp):
    - single pink  = app closed / not opened recently ("outside the app")
@@ -3321,7 +3338,8 @@ function openDmPanel(otherId){
       <div class="chat-header">
         ${avatarHtml(o.name, o.photo, "lg")}
         <div><b style="display:flex;align-items:center">${escapeHtml(o.name)}${tick(o.verified)}</b><small id="dm-substatus">Private chat</small></div>
-        <button class="sheet-close" data-close style="position:static; margin-left:auto; float:none;"><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+        ${state.isOwner ? `<button class="icon-del" id="dm-clear-all" title="Clear entire conversation" style="margin-left:auto"><svg width="16" height="16"><use href="#ic-trash"/></svg></button>` : ""}
+        <button class="sheet-close" data-close style="position:static; margin-left:${state.isOwner?"6px":"auto"}; float:none;"><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       </div>
       <div class="chat-log" id="dm-log"></div>
       <div class="chat-input-row">
@@ -3390,37 +3408,32 @@ function openDmPanel(otherId){
   };
   $("#dm-send").addEventListener("click", send);
   $("#dm-input").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); else pingTyping(); });
-}
-function openInbox(){
-  if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return; }
-  const html = `
-  <div class="sheet-backdrop" id="inbox-backdrop">
-    <div class="sheet">
-      <div class="sheet-handle"></div>
-      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
-      <h3 style="padding:22px 18px 10px;margin:0;font-size:17px">Private messages</h3>
-      <div class="settings-list" id="inbox-list" style="margin:0 14px 24px"><div class="mini-row" style="color:var(--text-faint)">Loading…</div></div>
-    </div>
-  </div>`;
-  document.body.insertAdjacentHTML("beforeend", html);
-  const wrap = $("#inbox-backdrop");
-  const unsub = onSnapshot(query(collection(db,"dmMessages"), where("participants","array-contains", state.uid)), snap=>{
-    const threads = {};
-    snap.docs.forEach(d=>{
-      const m = d.data(); const other = m.from === state.uid ? m.to : m.from;
-      if(!threads[other] || (m.createdAtMs||0) > (threads[other].createdAtMs||0)) threads[other] = m;
-    });
-    const rows = Object.entries(threads).sort((a,b)=> (b[1].createdAtMs||0) - (a[1].createdAtMs||0));
-    $("#inbox-list").innerHTML = rows.map(([other,m])=>{
-      const u = userView(other, m.from === other ? m.fromName : "", false);
-      return `<div class="mini-row tap" data-dm="${escapeHtml(other)}">${avatarHtml(u.name, u.photo, "lg")}<div class="mini-main"><b>${escapeHtml(u.name)}${tick(u.verified)}</b><small>${escapeHtml(m.text)}</small></div></div>`;
-    }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No private messages yet. Open a blue-tick member's profile in Users and tap Private chat.</div>`;
-  }, err=>{ console.warn(err); });
-  wrap.addEventListener("click", e=>{
-    if(e.target === wrap || e.target.closest("[data-close]")){ unsub(); wrap.remove(); return; }
-    const r = e.target.closest("[data-dm]");
-    if(r){ unsub(); wrap.remove(); openDmPanel(r.dataset.dm); }
+  const clearBtn = $("#dm-clear-all");
+  if(clearBtn) clearBtn.addEventListener("click", async ()=>{
+    if(!msgs.length){ toast("Nothing to clear"); return; }
+    if(!(await confirmSheet("Clear this conversation?", `This deletes all ${msgs.length} message${msgs.length===1?"":"s"} in this chat for both people, permanently.`, "Clear chat"))) return;
+    try{
+      await Promise.all(msgs.map(m=> deleteDoc(doc(db,"dmMessages",m.id)).catch(()=>{})));
+      toast("Conversation cleared");
+    }catch(e){ toast("Clear failed: " + (e.code||e.message), "ic-close"); }
   });
+}
+/* Live count of unread DMs per sender, addressed to me — powers the green
+   badge next to each person in Users, WhatsApp-home-screen style. Replaces
+   the old standalone "Private messages" inbox page: tapping a member's row
+   opens their profile, and "Private chat" from there goes straight to the
+   conversation. */
+function listenDmUnread(){
+  if(!firebaseReady || !state.uid) return;
+  onSnapshot(query(collection(db,"dmMessages"), where("to","==", state.uid)), snap=>{
+    const counts = {};
+    snap.docs.forEach(d=>{
+      const m = d.data();
+      if(!m.seenAt) counts[m.from] = (counts[m.from]||0) + 1;
+    });
+    state.dmUnread = counts;
+    renderUsersPage();
+  }, err=> console.warn("dm unread listener", err));
 }
 
 /* Category creation (used from the upload screen). */
@@ -3446,7 +3459,6 @@ function initProfileActions(){
   $("#row-theme").addEventListener("click", ()=> $("#theme-toggle-btn").click());
   $("#row-verify").addEventListener("click", enterTickCode);
   $("#row-phone").addEventListener("click", setMyPhone);
-  $("#row-messages").addEventListener("click", openInbox);
   $("#row-logout").addEventListener("click", logoutSelf);
   $("#row-delete-account").addEventListener("click", deleteMyAccount);
   $("#copy-secret-btn").addEventListener("click", async ()=>{
