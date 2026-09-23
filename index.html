@@ -1034,7 +1034,7 @@ const CONFIG = {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   initializeFirestore, getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, increment,
-  onSnapshot, query, orderBy, limit, serverTimestamp, where
+  onSnapshot, query, orderBy, limit, serverTimestamp, where, persistentLocalCache, persistentMultipleTabManager
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -1043,7 +1043,10 @@ let auth = null;
 let firebaseReady = false;
 try{
   const fbApp = initializeApp(CONFIG.firebase);
-  db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
+  db = initializeFirestore(fbApp, {
+    experimentalAutoDetectLongPolling: true,
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  });
   auth = getAuth(fbApp);
   firebaseReady = true;
 }catch(e){
@@ -1209,6 +1212,7 @@ const state = {
   pendingCat: null,
   heroIndex: 0,
   dmUnread: {},         // {otherUid: unreadCount} — messages addressed to me, not yet seen
+  dmLastMs: {},         // {otherUid: mostRecentMs} — last DM activity with them, either direction
   upload: { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"", hasUrl:false, url:"" }
 };
 
@@ -1593,6 +1597,7 @@ function showGate(notice){
 async function forceLogout(reason){
   sessionStorage.setItem("pika_notice", reason);
   ["pika_pin","pika_session"].forEach(k=> localStorage.removeItem(k));
+  try{ if(window.__pikaOneSignal) await window.__pikaOneSignal.logout(); }catch(e){}
   try{ await signOut(auth); }catch(e){}
   location.reload();
 }
@@ -1739,7 +1744,7 @@ function boot(){
   listenApps();
   listenCategories();
   listenChat();
-  listenDmUnread();
+  listenDmActivity();
   startHeartbeat();
   if(state.isOwner){ listenCodes(); toast("Owner control enabled", "ic-check"); }
 }
@@ -3052,6 +3057,7 @@ async function enterTickCode(){
 async function logoutSelf(){
   if(!(await confirmSheet("Log out?", state.isOwner ? "You will need to enter the owner secret name again." : "You can log back in with your name and 6-digit secret code.", "Log out"))) return;
   ["pika_pin","pika_session"].forEach(k=> localStorage.removeItem(k));
+  try{ if(window.__pikaOneSignal) await window.__pikaOneSignal.logout(); }catch(e){}
   try{ await signOut(auth); }catch(e){}
   location.reload();
 }
@@ -3106,8 +3112,13 @@ function renderUsersPage(){
   $("#users-count-title").textContent = `${entries.length} member${entries.length === 1 ? "" : "s"} joined`;
   const counts = {};
   state.apps.forEach(a=>{ if(a.uploaderUid) counts[a.uploaderUid] = (counts[a.uploaderUid]||0) + 1; });
-  const rank = u => u.banned ? 2 : (u.verified ? 0 : 1);          // blue tick first, normal members below, banned last (owner only)
-  entries.sort((a,b)=> rank(a[1]) - rank(b[1]) || (b[1].lastActiveMs||0) - (a[1].lastActiveMs||0));
+  const rank = u => u.banned ? 2 : (u.verified ? 0 : 1);          // tie-break only: blue tick first, normal below, banned last
+  entries.sort((a,b)=>{
+    const da = (state.dmLastMs && state.dmLastMs[a[0]]) || 0;
+    const db = (state.dmLastMs && state.dmLastMs[b[0]]) || 0;
+    if(da !== db) return db - da;              // anyone who's messaged you (either direction) floats to the top, most recent first — like WhatsApp
+    return rank(a[1]) - rank(b[1]) || ((b[1].lastActiveMs||0) - (a[1].lastActiveMs||0));
+  });
   list.innerHTML = entries.map(([uid,u])=>{
     const status = presenceText(u.lastActiveMs);
     const n = counts[uid]||0;
@@ -3418,22 +3429,26 @@ function openDmPanel(otherId){
     }catch(e){ toast("Clear failed: " + (e.code||e.message), "ic-close"); }
   });
 }
-/* Live count of unread DMs per sender, addressed to me — powers the green
-   badge next to each person in Users, WhatsApp-home-screen style. Replaces
-   the old standalone "Private messages" inbox page: tapping a member's row
-   opens their profile, and "Private chat" from there goes straight to the
-   conversation. */
-function listenDmUnread(){
+/* Live per-contact DM activity: unread count (for the green badge) AND the
+   timestamp of the most recent message either direction — the latter lets
+   Users sort recently-messaged people toward the top, WhatsApp-home style,
+   instead of only going by general last-active time. */
+function listenDmActivity(){
   if(!firebaseReady || !state.uid) return;
-  onSnapshot(query(collection(db,"dmMessages"), where("to","==", state.uid)), snap=>{
-    const counts = {};
+  onSnapshot(query(collection(db,"dmMessages"), where("participants","array-contains", state.uid)), snap=>{
+    const unread = {}, lastMs = {};
     snap.docs.forEach(d=>{
       const m = d.data();
-      if(!m.seenAt) counts[m.from] = (counts[m.from]||0) + 1;
+      const other = m.from === state.uid ? m.to : m.from;
+      if(!other) return;
+      const ts = m.createdAtMs || 0;
+      if(!lastMs[other] || ts > lastMs[other]) lastMs[other] = ts;
+      if(m.to === state.uid && !m.seenAt) unread[other] = (unread[other]||0) + 1;
     });
-    state.dmUnread = counts;
+    state.dmUnread = unread;
+    state.dmLastMs = lastMs;
     renderUsersPage();
-  }, err=> console.warn("dm unread listener", err));
+  }, err=> console.warn("dm activity listener", err));
 }
 
 /* Category creation (used from the upload screen). */
