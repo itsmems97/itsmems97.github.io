@@ -1034,7 +1034,8 @@ const CONFIG = {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   initializeFirestore, getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, increment,
-  onSnapshot, query, orderBy, limit, serverTimestamp, where, persistentLocalCache, persistentMultipleTabManager
+  onSnapshot, query, orderBy, limit, serverTimestamp, where, persistentLocalCache, persistentMultipleTabManager,
+  enableNetwork, disableNetwork
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -1745,6 +1746,7 @@ function boot(){
   listenCategories();
   listenChat();
   listenDmActivity();
+  watchConnectivity();
   startHeartbeat();
   if(state.isOwner){ listenCodes(); toast("Owner control enabled", "ic-check"); }
 }
@@ -1755,6 +1757,18 @@ function listenSession(){
     const sid = s.data().sessionId;
     if(state.sessionId && sid !== state.sessionId) forceLogout(String(sid).startsWith("revoked") ? "revoked" : "session");
   }, err=> console.warn("session listener", err));
+}
+function watchConnectivity(){
+  let reconnecting = false;
+  const kick = async ()=>{
+    if(reconnecting || !firebaseReady) return;
+    reconnecting = true;
+    try{ await disableNetwork(db); await enableNetwork(db); }catch(e){}
+    reconnecting = false;
+  };
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") kick(); });
+  window.addEventListener("online", kick);
+  window.addEventListener("pageshow", kick);
 }
 function startHeartbeat(){
   const goOffline = ()=>{ if(state.uid) updateDoc(doc(db,"users",state.uid), { lastActiveMs: 0, activeThreadId: null }).catch(()=>{}); };
