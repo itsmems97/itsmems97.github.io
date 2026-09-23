@@ -1034,7 +1034,7 @@ const CONFIG = {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   initializeFirestore, getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, increment,
-  onSnapshot, query, orderBy, limit, serverTimestamp, where,
+  onSnapshot, query, orderBy, limit, serverTimestamp, where, persistentLocalCache,
   enableNetwork, disableNetwork
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -1045,7 +1045,7 @@ let firebaseReady = false;
 try{
   const fbApp = initializeApp(CONFIG.firebase);
   db = initializeFirestore(fbApp, {
-    experimentalAutoDetectLongPolling: true
+    experimentalForceLongPolling: true
   });
   auth = getAuth(fbApp);
   firebaseReady = true;
