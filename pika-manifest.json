@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "Pika Store",
+  "short_name": "Pika Store",
+  "description": "Pika Store - download apps, share files and chat with the community.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0E14",
+  "theme_color": "#0B0E14",
+  "categories": ["utilities", "social"],
+  "icons": [
+    { "src": "pika-icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
