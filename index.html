@@ -28,7 +28,7 @@
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 
 <!-- Google Identity Services (account picker with the phone's own Google accounts) -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client?hl=en" async defer></script>
 
 <!-- Firebase (modular v10, loaded as ES module further down together with app logic) -->
 
@@ -1055,10 +1055,11 @@ const CONFIG = {
   // Raise this to match your real disk size — nothing here enforces a hard
   // stop, it's purely cosmetic for the meter on the Profile page.
   totalStorageGB: 150,
-  // Public name + blue tick shown for the owner. The secret owner login name is NOT stored here —
-  // it lives only inside your Firestore rules (firestore.rules), so nobody can read it from this file.
+  // Public name + blue tick shown for the owner.
   ownerPublicName: "PIKAZOOARMY",
-  // Google account that automatically becomes the store owner (needs the firestore.rules line from the guide).
+  // Google account that automatically becomes the store owner / control mode.
+  // Checked again server-side in firestore.rules against the verified Google
+  // sign-in token, so this email can't be spoofed by editing this file.
   ownerEmail: "itsme16241897@gmail.com",
   // Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration → "Web client ID" (copy it from there).
   googleClientId: "393448449695-829tqmsom7cs07kt0jid4fbhd3g4j3qp.apps.googleusercontent.com",
@@ -1085,6 +1086,7 @@ try{
     experimentalForceLongPolling: true
   });
   auth = getAuth(fbApp);
+  auth.languageCode = "en"; // force English on Google sign-in screens, regardless of device/country language
   firebaseReady = true;
 }catch(e){
   console.warn("Firebase not configured yet — running in local demo mode.", e);
@@ -1458,12 +1460,11 @@ function showBannedDialog(){
 
 /* ---------------------------------------------------------------------
    5. ACCOUNTS — Google sign-in through Firebase Authentication,
-   one active browser per account, owner access with the secret owner name (entered in Profile).
+   one active browser per account. Owner/control mode is granted only to
+   CONFIG.ownerEmail's verified Google account (checked again server-side
+   by firestore.rules against the signed-in token's email) — there is no
+   secret code anymore.
    --------------------------------------------------------------------- */
-async function tryClaimOwner(code){
-  try{ await withTimeout(setDoc(doc(db,"adminClaims",state.uid), { code, at: serverTimestamp() }), 8000, "Owner check"); return true; }
-  catch(e){ return false; }
-}
 async function tryClaimVerified(code){
   try{ await withTimeout(setDoc(doc(db,"verifiedClaims",state.uid), { code, at: serverTimestamp() }), 8000, "Tick check"); return true; }
   catch(e){ return false; }
@@ -3170,19 +3171,8 @@ async function enterTickCode(){
   const v = await askText({ title:"Blue-tick code", placeholder:"Enter your code", max:60, okLabel:"Verify" });
   if(v === null) return;
   const code = v.trim();
-  if(code.length > NAME_MAX){
-    // Owner secret name — verified by Firestore rules (never stored in this file)
-    if(await tryClaimOwner(code)){
-      try{
-        const sid = randomKey();
-        await setDoc(doc(db,"sessions","owner"), { sessionId: sid, at: serverTimestamp() });
-        localStorage.setItem("pika_session", sid);
-        await deleteDoc(doc(db,"users",state.uid)).catch(()=>{});
-      }catch(e){ console.warn(e); }
-      toast("Owner control enabled"); setTimeout(()=> location.reload(), 600);
-    } else { toast("That code is not valid.", "ic-close"); }
-    return;
-  }
+  // Owner/control mode is no longer unlocked with a code here — it turns on
+  // automatically when CONFIG.ownerEmail signs in with Google (see applyIdentity()).
   if(!/^\d{6,12}$/.test(code)){ toast("That code is not valid.", "ic-close"); return; }
   if(await tryClaimVerified(code)){
     try{ await setDoc(doc(db,"users",state.uid), { verified: true, updatedAt: serverTimestamp() }, { merge:true }); }catch(e){ console.warn(e); }
@@ -3192,7 +3182,7 @@ async function enterTickCode(){
   }
 }
 async function logoutSelf(){
-  if(!(await confirmSheet("Log out?", state.isOwner ? "You will need to sign in with Google and enter the owner secret name again." : "You can log back in any time with your Google account.", "Log out"))) return;
+  if(!(await confirmSheet("Log out?", state.isOwner ? "You will need to sign in again with the owner's Google account to get control mode back." : "You can log back in any time with your Google account.", "Log out"))) return;
   ["pika_pin","pika_session"].forEach(k=> localStorage.removeItem(k));
   try{ if(window.__pikaOneSignal) await window.__pikaOneSignal.logout(); }catch(e){}
   try{ await signOut(auth); }catch(e){}
