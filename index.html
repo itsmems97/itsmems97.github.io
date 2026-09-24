@@ -27,6 +27,9 @@
 -->
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 
+<!-- Google Identity Services (account picker with the phone's own Google accounts) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <!-- Firebase (modular v10, loaded as ES module further down together with app logic) -->
 
 <style>
@@ -467,6 +470,15 @@ html[data-theme="light"] .sheet-close{ background:rgba(0,0,0,.25); }
   padding:15px 18px; color:var(--text); font-size:16px; text-align:center; font-weight:700; margin-bottom:8px;
   -webkit-user-select:text; user-select:text;
 }
+.google-btn{
+  display:flex; align-items:center; justify-content:center; gap:12px; width:100%; max-width:300px;
+  background:#fff; color:#1f1f1f; border:1px solid #dadce0; border-radius:16px; padding:15px 18px;
+  font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.google-btn:active{ transform:scale(.98); }
+.google-btn[disabled]{ opacity:.6; pointer-events:none; }
+.gate-alt{ margin-top:18px; background:none; border:0; color:var(--text-faint); font-size:12px; text-decoration:underline; cursor:pointer; font-family:inherit; }
+.gate-step{ width:100%; max-width:300px; display:flex; flex-direction:column; align-items:center; }
 .gate-hint{ font-size:11px; color:var(--text-faint); margin-bottom:22px; }
 #username-gate .btn{ width:100%; max-width:300px; }
 
@@ -680,16 +692,28 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <div id="username-gate" hidden>
   <img class="gate-logo" alt="Pika Store" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
   <h1>Welcome to Pika Store</h1>
-  <p>Choose a name and, if you like, a profile photo. No email or phone number needed.</p>
   <div id="gate-notice" hidden></div>
-  <button class="gate-avatar" id="gate-avatar-btn" type="button" aria-label="Choose profile photo"><svg><use href="#ic-image"/></svg></button>
-  <div class="gate-hint" style="margin-bottom:14px">Profile photo (optional)</div>
-  <input id="gate-avatar-input" type="file" accept="image/*" hidden />
-  <input id="gate-username-input" type="text" maxlength="15" placeholder="Your name" autocomplete="username" autocapitalize="off" spellcheck="false" />
-  <div class="gate-hint" id="gate-hint">3 to 14 characters. Letters, numbers, spaces and @ - _ . are allowed.</div>
-  <button class="btn btn-primary btn-lg btn-block" id="gate-continue-btn">
-    <svg><use href="#ic-check"/></svg> Continue
-  </button>
+
+  <!-- Step 1: install the app, or use the store live in the browser -->
+  <div class="gate-step" id="gate-step-welcome">
+    <p>Install the app on your phone, or open the store right here in your browser.</p>
+    <button class="btn btn-primary btn-lg btn-block" id="gate-install-btn" type="button"><svg><use href="#ic-download"/></svg> Install App</button>
+    <button class="btn btn-ghost btn-lg btn-block" id="gate-live-btn" type="button" style="margin-top:12px"><svg><use href="#ic-play"/></svg> Use Live</button>
+  </div>
+
+  <!-- Step 2: Google account or Guest -->
+  <div class="gate-step" id="gate-step-login" hidden>
+    <p>Sign in with Google to upload, chat and get your own profile.</p>
+    <div id="gate-gsi-slot" style="min-height:44px;width:100%;display:flex;justify-content:center"></div>
+    <button class="google-btn" id="gate-google-btn" type="button" hidden>
+      <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <button class="btn btn-ghost btn-lg btn-block" id="gate-guest-btn" type="button" style="margin-top:14px">Continue as Guest</button>
+    <div class="gate-hint" style="margin:8px 0 0">Guests can only download.</div>
+    <button class="gate-alt" id="gate-alt-btn" type="button">Trouble signing in? Try another way</button>
+    <button class="gate-alt" id="gate-back-btn" type="button" style="margin-top:8px">← Back</button>
+  </div>
 </div>
 
 <!-- =========================================================
@@ -901,10 +925,19 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
         <div class="stat"><b id="profile-cats-count">0</b><span>Categories</span></div>
         <div class="stat"><b id="profile-downloads-count">0</b><span>Downloads</span></div>
       </div>
+      <div class="settings-list" id="guest-card" hidden style="padding:16px;margin-bottom:16px;text-align:center">
+        <b style="font-size:15px">You are using a Guest account</b>
+        <p style="font-size:12.5px;color:var(--text-dim);line-height:1.55;margin:6px 0 14px">Guests can only download. Sign in with Google to upload, chat and get your own profile.</p>
+        <div id="profile-gsi-slot" style="min-height:44px;display:flex;justify-content:center"></div>
+        <button class="google-btn" id="profile-google-btn" type="button" hidden style="margin:0 auto">
+          <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Sign in with Google
+        </button>
+      </div>
+      <h3 class="section-title" id="account-details-title" hidden>Account details</h3>
+      <div class="settings-list" id="account-details" hidden style="margin-bottom:16px"></div>
       <input type="file" id="profile-photo-input" accept="image/*" hidden />
       <div class="settings-list">
-        <div class="row" id="row-secret"><div class="row-left"><svg><use href="#ic-lock"/></svg> Login code</div><span style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:12.5px;color:var(--text-faint)" id="profile-secret">••••••</span><button class="mini-btn" id="copy-secret-btn" type="button">Copy</button></span></div>
-        <div class="row tap" id="row-change-creds"><div class="row-left"><svg><use href="#ic-user"/></svg> Change name &amp; secret code</div><span style="font-size:12px;color:var(--text-faint)" id="profile-name-inline"></span></div>
         <div class="row tap" id="row-phone"><div class="row-left"><svg><use href="#ic-chat"/></svg> WhatsApp number</div><span style="font-size:12px;color:var(--text-faint)" id="profile-phone">Not set</span></div>
         <div class="row tap" id="row-change-photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Change profile photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
@@ -966,10 +999,10 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
    -----------------------------------------------------------------
    Sections in this file:
    1.  CONFIG            — fill in your own Firebase + VPS upload API + OneSignal keys
-   2.  Firebase bootstrap — Firestore (data)
+   2.  Firebase bootstrap — Firestore (data) + Google sign-in
    3.  VPS storage        — file hosting straight on your own 150GB VPS disk
    4.  State & helpers
-   5.  Onboarding (username gate)
+   5.  Welcome gate (Install / Use Live), Google sign-in, Guest mode
    6.  Theme
    7.  Navigation
    8.  Home feed (hero, categories, rows) — realtime via Firestore
@@ -1025,6 +1058,10 @@ const CONFIG = {
   // Public name + blue tick shown for the owner. The secret owner login name is NOT stored here —
   // it lives only inside your Firestore rules (firestore.rules), so nobody can read it from this file.
   ownerPublicName: "PIKAZOOARMY",
+  // Google account that automatically becomes the store owner (needs the firestore.rules line from the guide).
+  ownerEmail: "itsme16241897@gmail.com",
+  // Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration → "Web client ID" (copy it from there).
+  googleClientId: "393448449695-829tqmsom7cs07kt0jid4fbhd3g4j3qp.apps.googleusercontent.com",
   supportWhatsApp: "923041891897"
 };
 
@@ -1037,7 +1074,7 @@ import {
   onSnapshot, query, orderBy, limit, serverTimestamp, where, persistentLocalCache,
   enableNetwork, disableNetwork
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, reauthenticateWithPopup, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 let db = null;
 let auth = null;
@@ -1195,10 +1232,11 @@ const state = {
     localStorage.setItem("pika_device_id", id);
     return id;
   })(),
-  uid: "",             // Firebase anonymous-auth uid (real identity used by security rules)
+  uid: "",             // Firebase Google-auth uid (real identity used by security rules)
   sessionId: "",
   verified: false,     // blue tick: owner OR member who used a secret tick code (NO delete powers)
   codes: [],           // owner only: list of tick codes
+  isGuest: false,      // anonymous "Guest" login: download only
   isOwner: false,      // true only after the secret owner name was accepted by Firestore rules
   photoURL: "",
   users: {},           // live from Firestore 'users' collection: uid -> {name, photoURL, verified, banned}
@@ -1239,19 +1277,18 @@ async function sha256(text){
    4b. IDENTITY HELPERS
    --------------------------------------------------------------------- */
 const NAME_MIN = 3, NAME_MAX = 14;
-const EMAIL_DOMAIN = "pika-store.app";
-const emailFor = key => `${key}@${EMAIL_DOMAIN}`;
 const randomKey = () => Array.from(crypto.getRandomValues(new Uint8Array(12))).map(b=>b.toString(16).padStart(2,"0")).join("");
 const lowerName = n => String(n||"").trim().toLowerCase();
 
-async function signInAnon(){ return (await signInAnonymously(auth)).user; }
 function authError(e){
   console.warn(e);
   const code = (e && e.code) || "";
   if(code.includes("operation-not-allowed") || code.includes("admin-restricted")){
-    toast("Firebase Console → Authentication → Sign-in method: enable Anonymous AND Email/Password", "ic-close");
+    toast("Firebase Console → Authentication → Sign-in method: enable Google AND Anonymous", "ic-close");
   } else if(code.includes("too-many-requests")){
     toast("Too many attempts. Please wait a few minutes and try again.", "ic-close");
+  } else if(code.includes("unauthorized-domain")){
+    toast("Firebase Console → Authentication → Settings → Authorized domains: add this website's domain", "ic-close");
   } else if(code.includes("network")){
     toast("Network problem. Please check your connection.", "ic-close");
   } else {
@@ -1402,96 +1439,6 @@ function confirmSheet(title, message, okLabel="Delete"){
     bd.addEventListener("click", e=>{ if(e.target===bd) close(false); });
   });
 }
-/** Step 1 — choose the 6-digit secret code. Confirm stays disabled until the person taps Copy. */
-function pinDialog({ mode, name, pin="" }){
-  return new Promise(resolve=>{
-    const editable = mode === "change";
-    const html = `
-    <div class="sheet-backdrop dlg" id="pin-backdrop">
-      <div class="sheet" style="padding:24px 20px calc(24px + var(--safe-bottom));">
-        <h3 style="text-align:center;font-size:18px;margin:0 0 10px;">${editable ? "Change name &amp; secret code" : "Create your secret code"}</h3>
-        <p class="dlg-p">Please add any favorite 6-digit number that you remember. If you want to log in to your old account again, enter your name together with this code, like <b>Ali123456</b>.</p>
-        ${editable
-          ? `<div class="field"><input type="text" id="pin-name" maxlength="${NAME_MAX}" placeholder="Name" autocomplete="off" /></div>`
-          : `<div class="dlg-name">Name: <span id="pin-name-lock"></span></div>`}
-        <div class="field"><input type="text" id="pin-input" inputmode="numeric" maxlength="6" placeholder="6-digit secret code" autocomplete="off" /></div>
-        <div class="dlg-err" id="pin-err"></div>
-        <div id="pin-actions" style="display:none;gap:10px;margin-bottom:10px;">
-          <button class="btn btn-ghost" style="flex:1" id="pin-copy" type="button"><svg><use href="#ic-copy"/></svg> Copy</button>
-          <button class="btn btn-primary" style="flex:1" id="pin-confirm" type="button" disabled>Confirm</button>
-        </div>
-        <button class="btn btn-ghost btn-block" id="pin-back" type="button">${editable ? "Cancel" : "Back"}</button>
-      </div>
-    </div>`;
-    document.body.insertAdjacentHTML("beforeend", html);
-    const bd = $("#pin-backdrop"), pinEl = $("#pin-input"), err = $("#pin-err"), actions = $("#pin-actions"), okBtn = $("#pin-confirm");
-    const nameEl = editable ? $("#pin-name") : null;
-    if(editable) nameEl.value = name; else $("#pin-name-lock").textContent = name;
-    pinEl.value = pin;
-    let copied = false;
-    const curName = () => editable ? nameEl.value.trim() : name;
-    const refresh = ()=>{
-      const okPin = /^\d{6}$/.test(pinEl.value);
-      actions.style.display = okPin ? "flex" : "none";
-      if(okPin && copied) okBtn.removeAttribute("disabled"); else okBtn.setAttribute("disabled","true");
-    };
-    const reset = ()=>{ copied = false; err.textContent = ""; refresh(); };
-    pinEl.addEventListener("input", ()=>{ pinEl.value = pinEl.value.replace(/\D/g,"").slice(0,6); reset(); });
-    if(nameEl) nameEl.addEventListener("input", reset);
-    $("#pin-copy").addEventListener("click", async ()=>{
-      const n = curName(), e = validateName(n);
-      if(e){ err.textContent = e; return; }
-      const ok = await copyText(n + pinEl.value);
-      copied = true; refresh();
-      toast(ok ? `Copied: ${n}${pinEl.value}` : "Copy failed — please write it down", ok ? "ic-check" : "ic-close");
-    });
-    okBtn.addEventListener("click", ()=>{
-      const n = curName(), e = validateName(n);
-      if(e){ err.textContent = e; return; }
-      bd.remove(); resolve({ name:n, pin:pinEl.value });
-    });
-    $("#pin-back").addEventListener("click", ()=>{ bd.remove(); resolve(null); });
-    refresh(); pinEl.focus();
-  });
-}
-/** Step 2 — final warning. The username/password fields inside a real <form> let Chrome offer to save (or update) the login. */
-function finalDialog({ name, pin, action }){
-  return new Promise(resolve=>{
-    const html = `
-    <div class="sheet-backdrop dlg" id="fin-backdrop">
-      <div class="sheet" style="padding:24px 20px calc(24px + var(--safe-bottom));">
-        <h3 style="text-align:center;font-size:18px;margin:0 0 10px;">Save your login</h3>
-        <p class="dlg-p">Are you sure you copied your name together with your 6-digit secret code? If you forget it, you will not be able to go back to your old account, and that account will be deleted automatically after two months along with all your uploaded data. Please copy your name with the 6-digit code, then press <b>${escapeHtml(action)}</b>.</p>
-        <form id="cred-form" autocomplete="on">
-          <div class="field"><input type="text" name="username" id="cred-user" autocomplete="username" /></div>
-          <div class="field"><input type="password" name="password" id="cred-pass" autocomplete="${action === "LOGIN" ? "new-password" : "new-password"}" /></div>
-          <div style="display:flex;gap:10px;margin-bottom:10px;">
-            <button class="btn btn-ghost" style="flex:1" id="fin-copy" type="button"><svg><use href="#ic-copy"/></svg> Copy</button>
-            <button class="btn btn-primary" style="flex:1" id="fin-go" type="submit">${escapeHtml(action)}</button>
-          </div>
-        </form>
-        <button class="btn btn-ghost btn-block" id="fin-back" type="button">Back</button>
-      </div>
-    </div>`;
-    document.body.insertAdjacentHTML("beforeend", html);
-    const bd = $("#fin-backdrop");
-    $("#cred-user").value = name; $("#cred-pass").value = pin;
-    $("#fin-copy").addEventListener("click", async ()=>{ const ok = await copyText(name + pin); toast(ok ? `Copied: ${name}${pin}` : "Copy failed — please write it down", ok ? "ic-check" : "ic-close"); });
-    $("#cred-form").addEventListener("submit", e=>{
-      e.preventDefault();
-      $("#fin-go").setAttribute("disabled","true");
-      resolve({ ok:true, close: ()=> bd.remove() });
-    });
-    $("#fin-back").addEventListener("click", ()=>{ bd.remove(); resolve({ ok:false }); });
-  });
-}
-async function storeCredential(name, pin){
-  try{
-    if(window.PasswordCredential && navigator.credentials && navigator.credentials.store){
-      await navigator.credentials.store(new PasswordCredential({ id:name, name:name, password:pin }));
-    }
-  }catch(e){ console.warn("Password manager save skipped", e); }
-}
 function showBannedDialog(){
   const html = `
   <div class="sheet-backdrop dlg" id="ban-backdrop">
@@ -1510,8 +1457,8 @@ function showBannedDialog(){
 }
 
 /* ---------------------------------------------------------------------
-   5. ACCOUNTS — name + 6-digit secret code (Firebase email/password under the hood),
-   one active browser per account, owner login with the secret name only.
+   5. ACCOUNTS — Google sign-in through Firebase Authentication,
+   one active browser per account, owner access with the secret owner name (entered in Profile).
    --------------------------------------------------------------------- */
 async function tryClaimOwner(code){
   try{ await withTimeout(setDoc(doc(db,"adminClaims",state.uid), { code, at: serverTimestamp() }), 8000, "Owner check"); return true; }
@@ -1527,19 +1474,6 @@ async function isBannedAccount(uid){ try{ return (await getDoc(doc(db,"bans",uid
 async function findAccount(nameLower){
   const s = await getDoc(doc(db,"usernames",nameLower));
   return s.exists() ? s.data() : null;
-}
-async function createAccount(name, pin){
-  const emailKey = randomKey();
-  const cred = await createUserWithEmailAndPassword(auth, emailFor(emailKey), pin);
-  const user = cred.user;
-  try{
-    await setDoc(doc(db,"usernames", lowerName(name)), { uid:user.uid, emailKey, name, nameLower: lowerName(name), at: serverTimestamp() });
-  }catch(e){
-    try{ await deleteUser(user); }catch(_){ try{ await signOut(auth); }catch(__){} }
-    throw new Error("TAKEN");
-  }
-  try{ await updateProfile(user, { displayName: name }); }catch(e){}
-  return user;
 }
 async function startSession(){
   state.sessionId = randomKey();
@@ -1561,7 +1495,7 @@ async function ensureProfile(){
   try{ const s = await getDoc(ref); if(s.exists()) existing = s.data(); }catch(e){}
   if(existing){
     state.username = state.isOwner ? CONFIG.ownerPublicName : (existing.name || state.username);
-    if(!state.photoURL) state.photoURL = existing.photoURL || "";
+    state.photoURL = existing.photoURL || state.photoURL || "";
   }
   const base = { name: state.username, nameLower: lowerName(state.username), photoURL: state.photoURL || "", verified: state.verified, owner: state.isOwner, lastActiveMs: Date.now(), updatedAt: serverTimestamp() };
   try{ await setDoc(ref, existing ? base : { ...base, joinedAt: serverTimestamp() }, { merge:true }); }
@@ -1593,6 +1527,7 @@ function showGate(notice){
   const n = $("#gate-notice");
   if(msgs[notice]){ n.textContent = msgs[notice]; n.hidden = false; } else { n.hidden = true; }
   if(notice === "banned") showBannedDialog();
+  showGateStep((isStandalone() || notice) ? "login" : "welcome");
 }
 async function forceLogout(reason){
   sessionStorage.setItem("pika_notice", reason);
@@ -1601,24 +1536,75 @@ async function forceLogout(reason){
   try{ await signOut(auth); }catch(e){}
   location.reload();
 }
-/** Runs on every page load: restores a saved login, or shows the login screen. */
+const isGoogleUser = u => !!u && !u.isAnonymous && (u.providerData || []).some(p => p.providerId === "google.com");
+/** Public name from the Google account, cleaned to the store's name rules. */
+function googleDisplayName(user){
+  let n = String(user.displayName || (user.email || "").split("@")[0] || "")
+    .replace(/[^\p{L}\p{N}@._\- ]/gu, "").replace(/\s{2,}/g, " ").trim().slice(0, NAME_MAX).trim();
+  if(n.length < NAME_MIN || containsAbuse(n) || isReservedName(n)) n = "Member" + String(user.uid).slice(0, 4);
+  return n;
+}
+/** Fills `state` from the signed-in Google user. Returns "banned" or "ok". */
+async function applyIdentity(user){
+  state.uid = user.uid;
+  state.photoURL = user.photoURL || "";
+  if(user.isAnonymous){          // Guest: download only, no profile / session / chat
+    state.isGuest = true; state.isOwner = false; state.verified = false; state.username = "Guest"; state.photoURL = "";
+    return "ok";
+  }
+  state.isGuest = false;
+  let owner = await checkOwner();
+  if(!owner && CONFIG.ownerEmail && user.emailVerified && String(user.email || "").toLowerCase() === CONFIG.ownerEmail.toLowerCase()){
+    // Owner Google account: ask Firestore rules to grant owner powers (rules re-check the verified email on the server).
+    try{ await setDoc(doc(db,"adminClaims",user.uid), { code:"google-owner", email:user.email, at: serverTimestamp() }); owner = await checkOwner(); }
+    catch(e){ console.warn("Owner email claim refused — update firestore.rules", e); }
+  }
+  if(owner){
+    state.isOwner = true; state.verified = true; state.username = CONFIG.ownerPublicName;
+    state.uid = "owner";          // one permanent id, so uploads never get lost between logins
+    return "ok";
+  }
+  state.isOwner = false;
+  if(await isBannedAccount(user.uid)) return "banned";
+  state.verified = await checkVerified();
+  state.username = googleDisplayName(user);
+  return "ok";
+}
+/** Fresh Google sign-in: this browser becomes the account's one active session. */
+async function completeLogin(user){
+  const r = await applyIdentity(user);
+  if(r === "banned"){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
+  if(state.isGuest){ await saveGuestDevice(); enterStore(); return; }
+  await startSession();
+  await ensureProfile();
+  enterStore();
+}
+/** A guest just signed in with Google from the Profile page: switch this browser to the Google account. */
+async function upgradeGuest(user){
+  const r = await applyIdentity(user);
+  if(r === "banned"){ try{ await signOut(auth); }catch(e){} sessionStorage.setItem("pika_notice","banned"); location.reload(); return; }
+  await startSession();
+  await ensureProfile();
+  location.reload();
+}
+async function onGoogleUser(user){
+  if(booted && state.isGuest) await upgradeGuest(user); else await completeLogin(user);
+}
+/** Runs on every page load: restores a saved Google login, or shows the login screen. */
 async function initAuth(){
   const notice = sessionStorage.getItem("pika_notice"); sessionStorage.removeItem("pika_notice");
   if(!firebaseReady){ showGate(notice); return; }
+  try{
+    const rr = await getRedirectResult(auth);
+    if(rr && rr.user){ showLoading("Signing you in…"); try{ await completeLogin(rr.user); } finally { hideLoading(); } return; }
+  }catch(e){ authError(e); }
   try{ await auth.authStateReady(); }catch(e){}
   const user = auth.currentUser;
   if(!user){ showGate(notice); return; }
-  state.uid = user.uid;
-  if(user.isAnonymous){
-    if(!(await checkOwner())){ try{ await signOut(auth); }catch(e){} showGate(notice); return; }
-    state.isOwner = true; state.verified = true; state.username = CONFIG.ownerPublicName;
-    state.uid = "owner";          // one permanent id, so uploads never get lost between logins
-  } else {
-    state.isOwner = false;
-    if(await isBannedAccount(user.uid)){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
-    state.verified = await checkVerified();
-    state.username = user.displayName || "Member";
-  }
+  if(!user.isAnonymous && !isGoogleUser(user)){ try{ await signOut(auth); }catch(e){} showGate(notice); return; }
+  const r = await applyIdentity(user);
+  if(r === "banned"){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
+  if(state.isGuest){ await saveGuestDevice(); enterStore(); return; }
   const key = state.isOwner ? "owner" : state.uid;
   const localSid = localStorage.getItem("pika_session");
   try{
@@ -1630,101 +1616,252 @@ async function initAuth(){
   enterStore();
 }
 
-function initOnboarding(){
-  const input = $("#gate-username-input");
-  let pickedAvatar = null;
-  $("#gate-avatar-btn").addEventListener("click", ()=> $("#gate-avatar-input").click());
-  $("#gate-avatar-input").addEventListener("change", e=>{
-    const f = e.target.files[0]; if(!f) return;
-    pickedAvatar = f;
-    $("#gate-avatar-btn").innerHTML = `<img alt="" src="${URL.createObjectURL(f)}" />`;
+/** Sign-in through Google's own account picker (no firebaseapp.com page). Uses the accounts already on the phone. */
+function isStandalone(){
+  return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true || String(document.referrer).startsWith("android-app://");
+}
+/* ---------- Install App ---------- */
+let deferredInstall = null;
+window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferredInstall = e; });
+window.addEventListener("appinstalled", ()=>{ deferredInstall = null; });
+function infoSheet(title, html, okLabel="OK"){
+  return new Promise(resolve=>{
+    document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="info-backdrop">
+      <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+        <h3 style="text-align:center;font-size:18px;margin:0 0 10px;">${escapeHtml(title)}</h3>
+        <div class="dlg-p" style="text-align:center">${html}</div>
+        <button class="btn btn-primary btn-block" id="info-ok" type="button">${escapeHtml(okLabel)}</button>
+      </div>
+    </div>`);
+    $("#info-ok").addEventListener("click", ()=>{ $("#info-backdrop").remove(); resolve(true); });
   });
-
-  async function finish(user, { isNew }){
-    state.uid = user.uid;
-    state.verified = await checkVerified();
-    if(pickedAvatar){
-      try{ state.photoURL = await uploadAvatar(pickedAvatar); }
-      catch(e){ toast("Photo could not be saved. You can add it later from your Profile.", "ic-close"); }
-    }
-    await startSession();
-    await ensureProfile();
-    if(pickedAvatar && state.photoURL){ try{ await setDoc(doc(db,"users",state.uid), { photoURL: state.photoURL, verified: state.verified }, { merge:true }); }catch(e){} }
-    enterStore();
-  }
-
-  const btn = $("#gate-continue-btn");
-  btn.addEventListener("click", async ()=>{
-    const raw = input.value.trim();
-    if(!raw){ input.focus(); return; }
-    if(!firebaseReady){ toast("Firebase is not connected", "ic-close"); return; }
-    btn.setAttribute("disabled","true");
+}
+async function installApp(){
+  if(deferredInstall){
     try{
-      // Longer than a normal name: could be the owner's secret name (checked by Firestore rules, never in this file).
-      if(raw.length > NAME_MAX){
-        try{ await signInAnon(); }catch(e){ authError(e); return; }
-        state.uid = auth.currentUser.uid;
-        if(await tryClaimOwner(raw)){
-          state.isOwner = true; state.verified = true; state.username = CONFIG.ownerPublicName;
-          state.uid = "owner";
-          if(pickedAvatar){ try{ state.photoURL = await uploadAvatar(pickedAvatar); }catch(e){} }
-          await startSession(); await ensureProfile(); enterStore();
-          return;
-        }
-        try{ await deleteUser(auth.currentUser); }catch(e){ try{ await signOut(auth); }catch(_){} }
-        toast(`Name is too long (maximum ${NAME_MAX} characters).`, "ic-close");
-        return;
+      deferredInstall.prompt();
+      const c = await deferredInstall.userChoice;
+      deferredInstall = null;
+      if(c && c.outcome === "accepted"){
+        await infoSheet("Pika Store installed ✅", "The app was added to your <b>home screen</b>. Press the Home button and open <b>Pika Store</b> from there.", "Got it");
       }
-      const nameErr = validateName(raw);
-      if(nameErr){ toast(nameErr, "ic-close"); return; }
-      if(isReservedName(raw)){ toast("This name is reserved. Please choose another name.", "ic-close"); return; }
+    }catch(e){ console.warn(e); }
+    return;
+  }
+  await infoSheet("Install Pika Store", "Tap the <b>⋮ menu</b> in Chrome, then choose <b>Install app</b> (or <b>Add to Home screen</b>) and tap <b>Install</b>.<br><br>On iPhone: tap <b>Share</b>, then <b>Add to Home Screen</b>.", "OK");
+}
+function showGateStep(step){
+  $("#gate-step-welcome").hidden = step !== "welcome";
+  $("#gate-step-login").hidden = step !== "login";
+  if(step === "login") startGoogleGate();
+}
 
-      const r = await pinDialog({ mode:"signup", name: raw });
-      if(!r) return;
-
-      // Name already registered? Then this may be the owner of that account logging in again.
-      showLoading("Checking your name…");
-      let acc;
-      try{ acc = await findAccount(lowerName(r.name)); }finally{ hideLoading(); }
-      if(acc){
-        showLoading("Logging you in…");
-        let user;
-        try{ user = (await signInWithEmailAndPassword(auth, emailFor(acc.emailKey), r.pin)).user; }
-        catch(e){
-          const c = (e && e.code) || "";
-          if(c.includes("too-many-requests") || c.includes("network")){ authError(e); return; }
-          toast("Someone Already Taken", "ic-close"); return;
-        }
-        if(await isBannedAccount(user.uid)){ try{ await signOut(auth); }catch(e){} showBannedDialog(); return; }
-        state.isOwner = false; state.username = acc.name;
-        localStorage.setItem("pika_pin", r.pin);
-        await finish(user, { isNew:false });
-        toast("Welcome back!");
-        return;
-      }
-
-      const fin = await finalDialog({ name: r.name, pin: r.pin, action: "LOGIN" });
-      if(!fin.ok) return;
-      showLoading("Creating your account…");
-      try{
-        const user = await createAccount(r.name, r.pin);
-        state.isOwner = false; state.username = r.name;
-        localStorage.setItem("pika_pin", r.pin);
-        await finish(user, { isNew:true });
-        await storeCredential(r.name, r.pin);
-        fin.close();
-      }catch(e){
-        fin.close();
-        if(e && e.message === "TAKEN") toast("Someone Already Taken", "ic-close"); else authError(e);
-      }
-    }catch(e){
-      console.warn(e); authError(e);
-    }finally{
-      hideLoading();
-      btn.removeAttribute("disabled");
+/* ---------- Google sign-in (Google's own account picker) ---------- */
+async function signInWithGoogleToken(idToken){
+  showLoading("Signing you in…");
+  try{
+    const cred = await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+    await onGoogleUser(cred.user);
+  }catch(e){ console.warn(e); authError(e); }
+  finally{ hideLoading(); }
+}
+/** Fallback: normal Firebase popup / redirect sign-in. */
+async function popupSignIn(btn){
+  if(!firebaseReady){ toast("Firebase is not connected", "ic-close"); return; }
+  if(btn) btn.setAttribute("disabled","true");
+  try{
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    let cred;
+    try{ cred = await signInWithPopup(auth, provider); }
+    catch(e){
+      const c = (e && e.code) || "";
+      if(c.includes("popup-closed-by-user") || c.includes("cancelled-popup-request")) return;
+      if(c.includes("popup-blocked") || c.includes("operation-not-supported")){ await signInWithRedirect(auth, provider); return; }
+      throw e;
     }
+    showLoading("Signing you in…");
+    await onGoogleUser(cred.user);
+  }catch(e){
+    console.warn(e); authError(e);
+  }finally{
+    hideLoading();
+    if(btn) btn.removeAttribute("disabled");
+  }
+}
+let gsiInit = false;
+function initGoogleIdentity(){
+  if(gsiInit) return true;
+  if(!(window.google && google.accounts && google.accounts.id)) return false;
+  google.accounts.id.initialize({
+    client_id: CONFIG.googleClientId,
+    callback: r => { if(r && r.credential) signInWithGoogleToken(r.credential); },
+    auto_select: false, cancel_on_tap_outside: false, use_fedcm_for_prompt: true
   });
-  input.addEventListener("keydown", e=>{ if(e.key==="Enter") btn.click(); });
+  gsiInit = true; return true;
+}
+let gateGsiRendered = false;
+/** Called whenever the login step is shown: draws Google's button and offers the phone's accounts. */
+function startGoogleGate(){
+  let tries = 0;
+  const t = setInterval(()=>{
+    tries++;
+    if(initGoogleIdentity()){
+      clearInterval(t);
+      try{
+        if(!gateGsiRendered){
+          google.accounts.id.renderButton($("#gate-gsi-slot"), { type:"standard", theme:"filled_black", size:"large", text:"continue_with", shape:"pill", width:300 });
+          gateGsiRendered = true;
+        }
+        google.accounts.id.prompt();
+      }catch(e){ console.warn("Google button failed", e); $("#gate-google-btn").hidden = false; }
+    } else if(tries > 40){ clearInterval(t); $("#gate-google-btn").hidden = false; }
+  }, 100);
+}
+let profileGsiRendered = false;
+/** Google button inside the Profile page (shown to guests). */
+function mountProfileGoogle(){
+  if(profileGsiRendered) return;
+  let tries = 0;
+  const t = setInterval(()=>{
+    tries++;
+    if(initGoogleIdentity()){
+      clearInterval(t);
+      try{
+        google.accounts.id.renderButton($("#profile-gsi-slot"), { type:"standard", theme:"filled_black", size:"large", text:"signin_with", shape:"pill", width:260 });
+        profileGsiRendered = true;
+      }catch(e){ $("#profile-google-btn").hidden = false; }
+    } else if(tries > 40){ clearInterval(t); $("#profile-google-btn").hidden = false; }
+  }, 100);
+}
+
+/* ---------- Guest (anonymous) login + device fingerprint ---------- */
+/** Everything the browser can tell about this device. Real IMEI / Android ID cannot be read by a web app. */
+async function getDeviceDetails(){
+  const n = navigator, sc = screen, dpr = window.devicePixelRatio || 1;
+  const d = {
+    deviceId: state.deviceId,
+    platform: n.platform || "", userAgent: n.userAgent || "",
+    language: n.language || "", languages: (n.languages || []).join(","),
+    timezone: (Intl.DateTimeFormat().resolvedOptions().timeZone) || "",
+    cores: n.hardwareConcurrency || 0, memoryGB: n.deviceMemory || 0, touchPoints: n.maxTouchPoints || 0,
+    screenCss: sc.width + "x" + sc.height, screenPx: Math.round(sc.width*dpr) + "x" + Math.round(sc.height*dpr),
+    pixelRatio: dpr, colorDepth: sc.colorDepth || 0, installedApp: isStandalone()
+  };
+  try{
+    if(n.userAgentData && n.userAgentData.getHighEntropyValues){
+      const h = await n.userAgentData.getHighEntropyValues(["model","architecture","bitness","platform","platformVersion"]);
+      d.model = h.model || ""; d.arch = h.architecture || ""; d.bits = h.bitness || ""; d.os = h.platform || ""; d.osVersion = h.platformVersion || "";
+    }
+  }catch(e){}
+  try{
+    const c = document.createElement("canvas");
+    const gl = c.getContext("webgl") || c.getContext("experimental-webgl");
+    if(gl){
+      const ext = gl.getExtension("WEBGL_debug_renderer_info");
+      d.gpuVendor = String(ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR));
+      d.gpuRenderer = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    }
+  }catch(e){}
+  const stable = JSON.stringify([d.platform, d.cores, d.memoryGB, d.touchPoints,
+    Math.max(sc.width, sc.height)*dpr, Math.min(sc.width, sc.height)*dpr, d.colorDepth, d.model||"", d.arch||"", d.bits||"", d.os||"", d.gpuVendor||"", d.gpuRenderer||""]);
+  d.fingerprintId = await sha256("pika-hw|" + stable);
+  return d;
+}
+/** Saves the guest's device info in Firestore → collection "devices", document = the guest's uid. */
+async function saveGuestDevice(){
+  if(!firebaseReady || !auth.currentUser) return;
+  try{
+    const uid = auth.currentUser.uid;
+    const d = await getDeviceDetails();
+    const ref = doc(db, "devices", uid);
+    let isNew = true;
+    try{ isNew = !(await getDoc(ref)).exists(); }catch(e){}
+    const payload = { ...d, uid, accountType: "guest", lastSeen: serverTimestamp() };
+    if(isNew) payload.firstSeen = serverTimestamp();
+    await setDoc(ref, payload, { merge: true });
+  }catch(e){ console.warn("Device info not saved — add the /devices rule to firestore.rules", e); }
+}
+function guestWarningSheet(){
+  return new Promise(resolve=>{
+    document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="gw-backdrop">
+      <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+        <h3 style="text-align:center;font-size:18px;margin:0 0 10px;">Guest account ⚠️</h3>
+        <p class="dlg-p" style="text-align:center">If you stay with a Guest account you <b>cannot upload anything</b>, chat, or create categories. You can only <b>download</b> uploaded content.<br><br>Sign in with Google to unlock everything.</p>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="gw-guest" type="button">Stay as Guest</button>
+          <button class="btn btn-primary" style="flex:1" id="gw-google" type="button">Use Google</button>
+        </div>
+      </div>
+    </div>`);
+    $("#gw-guest").addEventListener("click", ()=>{ $("#gw-backdrop").remove(); resolve("guest"); });
+    $("#gw-google").addEventListener("click", ()=>{ $("#gw-backdrop").remove(); resolve("google"); });
+  });
+}
+async function guestLogin(){
+  if(!firebaseReady){ toast("Firebase is not connected", "ic-close"); return; }
+  if(await guestWarningSheet() !== "guest") return;
+  const btn = $("#gate-guest-btn");
+  btn.setAttribute("disabled","true");
+  showLoading("Opening as guest…");
+  try{
+    const cred = await signInAnonymously(auth);
+    await applyIdentity(cred.user);
+    await saveGuestDevice();
+    enterStore();
+  }catch(e){ console.warn(e); authError(e); }
+  finally{ hideLoading(); btn.removeAttribute("disabled"); }
+}
+/** Shows the "sign in with Google" popup when a guest tries something that needs an account. */
+function guestBlock(what){
+  if(!state.isGuest) return false;
+  document.body.insertAdjacentHTML("beforeend", `
+  <div class="sheet-backdrop dlg" id="gb-backdrop">
+    <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+      <h3 style="text-align:center;font-size:18px;margin:0 0 10px;">Sign in with Google</h3>
+      <p class="dlg-p" style="text-align:center">Guest accounts can only download. Sign in with Google to ${escapeHtml(what)}.</p>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" style="flex:1" id="gb-no" type="button">Not now</button>
+        <button class="btn btn-primary" style="flex:1" id="gb-yes" type="button">Sign in</button>
+      </div>
+    </div>
+  </div>`);
+  $("#gb-no").addEventListener("click", ()=> $("#gb-backdrop").remove());
+  $("#gb-yes").addEventListener("click", ()=>{ $("#gb-backdrop").remove(); const b = document.querySelector('.nav-btn[data-page="profile-page"]'); if(b) b.click(); });
+  return true;
+}
+/** Email, name and other details for Google accounts (shown on the Profile page). */
+function renderAccountDetails(){
+  const box = $("#account-details"), title = $("#account-details-title");
+  if(!box) return;
+  const u = auth && auth.currentUser;
+  if(!u || u.isAnonymous){ box.hidden = true; title.hidden = true; return; }
+  const fmt = t => { const d = new Date(t); return isNaN(d) ? "—" : d.toLocaleString(); };
+  const rows = [
+    ["Email", u.email || "—"],
+    ["Google name", u.displayName || "—"],
+    ["Store name", state.username || "—"],
+    ["Role", state.isOwner ? "Store Owner" : (state.verified ? "Verified member" : "Member")],
+    ["Sign-in method", "Google"],
+    ["Email verified", u.emailVerified ? "Yes" : "No"],
+    ["Account created", fmt(u.metadata && u.metadata.creationTime)],
+    ["Last sign-in", fmt(u.metadata && u.metadata.lastSignInTime)],
+    ["User ID", u.uid]
+  ];
+  box.innerHTML = rows.map(([k,v])=> `<div class="row"><div class="row-left">${escapeHtml(k)}</div><span style="font-size:12px;color:var(--text-faint);word-break:break-all;text-align:right;max-width:62%">${escapeHtml(String(v))}</span></div>`).join("");
+  box.hidden = false; title.hidden = false;
+}
+
+function initOnboarding(){
+  $("#gate-install-btn").addEventListener("click", installApp);
+  $("#gate-live-btn").addEventListener("click", ()=> showGateStep("login"));
+  $("#gate-back-btn").addEventListener("click", ()=> showGateStep("welcome"));
+  $("#gate-guest-btn").addEventListener("click", guestLogin);
+  $("#gate-google-btn").addEventListener("click", ()=> popupSignIn($("#gate-google-btn")));
+  $("#gate-alt-btn").addEventListener("click", ()=> popupSignIn($("#gate-google-btn")));
+  $("#profile-google-btn").addEventListener("click", ()=> popupSignIn($("#profile-google-btn")));
   setTimeout(()=>{
     hideSplash();
     // If neither the app nor the login gate ended up visible, something hung during boot —
@@ -1753,15 +1890,15 @@ function boot(){
   initProfileActions();
   initUsersPage();
   initHomeCategories();
-  loadMyPhone();
+  if(!state.isGuest) loadMyPhone();
   listenUsers();
   listenSession();
   listenApps();
   listenCategories();
-  listenChat();
-  listenDmActivity();
+  if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity();
-  startHeartbeat();
+  if(!state.isGuest) startHeartbeat();
+  if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: you can only download", "ic-lock"); }
   if(state.isOwner){ listenCodes(); toast("Owner control enabled", "ic-check"); }
 }
 function listenSession(){
@@ -1843,6 +1980,7 @@ function initNav(){
     btn.addEventListener("click", ()=>{
       const target = btn.dataset.page;
       if(target === "__categories"){ openCategoriesSheet(); return; }
+      if(target === "upload-page" && guestBlock("upload apps")) return;
       $$(".nav-btn").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
       $$(".page").forEach(p=>p.hidden = true);
@@ -2170,6 +2308,7 @@ function openCategoriesSheet(){
   $("#create-cat-btn").addEventListener("click", async ()=>{
     const name = $("#new-cat-input").value.trim();
     if(!name) return;
+    if(guestBlock("create categories")) return;
     if(!firebaseReady || !state.uid){ toast("Connect Firebase first","ic-lock"); return; }
     try{
       await addDoc(collection(db,"categories"), { name, ownerName: state.username, ownerUid: state.uid, isOwner: state.isOwner, ownerDevice: state.deviceId, createdAt: serverTimestamp() });
@@ -2586,6 +2725,7 @@ function initUploadWizard(){
   }
 
   async function submitUpload(){
+    if(guestBlock("upload apps")) return;
     if(!firebaseReady || !state.uid){ toast("Connect Firebase first","ic-close"); return; }
     if(state.users[state.uid] && state.users[state.uid].banned){ toast("You are not allowed to upload","ic-close"); return; }
     if(!storageReady()){ toast("Connect your VPS upload API first","ic-close"); return; }
@@ -2761,6 +2901,7 @@ function updateReplyBar(){
   $("#reply-x").addEventListener("click", ()=>{ state.replyTo = null; updateReplyBar(); });
 }
 async function postChat(text, extra={}){
+  if(guestBlock("chat")) return false;
   const problem = checkChatText(text, state.verified, state.isOwner);
   if(problem){ toast(problem, "ic-close"); return false; }
   if(!firebaseReady || !state.uid){ toast("Connect Firebase first","ic-close"); return false; }
@@ -2798,6 +2939,7 @@ function openAppPicker(onPick){
   });
 }
 function openChatPanel(){
+  if(guestBlock("chat with everyone")) return;
   chatPanelOpen = true; chatUnread = 0; updateChatBadge();
   const html = `
   <div class="sheet-backdrop" id="chat-backdrop">
@@ -2982,8 +3124,7 @@ async function initOneSignal(){
 function renderProfile(){
   const nameEl = $("#profile-name"); if(!nameEl) return;
   nameEl.innerHTML = `${escapeHtml(state.username || "—")}${tick(state.verified)}`;
-  $("#profile-name-inline").textContent = state.username || "";
-  $("#profile-role").textContent = state.isOwner ? "Store Owner" : (state.verified ? "Verified member" : "Member of Pika Store");
+  $("#profile-role").textContent = state.isOwner ? "Store Owner" : (state.isGuest ? "Guest — download only" : (state.verified ? "Verified member" : "Member of Pika Store"));
   $("#profile-avatar").innerHTML = state.photoURL ? `<img alt="" src="${escapeHtml(state.photoURL)}" />` : escapeHtml((state.username||"P").slice(0,1).toUpperCase());
 
   const mine = state.apps.filter(a=> a.uploaderUid === state.uid);
@@ -2991,14 +3132,16 @@ function renderProfile(){
   $("#profile-uploads-count").textContent = mine.length;
   $("#profile-cats-count").textContent = myCats.length;
   $("#profile-downloads-count").textContent = fmtCount(mine.reduce((s,a)=> s + (a.downloadCount||0), 0));
-  $("#row-verify").hidden = state.verified;
-  $("#danger-zone").hidden = state.isOwner;
-  $("#row-secret").hidden = state.isOwner;
-  $("#row-change-creds").hidden = state.isOwner;
-  const pin = localStorage.getItem("pika_pin") || "";
-  $("#profile-secret").textContent = pin ? `${state.username}${pin}` : "Not saved on this device";
-  $("#copy-secret-btn").hidden = !pin;
+  $("#row-verify").hidden = state.verified || state.isGuest;
+  $("#danger-zone").hidden = state.isOwner || state.isGuest;
   $("#profile-phone").textContent = state.phone ? state.phone.slice(0,4) + "••••" + state.phone.slice(-2) : "Not set";
+
+  const g = state.isGuest;
+  $("#row-phone").hidden = g; $("#row-change-photo").hidden = g; $(".profile-stats").hidden = g;
+  $("#guest-card").hidden = !g;
+  $("#my-uploads-title").hidden = g; $("#my-uploads-list").hidden = g;
+  if(g) mountProfileGoogle();
+  renderAccountDetails();
 
   const list = state.isOwner ? state.apps : mine;
   $("#my-uploads-title").textContent = state.isOwner ? "All uploads (Owner)" : "My uploads";
@@ -3012,58 +3155,9 @@ function renderProfile(){
   }).join("") : `<div class="mini-row" style="color:var(--text-faint)">No uploads yet.</div>`;
 }
 
-/* Change name and/or secret code — same two-step pattern as signing up. */
-async function changeCredentials(){
-  if(state.isOwner){ toast("The owner logs in with the secret name only."); return; }
-  const user = auth.currentUser;
-  if(!user || user.isAnonymous){ toast("Please log in again.", "ic-close"); return; }
-  const oldName = state.username;
-  const oldPin = localStorage.getItem("pika_pin") || "";
-  const r = await pinDialog({ mode:"change", name: oldName, pin: oldPin });
-  if(!r) return;
-  if(r.name === oldName && r.pin === oldPin){ toast("Nothing changed."); return; }
-  const nameChanged = r.name !== oldName;
-  const pinChanged = r.pin !== oldPin;
-  if(nameChanged && lowerName(r.name) !== lowerName(oldName)){
-    if(isReservedName(r.name)){ toast("This name is reserved. Please choose another name.", "ic-close"); return; }
-    if(await findAccount(lowerName(r.name))){ toast("Someone Already Taken", "ic-close"); return; }
-  }
-  const fin = await finalDialog({ name: r.name, pin: r.pin, action: "UPDATE" });
-  if(!fin.ok) return;
-  try{
-    // Re-check identity with the current code (Firebase requires a recent login for these changes)
-    let current = oldPin;
-    if(!current){
-      const v = await askText({ title:"Enter your current secret code", placeholder:"6-digit code", max:6, okLabel:"OK" });
-      if(v === null){ fin.close(); return; }
-      current = v.trim();
-    }
-    try{ await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, current)); }
-    catch(e){ fin.close(); toast("Your current secret code is wrong.", "ic-close"); return; }
-
-    if(nameChanged){
-      const emailKey = user.email.split("@")[0];
-      const oldLower = lowerName(oldName), newLower = lowerName(r.name);
-      if(oldLower === newLower){
-        await deleteDoc(doc(db,"usernames",oldLower));
-        await setDoc(doc(db,"usernames",newLower), { uid:user.uid, emailKey, name:r.name, nameLower:newLower, at: serverTimestamp() });
-      } else {
-        await setDoc(doc(db,"usernames",newLower), { uid:user.uid, emailKey, name:r.name, nameLower:newLower, at: serverTimestamp() });
-        await deleteDoc(doc(db,"usernames",oldLower)).catch(()=>{});
-      }
-      await setDoc(doc(db,"users",state.uid), { name:r.name, nameLower:newLower, verified: state.verified, updatedAt: serverTimestamp() }, { merge:true });
-      try{ await updateProfile(user, { displayName: r.name }); }catch(e){}
-      state.username = r.name;
-    }
-    if(pinChanged){ await updatePassword(user, r.pin); }
-    localStorage.setItem("pika_pin", r.pin);
-    await storeCredential(r.name, r.pin);
-    fin.close();
-    toast("Name and secret code updated"); renderProfile();
-  }catch(e){ fin.close(); console.warn(e); toast("Failed: " + (e.code||e.message), "ic-close"); }
-}
 async function changeMyPhoto(file){
   if(!file) return;
+  if(guestBlock("change your photo")) return;
   toast("Uploading photo…", "ic-upload");
   try{
     const url = await uploadAvatar(file);
@@ -3072,9 +3166,23 @@ async function changeMyPhoto(file){
   }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
 async function enterTickCode(){
-  const v = await askText({ title:"Blue-tick code", placeholder:"Enter your code", max:12, okLabel:"Verify" });
+  if(guestBlock("get a blue tick")) return;
+  const v = await askText({ title:"Blue-tick code", placeholder:"Enter your code", max:60, okLabel:"Verify" });
   if(v === null) return;
   const code = v.trim();
+  if(code.length > NAME_MAX){
+    // Owner secret name — verified by Firestore rules (never stored in this file)
+    if(await tryClaimOwner(code)){
+      try{
+        const sid = randomKey();
+        await setDoc(doc(db,"sessions","owner"), { sessionId: sid, at: serverTimestamp() });
+        localStorage.setItem("pika_session", sid);
+        await deleteDoc(doc(db,"users",state.uid)).catch(()=>{});
+      }catch(e){ console.warn(e); }
+      toast("Owner control enabled"); setTimeout(()=> location.reload(), 600);
+    } else { toast("That code is not valid.", "ic-close"); }
+    return;
+  }
   if(!/^\d{6,12}$/.test(code)){ toast("That code is not valid.", "ic-close"); return; }
   if(await tryClaimVerified(code)){
     try{ await setDoc(doc(db,"users",state.uid), { verified: true, updatedAt: serverTimestamp() }, { merge:true }); }catch(e){ console.warn(e); }
@@ -3084,7 +3192,7 @@ async function enterTickCode(){
   }
 }
 async function logoutSelf(){
-  if(!(await confirmSheet("Log out?", state.isOwner ? "You will need to enter the owner secret name again." : "You can log back in with your name and 6-digit secret code.", "Log out"))) return;
+  if(!(await confirmSheet("Log out?", state.isOwner ? "You will need to sign in with Google and enter the owner secret name again." : "You can log back in any time with your Google account.", "Log out"))) return;
   ["pika_pin","pika_session"].forEach(k=> localStorage.removeItem(k));
   try{ if(window.__pikaOneSignal) await window.__pikaOneSignal.logout(); }catch(e){}
   try{ await signOut(auth); }catch(e){}
@@ -3119,9 +3227,8 @@ async function deleteMyAccount(){
     try{ await deleteUser(u); }
     catch(e){
       try{
-        const pin = localStorage.getItem("pika_pin");
-        if(pin && u.email){ await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, pin)); await deleteUser(u); }
-        else await signOut(auth);
+        await reauthenticateWithPopup(u, new GoogleAuthProvider());
+        await deleteUser(u);
       }catch(_){ try{ await signOut(auth); }catch(__){} }
     }
     ["pika_pin","pika_session","pika_notif_dismissed"].forEach(k=> localStorage.removeItem(k));
@@ -3338,6 +3445,7 @@ async function loadMyPhone(){
   renderProfile();
 }
 async function setMyPhone(){
+  if(guestBlock("save a phone number")) return;
   const v = await askText({ title:"Your WhatsApp number", value: state.phone || "", placeholder:"+ country code and number", max:20, okLabel:"Save" });
   if(v === null) return;
   const p = normPhone(v);
@@ -3367,6 +3475,7 @@ function dmTickIcon(m, otherId, tid){
   return `<svg class="dm-tick sent"><use href="#ic-check1"/></svg>`;
 }
 function openDmPanel(otherId){
+  if(guestBlock("send private messages")) return;
   if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return; }
   const o = userView(otherId, (state.users[otherId]||{}).name, false);
   const tid = threadIdFor(state.uid, otherId);
@@ -3493,6 +3602,7 @@ function listenDmActivity(){
 
 /* Category creation (used from the upload screen). */
 async function createCategoryQuick(){
+  if(guestBlock("create categories")) return;
   if(!firebaseReady || !state.uid){ toast("Please log in first.", "ic-close"); return; }
   const v = await askText({ title:"New category", placeholder:"e.g. Games, Tools", max:24, okLabel:"Create" });
   if(v === null) return;
@@ -3507,7 +3617,6 @@ async function createCategoryQuick(){
 }
 
 function initProfileActions(){
-  $("#row-change-creds").addEventListener("click", changeCredentials);
   $("#row-change-photo").addEventListener("click", ()=> $("#profile-photo-input").click());
   $("#profile-avatar").addEventListener("click", ()=> $("#profile-photo-input").click());
   $("#profile-photo-input").addEventListener("change", e=>{ changeMyPhoto(e.target.files[0]); e.target.value = ""; });
@@ -3516,12 +3625,6 @@ function initProfileActions(){
   $("#row-phone").addEventListener("click", setMyPhone);
   $("#row-logout").addEventListener("click", logoutSelf);
   $("#row-delete-account").addEventListener("click", deleteMyAccount);
-  $("#copy-secret-btn").addEventListener("click", async ()=>{
-    const pin = localStorage.getItem("pika_pin") || "";
-    if(!pin) return;
-    const ok = await copyText(state.username + pin);
-    toast(ok ? "Copied" : "Copy failed", ok ? "ic-check" : "ic-close");
-  });
   $("#row-notif").addEventListener("click", async ()=>{
     if(!notifSupported()){ toast("Notifications are managed in the app settings."); return; }
     if(Notification.permission === "denied"){ sessionStorage.removeItem("pika_denied_hide"); showDeniedBanner(); return; }
