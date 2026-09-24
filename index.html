@@ -634,6 +634,33 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .dm-tick.sent{ color:#ff8fc7; }
 .dm-tick.delivered{ color:#ff8fc7; }
 .dm-tick.seen{ color:#20c56b; }
+
+/* ---------- Users page: guest tag ---------- */
+.guest-tag{ font-size:11px; font-weight:700; color:var(--text-faint); margin-left:4px; }
+
+/* ---------- Install prompt (iOS-style glass card) ---------- */
+#ip-overlay{ position:fixed; inset:0; z-index:104; display:flex; justify-content:center; align-items:center; padding:20px;
+  background:rgba(0,0,0,.4); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); animation:ipFade .3s ease-out forwards; }
+#ip-overlay, #ip-overlay *{ box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",sans-serif; -webkit-tap-highlight-color:transparent; }
+#ip-overlay .ip-card{ position:relative; width:100%; max-width:320px; background:rgba(255,255,255,.15); border-radius:28px; padding:24px 20px 20px;
+  backdrop-filter:blur(25px) saturate(190%); -webkit-backdrop-filter:blur(25px) saturate(190%); border:1px solid rgba(255,255,255,.25);
+  box-shadow:0 20px 40px rgba(0,0,0,.4), inset 0 1px 1px rgba(255,255,255,.4);
+  display:flex; flex-direction:column; align-items:center; text-align:center; color:#fff; transform:scale(.9);
+  animation:ipSpring .4s cubic-bezier(.175,.885,.32,1.275) forwards; }
+#ip-overlay .ip-icon{ width:72px; height:72px; margin-bottom:14px; border-radius:18px; background:linear-gradient(135deg,#ffc107,#ff9800);
+  display:flex; justify-content:center; align-items:center; box-shadow:0 8px 16px rgba(0,0,0,.3), 0 0 20px rgba(255,193,7,.3); border:1px solid rgba(255,255,255,.3); }
+#ip-overlay .ip-icon span{ font-size:38px; font-weight:800; color:#111; text-shadow:0 1px 2px rgba(255,255,255,.4); }
+#ip-overlay .ip-title{ font-size:20px; font-weight:700; letter-spacing:-.4px; margin:0 0 4px; color:#fff; }
+#ip-overlay .ip-domain{ font-size:13px; color:rgba(255,255,255,.65); margin:0 0 18px; }
+#ip-overlay .ip-desc{ font-size:13px; color:rgba(255,255,255,.85); line-height:1.4; margin:0 0 22px; padding:0 4px; }
+#ip-overlay .ip-btns{ display:flex; gap:12px; width:100%; }
+#ip-overlay .ip-btn{ flex:1; padding:12px 16px; border-radius:14px; font-size:15px; font-weight:600; border:none; cursor:pointer; outline:none; transition:all .2s cubic-bezier(.4,0,.2,1); }
+#ip-overlay .ip-cancel{ background:rgba(255,255,255,.12); color:rgba(255,255,255,.9); border:1px solid rgba(255,255,255,.15); }
+#ip-overlay .ip-cancel:active{ background:rgba(255,255,255,.25); transform:scale(.96); }
+#ip-overlay .ip-install{ background:linear-gradient(135deg,#007aff,#0056b3); color:#fff; box-shadow:0 4px 12px rgba(0,122,255,.4); }
+#ip-overlay .ip-install:active{ transform:scale(.96); filter:brightness(.9); }
+@keyframes ipFade{ from{opacity:0} to{opacity:1} }
+@keyframes ipSpring{ from{opacity:0; transform:scale(.8) translateY(20px)} to{opacity:1; transform:scale(1) translateY(0)} }
 </style>
 </head>
 <body>
@@ -1072,7 +1099,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   initializeFirestore, getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, increment,
   onSnapshot, query, orderBy, limit, serverTimestamp, where, persistentLocalCache,
-  enableNetwork, disableNetwork
+  enableNetwork, disableNetwork, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, reauthenticateWithPopup, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -1346,11 +1373,24 @@ async function copyText(t){
     catch(_){ return false; }
   }
 }
-function presenceText(ms){
-  if(!ms) return "Last seen a long time ago";
-  const diff = Date.now() - ms;
-  if(diff < ONLINE_WINDOW_MS) return "Online";
+/* Presence: every write carries BOTH the device clock (lastActiveMs) and the SERVER clock (lastSeen).
+   Viewers compare against server time, corrected by this device's own skew, so wrong phone clocks can't
+   make people look "Active now" forever or "a long time ago". */
+let CLOCK_SKEW = 0;
+const serverNow = () => Date.now() + CLOCK_SKEW;
+const presenceFields = () => ({ lastActiveMs: Date.now(), lastSeen: serverTimestamp() });
+function lastSeenMs(u){
+  if(!u) return 0;
+  if(u.lastSeen && typeof u.lastSeen.toMillis === "function") return u.lastSeen.toMillis();
+  return u.lastActiveMs || 0;
+}
+function presenceText(x){
+  const ms = (x && typeof x === "object") ? lastSeenMs(x) : x;
+  if(!ms) return "Offline";
+  const diff = serverNow() - ms;
+  if(diff < ONLINE_WINDOW_MS) return "Active now";
   const m = Math.floor(diff/60000);
+  if(m < 1) return "Last seen just now";
   if(m < 60) return `Last seen ${m} min ago`;
   const h = Math.floor(m/60);
   if(h < 24) return `Last seen ${h} hour${h===1?"":"s"} ago`;
@@ -1512,7 +1552,7 @@ async function ensureProfile(){
     state.username = state.isOwner ? CONFIG.ownerPublicName : (existing.name || state.username);
     state.photoURL = existing.photoURL || state.photoURL || "";
   }
-  const base = { name: state.username, nameLower: lowerName(state.username), photoURL: state.photoURL || "", verified: state.verified, owner: state.isOwner, lastActiveMs: Date.now(), updatedAt: serverTimestamp() };
+  const base = { name: state.username, nameLower: lowerName(state.username), photoURL: state.photoURL || "", verified: state.verified, owner: state.isOwner, ...presenceFields(), updatedAt: serverTimestamp() };
   try{ await setDoc(ref, existing ? base : { ...base, joinedAt: serverTimestamp() }, { merge:true }); }
   catch(e){ console.warn(e); toast(`Profile save error: ${e.code||e.message} — please republish firestore.rules`, "ic-close"); }
   if(state.isOwner){ await dedupeOwnerDocs(); migrateOwnerContent(); }
@@ -1533,12 +1573,13 @@ function enterStore(){
   $("#username-gate").hidden = true;
   $("#app").hidden = false;
   boot();
+  showInstallPrompt();
 }
 function showGate(notice){
   hideSplash();
   $("#app").hidden = true;
   $("#username-gate").hidden = false;
-  const msgs = { session:"You were signed out because this account was opened in another browser.", revoked:"You were logged out by the store admin." };
+  const msgs = { session:"You were signed out because this account was opened in another browser.", revoked:"You were logged out by the store admin.", guestExpired:"Your Guest account expired after 3 days. Sign in with Google or start a new Guest session." };
   const n = $("#gate-notice");
   if(msgs[notice]){ n.textContent = msgs[notice]; n.hidden = false; } else { n.hidden = true; }
   if(notice === "banned") showBannedDialog();
@@ -1589,7 +1630,7 @@ async function applyIdentity(user){
 async function completeLogin(user){
   const r = await applyIdentity(user);
   if(r === "banned"){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
-  if(state.isGuest){ await saveGuestDevice(); enterStore(); return; }
+  if(state.isGuest){ await guestBoot(); return; }
   await startSession();
   await ensureProfile();
   enterStore();
@@ -1619,7 +1660,7 @@ async function initAuth(){
   if(!user.isAnonymous && !isGoogleUser(user)){ try{ await signOut(auth); }catch(e){} showGate(notice); return; }
   const r = await applyIdentity(user);
   if(r === "banned"){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
-  if(state.isGuest){ await saveGuestDevice(); enterStore(); return; }
+  if(state.isGuest){ await guestBoot(); return; }
   const key = state.isOwner ? "owner" : state.uid;
   const localSid = localStorage.getItem("pika_session");
   try{
@@ -1638,7 +1679,35 @@ function isStandalone(){
 /* ---------- Install App ---------- */
 let deferredInstall = null;
 window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferredInstall = e; });
-window.addEventListener("appinstalled", ()=>{ deferredInstall = null; });
+window.addEventListener("appinstalled", ()=>{ deferredInstall = null; closeInstallPrompt(); });
+
+/* Install prompt: shown on EVERY page load while the store runs in a normal browser tab (not installed,
+   not inside the APK WebView). Cancel only hides it until the next refresh. */
+const isWebView = () => /; wv\)|\bwv\b/.test(navigator.userAgent || "");
+function closeInstallPrompt(){
+  const o = document.getElementById("ip-overlay"); if(!o) return;
+  const c = o.querySelector(".ip-card");
+  if(c){ c.style.transform = "scale(.8)"; c.style.opacity = "0"; }
+  setTimeout(()=> o.remove(), 200);
+}
+function showInstallPrompt(){
+  if(isStandalone() || isWebView() || document.getElementById("ip-overlay")) return;
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="ip-overlay">
+      <div class="ip-card">
+        <div class="ip-icon"><span>P</span></div>
+        <h2 class="ip-title">Pika Store</h2>
+        <p class="ip-domain">${escapeHtml(location.hostname)}</p>
+        <p class="ip-desc">Install this application on your home screen for quick access and a native full-screen experience.</p>
+        <div class="ip-btns">
+          <button class="ip-btn ip-cancel" id="ip-cancel" type="button">Cancel</button>
+          <button class="ip-btn ip-install" id="ip-install" type="button">Install</button>
+        </div>
+      </div>
+    </div>`);
+  document.getElementById("ip-cancel").addEventListener("click", closeInstallPrompt);
+  document.getElementById("ip-install").addEventListener("click", ()=> installApp());
+}
 function infoSheet(title, html, okLabel="OK"){
   return new Promise(resolve=>{
     document.body.insertAdjacentHTML("beforeend", `
@@ -1821,6 +1890,49 @@ async function getDeviceDetails(){
   d.fingerprintId = await sha256("pika-hw|" + stable);
   return d;
 }
+/* ---------- Guest lifetime: 3 days ---------- */
+const GUEST_TTL_MS = 3*24*60*60*1000;
+function guestCreatedMs(){ const u = auth.currentUser; return (u && u.metadata && Date.parse(u.metadata.creationTime)) || Date.now(); }
+function guestExpiryMs(){ return guestCreatedMs() + GUEST_TTL_MS; }
+/** Guest older than 3 days: delete its docs + its own Firebase Auth account, sign out. Returns true if it was removed. */
+async function guestExpired(){
+  const u = auth.currentUser;
+  if(!u || !u.isAnonymous || Date.now() < guestExpiryMs()) return false;
+  const uid = u.uid;
+  await deleteDoc(doc(db,"users",uid)).catch(()=>{});
+  await deleteDoc(doc(db,"devices",uid)).catch(()=>{});
+  try{ await deleteUser(u); }catch(e){ try{ await signOut(auth); }catch(_){} }
+  return true;
+}
+/** Public Users-list entry for a guest (name is generated; the list adds " Guest" after it). */
+async function ensureGuestProfile(){
+  const u = auth.currentUser; if(!u) return;
+  const ref = doc(db,"users",u.uid);
+  let isNew = true;
+  try{ isNew = !(await getDoc(ref)).exists(); }catch(e){}
+  const name = "User" + u.uid.slice(0,4).toUpperCase();
+  const exp = guestExpiryMs();
+  const base = { name, nameLower: lowerName(name), photoURL:"", verified:false, owner:false, guest:true, ...presenceFields(), updatedAt: serverTimestamp(), expireAt: Timestamp.fromMillis(exp), expireAtMs: exp };
+  try{ await setDoc(ref, isNew ? { ...base, joinedAt: serverTimestamp() } : base, { merge:true }); }
+  catch(e){ console.warn("Guest profile not saved — publish the guest users rule from firestore-rules-additions.txt", e); }
+}
+async function guestBoot(){
+  if(await guestExpired()){ showGate("guestExpired"); return; }
+  await ensureGuestProfile();
+  await saveGuestDevice();
+  enterStore();
+}
+/** Owner only: removes guest docs that outlived 3 days (the Firestore TTL policy does the same in the background). */
+async function sweepExpiredGuests(){
+  try{
+    const snap = await getDocs(query(collection(db,"users"), where("guest","==",true)));
+    const now = serverNow();
+    for(const d of snap.docs){
+      const x = d.data();
+      if(x.expireAtMs && x.expireAtMs < now){ await deleteDoc(d.ref).catch(()=>{}); await deleteDoc(doc(db,"devices",d.id)).catch(()=>{}); }
+    }
+  }catch(e){ console.warn("guest sweep", e); }
+}
 /** Saves the guest's device info in Firestore → collection "devices", document = the guest's uid. */
 async function saveGuestDevice(){
   if(!firebaseReady || !auth.currentUser) return;
@@ -1831,7 +1943,7 @@ async function saveGuestDevice(){
     let isNew = true;
     try{ isNew = !(await getDoc(ref)).exists(); }catch(e){}
     const payload = { ...d, uid, accountType: "guest", lastSeen: serverTimestamp() };
-    if(isNew) payload.firstSeen = serverTimestamp();
+    if(isNew){ payload.firstSeen = serverTimestamp(); payload.expireAt = Timestamp.fromMillis(guestExpiryMs()); }
     await setDoc(ref, payload, { merge: true });
   }catch(e){ console.warn("Device info not saved — add the /devices rule to firestore.rules", e); }
 }
@@ -1861,8 +1973,7 @@ async function guestLogin(){
   try{
     const cred = await signInAnonymously(auth);
     await applyIdentity(cred.user);
-    await saveGuestDevice();
-    enterStore();
+    await guestBoot();
   }catch(e){ console.warn(e); authError(e); }
   finally{ hideLoading(); btn.removeAttribute("disabled"); }
 }
@@ -1949,9 +2060,9 @@ function boot(){
   listenCategories();
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity();
-  if(!state.isGuest) startHeartbeat();
+  startHeartbeat();
   if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: you can only download", "ic-lock"); }
-  if(state.isOwner){ listenCodes(); toast("Owner control enabled", "ic-check"); }
+  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); toast("Owner control enabled", "ic-check"); }
 }
 function listenSession(){
   if(!firebaseReady) return;
@@ -1975,11 +2086,15 @@ function watchConnectivity(){
   window.addEventListener("online", kick);
 }
 function startHeartbeat(){
-  const goOffline = ()=>{ if(state.uid) updateDoc(doc(db,"users",state.uid), { lastActiveMs: Date.now(), activeThreadId: null }).catch(()=>{}); };
-  const beat = ()=>{
-    if(!state.uid || document.visibilityState !== "visible") return;
-    updateDoc(doc(db,"users",state.uid), { lastActiveMs: Date.now() }).catch(()=>{});
+  let warned = false;
+  const push = extra => {
+    if(!state.uid) return;
+    updateDoc(doc(db,"users",state.uid), { ...presenceFields(), updatedAt: serverTimestamp(), ...extra }).catch(e=>{
+      if(!warned){ warned = true; console.warn("Presence write blocked by Firestore rules — publish the users rule from firestore-rules-additions.txt", e && e.code); }
+    });
   };
+  const goOffline = ()=> push({ activeThreadId: null });
+  const beat = ()=>{ if(document.visibilityState === "visible") push({}); };
   beat();
   setInterval(beat, 25*1000);
   document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") beat(); else goOffline(); });
@@ -1994,6 +2109,7 @@ function listenUsers(){
     snap.docs.forEach(d=> m[d.id] = d.data());
     state.users = m;
     const me = m[state.uid];
+    if(me && me.lastSeen && typeof me.lastSeen.toMillis === "function" && me.lastActiveMs) CLOCK_SKEW = me.lastSeen.toMillis() - me.lastActiveMs;
     if(me){
       if(me.banned && !state.isOwner){ forceLogout("banned"); return; }
       state.username = state.isOwner ? CONFIG.ownerPublicName : (me.name || state.username); state.photoURL = me.photoURL || "";
@@ -2315,7 +2431,7 @@ function renderSearch(term){
     + (members.length ? `<h4>Members</h4><div class="settings-list">${members.map(({id,u})=>`
       <div class="mini-row tap" data-s-user="${escapeHtml(id)}">
         ${avatarHtml(u.name, u.photoURL, "lg")}
-        <div class="mini-main"><b>${escapeHtml(u.name)}${tick(u.verified)}</b><small>${presenceText(u.lastActiveMs)}</small></div>
+        <div class="mini-main"><b>${escapeHtml(u.name)}${tick(u.verified)}</b><small>${presenceText(u)}</small></div>
       </div>`).join("")}</div>` : "")
     + ((!apps.length && !members.length) ? `<div class="empty-row" style="margin:24px 18px">No results for "${escapeHtml(q)}".</div>` : "");
 }
@@ -3282,28 +3398,29 @@ async function deleteMyAccount(){
 /* ---------------------------------------------------------------------
    12d. USERS PAGE — members, last seen, tap a member for their uploads (+ owner controls)
    --------------------------------------------------------------------- */
+const userShuffleWeight = {};
+function userShuffle(id){ if(!(id in userShuffleWeight)) userShuffleWeight[id] = Math.random(); return userShuffleWeight[id]; }
+const GUEST_TAG = ' <span class="guest-tag">Guest</span>';
 function renderUsersPage(){
   const list = $("#users-list"); if(!list) return;
   const ctaLabel = $("#verify-cta-label"); if(ctaLabel) ctaLabel.textContent = state.isOwner ? "Manage blue-tick codes" : "Get Free Verification";
-  let entries = Object.entries(state.users);
+  const now = serverNow();
+  let entries = Object.entries(state.users).filter(([,u])=> !(u.guest && u.expireAtMs && u.expireAtMs < now));   // expired guests vanish at once
   if(!state.isOwner) entries = entries.filter(([,u])=> !u.banned);
   const counts = {};
   state.apps.forEach(a=>{ if(a.uploaderUid) counts[a.uploaderUid] = (counts[a.uploaderUid]||0) + 1; });
-  const rank = u => u.banned ? 2 : (u.verified ? 0 : 1);          // tie-break only: blue tick first, normal below, banned last
-  entries.sort((a,b)=>{
-    const da = (state.dmLastMs && state.dmLastMs[a[0]]) || 0;
-    const db = (state.dmLastMs && state.dmLastMs[b[0]]) || 0;
-    if(da !== db) return db - da;              // anyone who's messaged you (either direction) floats to the top, most recent first — like WhatsApp
-    return rank(a[1]) - rank(b[1]) || ((b[1].lastActiveMs||0) - (a[1].lastActiveMs||0));
-  });
+  // Tier 1: blue tick · Tier 2: Google members · Tier 3: guests (banned, owner-only view, last).
+  // Inside a tier the order is a fresh random shuffle on every page load (stable while the page stays open).
+  const tier = u => u.banned ? 3 : (u.guest ? 2 : (u.verified ? 0 : 1));
+  entries.sort((a,b)=> tier(a[1]) - tier(b[1]) || userShuffle(a[0]) - userShuffle(b[0]));
   list.innerHTML = entries.map(([uid,u])=>{
-    const status = presenceText(u.lastActiveMs);
+    const status = presenceText(u);
     const n = counts[uid]||0;
     const unread = (state.dmUnread && state.dmUnread[uid]) || 0;
     return `<div class="mini-row tap" data-user-open="${uid}">
       ${avatarHtml(u.name, u.photoURL, "lg")}
-      <div class="mini-main"><b>${escapeHtml(u.name||"—")}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
-        <small class="${status==="Online" ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small></div>
+      <div class="mini-main"><b>${escapeHtml(u.name||"—")}${u.guest ? GUEST_TAG : ""}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
+        <small class="${status==="Active now" ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small></div>
       ${unread ? `<span class="dm-badge">${unread>99?"99+":unread}</span>` : ""}
       <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
     </div>`;
@@ -3329,8 +3446,8 @@ function openUserSheet(uid){
   // (and any verified member) could never open a first DM with someone who
   // didn't have a blue tick yet — exactly the "my message never reaches a
   // non-blue-tick member" bug, because the button never even appeared.
-  const canDm = uid !== state.uid && (u.verified || state.verified || state.isOwner);
-  const canWa = uid !== state.uid && (u.verified || state.isOwner);
+  const canDm = uid !== state.uid && !raw.guest && (u.verified || state.verified || state.isOwner);
+  const canWa = uid !== state.uid && !raw.guest && (u.verified || state.isOwner);
   const contactBtns = canDm ? `
       <div style="display:flex;gap:10px;padding:0 18px 16px">
         ${canWa ? `<button class="btn btn-primary" style="flex:1" id="us-wa" type="button" hidden><svg><use href="#ic-chat"/></svg> WhatsApp</button>` : ""}
@@ -3351,8 +3468,8 @@ function openUserSheet(uid){
       <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       <div style="display:flex;align-items:center;gap:14px;padding:24px 18px 14px;">
         ${avatarHtml(u.name, u.photo, "xl")}
-        <div><h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center">${escapeHtml(u.name)}${tick(u.verified)}</h2>
-        <div class="${presenceText(raw.lastActiveMs)==="Online" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw.lastActiveMs)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div></div>
+        <div><h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center">${escapeHtml(u.name)}${raw.guest ? GUEST_TAG : ""}${tick(u.verified)}</h2>
+        <div class="${presenceText(raw)==="Active now" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div></div>
       </div>
       <div class="profile-stats"><div class="stat"><b>${apps.length}</b><span>Uploads</span></div><div class="stat"><b>${fmtCount(dl)}</b><span>Downloads</span></div></div>
       ${contactBtns}
@@ -3568,8 +3685,8 @@ async function setMyPhone(){
   }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
 const threadIdFor = (a,b)=> [a,b].sort().join("__");
-const ONLINE_WINDOW_MS = 45*1000; // > the 25s heartbeat interval, short enough that "offline" shows up fast
-function isOnlineUid(uid){ const u = state.users[uid]; return !!(u && u.lastActiveMs && (Date.now()-u.lastActiveMs) < ONLINE_WINDOW_MS); }
+const ONLINE_WINDOW_MS = 70*1000; // > 2 heartbeats (25s each) so one slow write never flips someone offline
+function isOnlineUid(uid){ const u = state.users[uid]; const t = lastSeenMs(u); return !!(t && (serverNow()-t) < ONLINE_WINDOW_MS); }
 /* Three tick states, escalating only (never downgrades once reached, same as WhatsApp):
    - single pink  = app closed / not opened recently ("outside the app")
    - double pink  = app open right now, but not looking at THIS conversation
@@ -3607,7 +3724,7 @@ function openDmPanel(otherId){
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#dm-backdrop"), log = $("#dm-log");
   let msgs = [];
-  if(firebaseReady) updateDoc(doc(db,"users",state.uid), { activeThreadId: tid, lastActiveMs: Date.now() }).catch(()=>{});
+  if(firebaseReady) updateDoc(doc(db,"users",state.uid), { activeThreadId: tid, ...presenceFields() }).catch(()=>{});
   const clearActiveThread = ()=>{ if(firebaseReady) updateDoc(doc(db,"users",state.uid), { activeThreadId: null }).catch(()=>{}); };
   const markSeen = ()=>{
     msgs.filter(m=> m.to === state.uid && !m.seenAt).forEach(m=>{
