@@ -903,9 +903,8 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
     <!-- ===================== USERS PAGE ===================== -->
     <section id="users-page" class="page" hidden>
       <div class="section">
-        <div class="section-head"><h2 id="users-count-title">Members</h2></div>
-        <p style="font-size:12.5px;color:var(--text-dim);margin:0 0 12px;">Tap a member to see what they uploaded.</p>
-        <div id="users-owner-tools" hidden style="margin-bottom:12px"><button class="btn btn-ghost btn-block" id="manage-codes-btn"><svg><use href="#ic-verified"/></svg> Manage blue-tick codes</button></div>
+        <div class="section-head"><h2>Members</h2></div>
+        <div style="margin-bottom:12px"><button class="btn btn-ghost btn-block" id="verify-cta-btn"><svg><use href="#ic-verified"/></svg> <span id="verify-cta-label">Get Free Verification</span></button></div>
       </div>
       <div class="settings-list" id="users-list"></div>
       <div style="height:30px"></div>
@@ -1638,7 +1637,37 @@ function infoSheet(title, html, okLabel="OK"){
     $("#info-ok").addEventListener("click", ()=>{ $("#info-backdrop").remove(); resolve(true); });
   });
 }
+/** Best-effort platform sniff, used ONLY to pick the right manual
+ *  instructions when the browser doesn't expose an automatic install
+ *  prompt. No browser lets a website trigger installation without the
+ *  person tapping through their own browser's menu/share sheet except
+ *  Chromium-based browsers (Chrome, Edge, Samsung Internet, Brave) on
+ *  Android/desktop, via the beforeinstallprompt API below — Safari on
+ *  iOS/iPadOS and Firefox everywhere have no such API at all, by design
+ *  (Apple/Mozilla don't allow a page to auto-install itself), so those
+ *  browsers can only ever be walked through the manual steps. */
+function installInstructions(){
+  const ua = navigator.userAgent || "";
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isSafari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
+  const isAndroid = /Android/.test(ua);
+  const isFirefox = /Firefox|FxiOS/.test(ua);
+  const isSamsung = /SamsungBrowser/.test(ua);
+  if(isIOS){
+    return isSafari
+      ? "On iPhone/iPad, Apple only allows installing through Safari's own <b>Share</b> button (a website can't trigger this automatically).<br><br>Tap the <b>Share</b> icon (square with an arrow) at the bottom of Safari, then choose <b>Add to Home Screen</b>."
+      : "Please open this page in <b>Safari</b> (not this browser) — on iPhone/iPad only Safari can add apps to your Home Screen. Then tap <b>Share</b> → <b>Add to Home Screen</b>.";
+  }
+  if(isFirefox) return "Firefox doesn't support one-tap installing. Tap the <b>⋮ menu</b> and look for <b>Install</b> or <b>Add to Home screen</b> — if you don't see it, try opening this page in Chrome instead.";
+  if(isSamsung) return "Tap the <b>menu</b> (☰ or ⋮) in Samsung Internet, then choose <b>Add page to</b> → <b>Home screen</b>.";
+  if(isAndroid) return "Tap the <b>⋮ menu</b> in your browser, then choose <b>Install app</b> (or <b>Add to Home screen</b>) and tap <b>Install</b>.";
+  return "Tap your browser's <b>menu</b> and look for <b>Install Pika Store</b> or <b>Add to Home screen</b>.";
+}
 async function installApp(){
+  if(isStandalone()){
+    await infoSheet("Already installed", "Pika Store is already installed on this device — open it from your Home screen or app drawer.", "OK");
+    return;
+  }
   if(deferredInstall){
     try{
       deferredInstall.prompt();
@@ -1647,10 +1676,17 @@ async function installApp(){
       if(c && c.outcome === "accepted"){
         await infoSheet("Pika Store installed ✅", "The app was added to your <b>home screen</b>. Press the Home button and open <b>Pika Store</b> from there.", "Got it");
       }
+      // If they dismissed it, say nothing — Chrome will offer the native
+      // prompt again on a future visit; showing manual steps on top of a
+      // prompt they just closed is confusing, not helpful.
     }catch(e){ console.warn(e); }
     return;
   }
-  await infoSheet("Install Pika Store", "Tap the <b>⋮ menu</b> in Chrome, then choose <b>Install app</b> (or <b>Add to Home screen</b>) and tap <b>Install</b>.<br><br>On iPhone: tap <b>Share</b>, then <b>Add to Home Screen</b>.", "OK");
+  // No native prompt available in THIS browser/session — either this
+  // browser doesn't support it at all (Safari/Firefox, see above), or
+  // Chrome hasn't (re)fired beforeinstallprompt yet since the last
+  // uninstall/page load. Either way, the manual steps always work.
+  await infoSheet("Install Pika Store", installInstructions(), "OK");
 }
 function showGateStep(step){
   $("#gate-step-welcome").hidden = step !== "welcome";
@@ -2002,6 +2038,7 @@ function listenApps(){
     renderProfile();
     renderUsersPage();
     applyDeepLink();
+    checkAutoVerification();
   }, err=>{
     console.warn(err);
     toast(`Firestore connection error: ${err.code || ""} ${err.message || err}`, "ic-close");
@@ -3232,10 +3269,9 @@ async function deleteMyAccount(){
    --------------------------------------------------------------------- */
 function renderUsersPage(){
   const list = $("#users-list"); if(!list) return;
-  $("#users-owner-tools").hidden = !state.isOwner;
+  const ctaLabel = $("#verify-cta-label"); if(ctaLabel) ctaLabel.textContent = state.isOwner ? "Manage blue-tick codes" : "Get Free Verification";
   let entries = Object.entries(state.users);
   if(!state.isOwner) entries = entries.filter(([,u])=> !u.banned);
-  $("#users-count-title").textContent = `${entries.length} member${entries.length === 1 ? "" : "s"} joined`;
   const counts = {};
   state.apps.forEach(a=>{ if(a.uploaderUid) counts[a.uploaderUid] = (counts[a.uploaderUid]||0) + 1; });
   const rank = u => u.banned ? 2 : (u.verified ? 0 : 1);          // tie-break only: blue tick first, normal below, banned last
@@ -3263,7 +3299,7 @@ function initUsersPage(){
     const r = e.target.closest("[data-user-open]");
     if(r) openUserSheet(r.dataset.userOpen);
   });
-  $("#manage-codes-btn").addEventListener("click", openCodesSheet);
+  $("#verify-cta-btn").addEventListener("click", ()=> state.isOwner ? openCodesSheet() : openGetVerifiedSheet());
 }
 function joinedMs(u){ return u && u.joinedAt && u.joinedAt.toMillis ? u.joinedAt.toMillis() : 0; }
 function openUserSheet(uid){
@@ -3388,6 +3424,72 @@ async function ownerAction(act, uid){
     }
   }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
   return false;
+}
+const UPLOADS_FOR_TICK = 5;
+function myUploadCount(){ return state.apps.filter(a=> a.uploaderUid === state.uid).length; }
+function openGetVerifiedSheet(){
+  if(state.isGuest){ guestBlock("get verified"); return; }
+  const n = myUploadCount();
+  const left = Math.max(0, UPLOADS_FOR_TICK - n);
+  const statusHtml = state.verified
+    ? `<div class="mini-row" style="justify-content:center;text-align:center;padding:14px"><div class="mini-main"><b>${tick(true)} You're verified</b><small>Keep ${UPLOADS_FOR_TICK}+ uploads live to keep your blue tick.</small></div></div>`
+    : `<div class="mini-row" style="justify-content:center;text-align:center;padding:14px"><div class="mini-main"><b>${n} / ${UPLOADS_FOR_TICK} uploads</b><small>${left} more upload${left===1?"":"s"} to unlock the blue tick</small></div></div>`;
+  const html = `
+  <div class="sheet-backdrop" id="getverified-backdrop">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <h3 style="padding:22px 18px 6px;margin:0;font-size:17px">Get Free Verification</h3>
+      <p class="hint-p" style="margin-bottom:4px">Unlock the blue tick for free — no code needed.</p>
+      <div class="settings-list" style="margin:12px 18px 16px;width:auto">
+        <div class="mini-row"><div class="mini-main"><b>Verified members get</b><small>A blue tick next to your name • friends can send you private DMs • your own named category</small></div></div>
+      </div>
+      <div class="settings-list" style="margin:0 18px 16px;width:auto">${statusHtml}</div>
+      <div class="settings-list" style="margin:0 18px 20px;width:auto">
+        <div class="mini-row"><div class="mini-main"><b>How to unlock it</b><small>Upload ${UPLOADS_FOR_TICK} of your best apps/files. As soon as the ${UPLOADS_FOR_TICK}${UPLOADS_FOR_TICK===5?"th":""} one finishes, your blue tick turns on automatically. If your live uploads ever drop below ${UPLOADS_FOR_TICK}, it's removed automatically too.</small></div></div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#getverified-backdrop");
+  wrap.addEventListener("click", e=>{ if(e.target === wrap || e.target.closest("[data-close]")) wrap.remove(); });
+}
+function showVerifiedCelebration(){
+  const html = `
+  <div class="sheet-backdrop dlg" id="celebrate-backdrop" style="align-items:center;justify-content:center">
+    <div style="text-align:center;padding:34px 28px;background:var(--surface,#161616);border-radius:20px;max-width:300px;margin:0 20px">
+      <div style="font-size:54px;line-height:1">🎉</div>
+      <h3 style="margin:12px 0 6px;font-size:19px">Congrats!</h3>
+      <p style="font-size:13.5px;color:var(--text-dim);margin:0">You just unlocked the blue tick for ${UPLOADS_FOR_TICK} uploads!</p>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  setTimeout(()=>{ const el = $("#celebrate-backdrop"); if(el) el.remove(); }, 5000);
+}
+/** Runs whenever the live apps list changes. Auto-grants/removes the blue tick
+ *  based on the signed-in member's OWN upload count (read straight from the
+ *  real, server-synced apps list — never a value the browser can fake).
+ *  Never touches the owner account. */
+async function checkAutoVerification(){
+  if(state.isGuest || state.isOwner || !state.uid || !firebaseReady) return;
+  const n = myUploadCount();
+  try{
+    if(n >= UPLOADS_FOR_TICK && !state.verified){
+      await setDoc(doc(db,"verifiedClaims",state.uid), { code:"auto-uploads", source:"uploads", uploadsAtGrant:n, at: serverTimestamp() });
+      await setDoc(doc(db,"users",state.uid), { verified: true, updatedAt: serverTimestamp() }, { merge:true });
+      state.verified = true;
+      showVerifiedCelebration();
+      renderProfile(); renderUsersPage();
+    } else if(n < UPLOADS_FOR_TICK && state.verified){
+      const snap = await getDoc(doc(db,"verifiedClaims",state.uid));
+      if(snap.exists() && snap.data().source === "uploads"){
+        await deleteDoc(doc(db,"verifiedClaims",state.uid));
+        await setDoc(doc(db,"users",state.uid), { verified: false, updatedAt: serverTimestamp() }, { merge:true });
+        state.verified = false;
+        renderProfile(); renderUsersPage();
+      }
+    }
+  }catch(e){ console.warn("auto-verification check failed", e); }
 }
 function openCodesSheet(){
   const render = ()=> state.codes.map(c=>`<div class="mini-row"><div class="mini-main"><b class="mono">${escapeHtml(c)}</b></div><button class="icon-del" data-del-code="${escapeHtml(c)}"><svg><use href="#ic-trash"/></svg></button></div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No codes yet.</div>`;
