@@ -1465,8 +1465,23 @@ function showBannedDialog(){
    secret code anymore.
    --------------------------------------------------------------------- */
 async function tryClaimVerified(code){
-  try{ await withTimeout(setDoc(doc(db,"verifiedClaims",state.uid), { code, at: serverTimestamp() }), 8000, "Tick check"); return true; }
-  catch(e){ return false; }
+  // Do NOT read verifyCodes here — firestore.rules only lets admin read that
+  // collection, so a plain member's getDoc on it is denied outright and would
+  // make every code look wrong even when it's correct. The existence check
+  // happens server-side instead: firestore.rules' create rule for
+  // verifiedClaims uses exists(/verifyCodes/$(code)), and exists()/get() calls
+  // inside rules bypass the target path's own read rules, so this single
+  // write is the correct and sufficient check.
+  try{
+    await withTimeout(setDoc(doc(db,"verifiedClaims",state.uid), { code, at: serverTimestamp() }), 8000, "Tick check");
+    return true;
+  }catch(e){
+    // permission-denied here means the rule's exists() check failed, i.e. the
+    // code doesn't exist in verifyCodes — that's a real "wrong code", not a
+    // bug. Anything else (network, timeout) should say so instead of lying.
+    if(e && e.code && e.code !== "permission-denied") toast("Could not check code: " + e.code, "ic-close");
+    return false;
+  }
 }
 async function checkOwner(){ try{ return (await getDoc(doc(db,"adminClaims",state.uid))).exists(); }catch(e){ return false; } }
 async function checkVerified(){ try{ return (await getDoc(doc(db,"verifiedClaims",state.uid))).exists(); }catch(e){ return false; } }
@@ -1960,7 +1975,7 @@ function watchConnectivity(){
   window.addEventListener("online", kick);
 }
 function startHeartbeat(){
-  const goOffline = ()=>{ if(state.uid) updateDoc(doc(db,"users",state.uid), { lastActiveMs: 0, activeThreadId: null }).catch(()=>{}); };
+  const goOffline = ()=>{ if(state.uid) updateDoc(doc(db,"users",state.uid), { lastActiveMs: Date.now(), activeThreadId: null }).catch(()=>{}); };
   const beat = ()=>{
     if(!state.uid || document.visibilityState !== "visible") return;
     updateDoc(doc(db,"users",state.uid), { lastActiveMs: Date.now() }).catch(()=>{});
