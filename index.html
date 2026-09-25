@@ -170,10 +170,10 @@ a{ color:inherit; text-decoration:none; }
 }
 .bottom-nav button{
   display:flex; flex-direction:column; align-items:center; gap:4px;
-  font-size:10.5px; font-weight:600; color:var(--text-faint);
-  padding:6px 14px; border-radius:14px;
+  font-size:10px; font-weight:600; color:var(--text-faint);
+  padding:6px 8px; border-radius:14px;
 }
-.bottom-nav button svg{ width:23px; height:23px; }
+.bottom-nav button svg{ width:22px; height:22px; }
 .bottom-nav button.active{ color:var(--accent); }
 .bottom-nav button.active svg{ filter:drop-shadow(0 2px 8px rgba(255,198,26,.5)); }
 
@@ -708,6 +708,8 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <symbol id="ic-sun-line" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></symbol>
 <symbol id="ic-moon-line" viewBox="0 0 24 24"><path d="M20 14.2A8.2 8.2 0 1 1 9.8 4a6.6 6.6 0 0 0 10.2 10.2Z"/></symbol>
 <symbol id="ic-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2.8 19.5c1-3.4 3.3-5 6.2-5s5.2 1.6 6.2 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="9.5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17.5 14.6c2 .3 3.2 1.7 3.9 4.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="ic-channel" viewBox="0 0 24 24"><path d="M3.5 10.2 19 4.8v14.4L3.5 13.8Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 13.2v5a1 1 0 0 0 1 1h1.2a1 1 0 0 0 1-1.2L9.4 13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M19 9.2a3 3 0 0 1 0 5.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="ic-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="3.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 12.5 19 4M19 4v3.5M19 4h-3.5M16 7l2 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="ic-verified" viewBox="0 0 24 24"><path d="M12 1.8l2.5 1.9 3.1-.3 1.2 2.9 2.8 1.4-.6 3.1L22 12l-1.9 2.2.6 3.1-2.8 1.4-1.2 2.9-3.1-.3L12 22.2l-2.5-1.9-3.1.3-1.2-2.9-2.8-1.4.6-3.1L2 12l1.9-2.2-.6-3.1 2.8-1.4 1.2-2.9 3.1.3Z" fill="#1D9BF0"/><path d="m7.8 12.3 3 3 5.6-5.8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
@@ -937,6 +939,16 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
       <div style="height:30px"></div>
     </section>
 
+    <!-- ===================== CHANNELS PAGE ===================== -->
+    <section id="channels-page" class="page" hidden>
+      <div class="section">
+        <div class="section-head"><h2>Channels</h2></div>
+        <div style="margin-bottom:12px"><button class="btn btn-ghost btn-block" id="channel-create-btn"><svg><use href="#ic-channel"/></svg> Create a channel</button></div>
+      </div>
+      <div class="settings-list" id="channels-list"></div>
+      <div style="height:30px"></div>
+    </section>
+
     <!-- ===================== PROFILE PAGE ===================== -->
     <section id="profile-page" class="page" hidden>
       <div class="profile-head">
@@ -963,7 +975,10 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
       <h3 class="section-title" id="account-details-title" hidden>Account details</h3>
       <div class="settings-list" id="account-details" hidden style="margin-bottom:16px"></div>
       <input type="file" id="profile-photo-input" accept="image/*" hidden />
+      <input type="file" id="channel-photo-input" accept="image/*" hidden />
+      <input type="file" id="channel-content-input" accept=".apk,.zip,.rar,.pak,.png,.jpg,.jpeg,.mp4,.json,.sav,.mkv,.pdf,.txt,.mp3,.gif,.webp,.obb,.xapk" hidden />
       <div class="settings-list">
+        <div class="row tap" id="row-rename"><div class="row-left"><svg><use href="#ic-user"/></svg> Change store name</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         <div class="row tap" id="row-phone"><div class="row-left"><svg><use href="#ic-chat"/></svg> WhatsApp number</div><span style="font-size:12px;color:var(--text-faint)" id="profile-phone">Not set</span></div>
         <div class="row tap" id="row-change-photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Change profile photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
@@ -988,6 +1003,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
   <!-- Bottom navigation -->
   <nav class="bottom-nav">
     <button class="nav-btn active" data-page="home-page"><svg><use href="#ic-home"/></svg>Home</button>
+    <button class="nav-btn" data-page="channels-page"><svg><use href="#ic-channel"/></svg>Channels</button>
     <button class="nav-btn" data-page="users-page"><svg><use href="#ic-users"/></svg>Users</button>
     <button class="nav-btn" data-page="upload-page"><svg><use href="#ic-upload"/></svg>Upload</button>
     <button class="nav-btn" data-page="profile-page"><svg><use href="#ic-user"/></svg>Profile</button>
@@ -1097,8 +1113,8 @@ const CONFIG = {
    --------------------------------------------------------------------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  initializeFirestore, getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, increment,
-  onSnapshot, query, orderBy, limit, serverTimestamp, where, persistentLocalCache,
+  initializeFirestore, getFirestore, collection, collectionGroup, addDoc, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, increment,
+  onSnapshot, query, orderBy, limit, serverTimestamp, where, persistentLocalCache, runTransaction,
   enableNetwork, disableNetwork, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, reauthenticateWithPopup, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -1279,6 +1295,10 @@ const state = {
   heroIndex: 0,
   dmUnread: {},         // {otherUid: unreadCount} — messages addressed to me, not yet seen
   dmLastMs: {},         // {otherUid: mostRecentMs} — last DM activity with them, either direction
+  channels: [],         // live from Firestore 'channels' collection
+  myChannels: {},        // live, collectionGroup 'members' where uid==me: channelId -> {role, blocked, ...}
+  myChannelsLoaded: false,
+  channelsLoaded: false,
   upload: { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"", hasUrl:false, url:"" }
 };
 
@@ -2052,12 +2072,15 @@ function boot(){
   initNotifFlow();
   initProfileActions();
   initUsersPage();
+  initChannelsPage();
   initHomeCategories();
   if(!state.isGuest) loadMyPhone();
   listenUsers();
   listenSession();
   listenApps();
   listenCategories();
+  listenChannels();
+  if(!state.isGuest) listenMyChannels();
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity();
   startHeartbeat();
@@ -2280,7 +2303,7 @@ function renderHome(){
     $("#hero-primary-btn").onclick = ()=>{ toast("There is nothing to download yet."); };
     $("#hero-dots").innerHTML = "";
   }
-  $("#hero-upload-btn").onclick = ()=>{ $$(".nav-btn")[2].click(); };
+  $("#hero-upload-btn").onclick = ()=>{ document.querySelector('.nav-btn[data-page="upload-page"]').click(); };
 
   renderAppRow("#top-downloaded-row", [...list].sort((a,b)=>(b.downloadCount||0)-(a.downloadCount||0)).slice(0,20), true);
   renderAppRow("#new-releases-row", [...list].sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0)).slice(0,20), false);
@@ -3557,6 +3580,33 @@ async function ownerAction(act, uid){
   }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
   return false;
 }
+/** Lets the signed-in member rename THEMSELVES (Profile → Change store name). Persists to Firestore
+    (users/{uid}.name) so the new name survives logout/login, mirroring ownerAction("rename") above. */
+async function renameMyself(){
+  if(guestBlock("change your store name")) return;
+  if(!state.uid || !firebaseReady) return;
+  const v = await askText({ title:"Change store name", value: state.username || "", placeholder:"New store name", max:NAME_MAX });
+  if(v === null) return;
+  const nn = v.trim(), errMsg = validateName(nn);
+  if(errMsg){ toast(errMsg, "ic-close"); return; }
+  if(isReservedName(nn)){ toast("That name is reserved.", "ic-close"); return; }
+  const oldLower = lowerName(state.username);
+  const newLower = lowerName(nn);
+  try{
+    if(newLower !== oldLower){
+      const taken = await findAccount(newLower);
+      if(taken && taken.uid !== state.uid){ toast("That name is already taken", "ic-close"); return; }
+      await setDoc(doc(db,"usernames",newLower), { uid: state.uid, name: nn, nameLower: newLower, at: serverTimestamp() });
+      const os = await getDoc(doc(db,"usernames",oldLower));
+      if(os.exists() && os.data().uid === state.uid) await deleteDoc(doc(db,"usernames",oldLower)).catch(()=>{});
+    }
+    await updateDoc(doc(db,"users",state.uid), { name: nn, nameLower: newLower, updatedAt: serverTimestamp() });
+    state.username = nn; localStorage.setItem("pika_username", nn);
+    renderProfile(); renderAccountDetails();
+    toast("Store name changed");
+  }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+}
+
 const UPLOADS_FOR_TICK = 5;
 function myUploadCount(){ return state.apps.filter(a=> a.uploaderUid === state.uid).length; }
 function openGetVerifiedSheet(){
@@ -3844,6 +3894,7 @@ function initProfileActions(){
   $("#row-change-photo").addEventListener("click", ()=> $("#profile-photo-input").click());
   $("#profile-avatar").addEventListener("click", ()=> $("#profile-photo-input").click());
   $("#profile-photo-input").addEventListener("change", e=>{ changeMyPhoto(e.target.files[0]); e.target.value = ""; });
+  $("#row-rename").addEventListener("click", renameMyself);
   $("#row-theme").addEventListener("click", ()=> $("#theme-toggle-btn").click());
   $("#row-verify").addEventListener("click", enterTickCode);
   $("#row-phone").addEventListener("click", setMyPhone);
@@ -3860,6 +3911,548 @@ function initProfileActions(){
     const app = state.apps.find(a=>a.id === b.dataset.delApp);
     if(app) await deleteApp(app);
   });
+}
+
+/* ---------------------------------------------------------------------
+   12f. CHANNELS — Telegram-style private broadcast channels.
+   Data model (see firestore.rules for the matching security rules):
+     channels/{channelId}                        — name, photoURL, ownerUid, ownerName, memberCount
+     channels/{channelId}/members/{uid}           — {uid, name, photoURL, role, blocked, joinedAt, viaCode}
+     channelCodes/{code}                          — 12-char one-time join code; doc ID = code itself
+     channelFiles/{id}                            — private content uploaded by the channel owner
+   Kept as separate collections from "apps" on purpose: apps/categories rely on
+   an open "allow read: if true" for the public Home feed, and mixing private
+   per-channel content into that same collection/rule would either leak
+   private files publicly or risk breaking the open Home query. The trade-off:
+   pika-notifier (the VPS cleanup service) currently only watches the "apps"
+   collection for deletions, so deleting channel content here removes the
+   Firestore record but NOT the file on the VPS disk yet — see the note at
+   the end of this file for the small addition pika-notifier would need.
+   --------------------------------------------------------------------- */
+const CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+function randomCode(len = 12){
+  const arr = crypto.getRandomValues(new Uint32Array(len));
+  return Array.from(arr, n => CODE_CHARS[n % CODE_CHARS.length]).join("");
+}
+const channelFilesCache = {};   // channelId -> last-rendered files array (so click handlers can find them without a re-query)
+let channelViewUnsub = null, chMembersUnsub = null, chCodesUnsub = null;
+let channelDeepLinkDone = false;
+
+function listenChannels(){
+  if(!firebaseReady) return;
+  const q = query(collection(db,"channels"), orderBy("createdAt","desc"), limit(200));
+  onSnapshot(q, snap=>{
+    state.channels = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    state.channelsLoaded = true;
+    renderChannelsPage();
+    applyChannelDeepLink();
+  }, err=>{ console.warn("channels listener", err); toast(`Channels sync error: ${err.code||""} ${err.message||err}`, "ic-close"); });
+}
+/** Every channel I belong to (owner or member), including ones where I've been blocked —
+    the "blocked" flag is what tells the UI to show a removed-notice instead of content. */
+function listenMyChannels(){
+  if(!firebaseReady || !state.uid) return;
+  const q = query(collectionGroup(db,"members"), where("uid","==",state.uid));
+  onSnapshot(q, snap=>{
+    const m = {};
+    snap.docs.forEach(d=>{
+      const cid = d.ref.parent.parent.id;
+      m[cid] = { ...d.data() };
+    });
+    state.myChannels = m;
+    state.myChannelsLoaded = true;
+    renderChannelsPage();
+    applyChannelDeepLink();
+  }, err=> console.warn("my-channels listener", err));
+}
+function renderChannelsPage(){
+  const list = $("#channels-list"); if(!list) return;
+  const createBtn = $("#channel-create-btn");
+  if(createBtn) createBtn.hidden = state.isGuest || !(state.verified || state.isOwner);
+  list.innerHTML = state.channels.map(ch=>{
+    const mine = state.myChannels[ch.id];
+    const badge = mine ? (mine.blocked
+      ? `<span style="color:var(--danger);font-size:11px;font-weight:700">BLOCKED</span>`
+      : `<span style="color:var(--accent-2);font-size:11px;font-weight:700">JOINED</span>`) : "";
+    return `<div class="mini-row tap" data-channel-open="${ch.id}">
+      ${avatarHtml(ch.name, ch.photoURL, "lg")}
+      <div class="mini-main"><b>${escapeHtml(ch.name)}${tick(true)}</b><small>by ${escapeHtml(ch.ownerName||"—")} • ${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}</small></div>
+      ${badge}
+      <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
+    </div>`;
+  }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No channels yet. ${(state.verified||state.isOwner) ? "Create the first one!" : "Ask a blue-tick member to create one."}</div>`;
+}
+function initChannelsPage(){
+  $("#channel-create-btn").addEventListener("click", openCreateChannelSheet);
+  $("#channels-list").addEventListener("click", e=>{
+    const r = e.target.closest("[data-channel-open]");
+    if(r) openChannelEntry(r.dataset.channelOpen);
+  });
+}
+
+/** ?channel=ID deep link — mirrors applyDeepLink()'s ?app=ID handling. Waits for both the
+    channel list and (for signed-in users) my membership snapshot before deciding whether to
+    show the channel straight away or prompt for the join code. */
+function applyChannelDeepLink(){
+  if(channelDeepLinkDone) return;
+  const qs = new URLSearchParams(location.search);
+  const cid = qs.get("channel");
+  if(!cid){ channelDeepLinkDone = true; return; }
+  if(!state.channelsLoaded) return;
+  if(!state.isGuest && !state.myChannelsLoaded) return;
+  channelDeepLinkDone = true;
+  try{ history.replaceState(null, "", location.pathname); }catch(e){}
+  const ch = state.channels.find(c=>c.id===cid);
+  if(!ch){ toast("This channel is no longer available.", "ic-close"); return; }
+  const nav = document.querySelector('.nav-btn[data-page="channels-page"]');
+  if(nav) nav.click();
+  openChannelEntry(cid);
+}
+
+function openChannelEntry(channelId){
+  if(guestBlock("open channels")) return;
+  const ch = state.channels.find(c=>c.id===channelId);
+  if(!ch) return;
+  const mine = state.myChannels[channelId];
+  if(mine){
+    if(mine.blocked){
+      document.body.insertAdjacentHTML("beforeend", `
+      <div class="sheet-backdrop dlg" id="chblock-backdrop">
+        <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+          <h3 style="text-align:center;font-size:17px;margin:0 0 8px;">Removed from channel</h3>
+          <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;">The owner removed you from "${escapeHtml(ch.name)}".</p>
+          <button class="btn btn-primary btn-block" data-close type="button">Close</button>
+        </div>
+      </div>`);
+      const w = $("#chblock-backdrop");
+      w.addEventListener("click", e=>{ if(e.target===w || e.target.closest("[data-close]")) w.remove(); });
+      return;
+    }
+    openChannelView(channelId);
+  } else {
+    askChannelPassword(ch);
+  }
+}
+
+/** Themed password prompt with Confirm + Get Password (opens the owner's WhatsApp via
+    the existing 'contacts' collection), matching askPassword()'s look for downloads. */
+function askChannelPassword(channel){
+  const html = `
+  <div class="sheet-backdrop dlg" id="chpw-backdrop">
+    <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+      <div style="width:52px;height:52px;border-radius:16px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+        <svg width="24" height="24" style="color:var(--accent-2)"><use href="#ic-key"/></svg>
+      </div>
+      <h3 style="text-align:center;font-size:17px;margin:0 0 4px;">${escapeHtml(channel.name)}</h3>
+      <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;">Enter the 12-character code from the channel owner to join.</p>
+      <div class="field" style="margin-bottom:12px;">
+        <input type="text" id="chpw-input" maxlength="12" placeholder="Secret code" autocomplete="off" autocapitalize="off" />
+      </div>
+      <button class="btn btn-ghost btn-block" id="chpw-get" type="button" style="margin-bottom:12px" hidden><svg><use href="#ic-chat"/></svg> Get Password</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" style="flex:1" id="chpw-cancel" type="button">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" id="chpw-ok" type="button">Confirm</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const backdrop = $("#chpw-backdrop"), input = $("#chpw-input");
+  input.focus();
+  getDoc(doc(db,"contacts",channel.ownerUid)).then(s=>{
+    const ph = s.exists() ? s.data().phone : "";
+    const g = $("#chpw-get");
+    if(g && ph){
+      g.hidden = false;
+      g.addEventListener("click", ()=> window.open(`https://wa.me/${ph.replace(/\D/g,"")}?text=${encodeURIComponent("Hi, please share the password for "+channel.name)}`, "_blank", "noopener"));
+    }
+  }).catch(()=>{});
+  const close = ()=>{ if(document.body.contains(backdrop)) backdrop.remove(); };
+  $("#chpw-cancel").addEventListener("click", close);
+  const doConfirm = async ()=>{
+    const ok = await joinChannelWithCode(channel, input.value);
+    if(ok){ close(); openChannelView(channel.id); }
+  };
+  $("#chpw-ok").addEventListener("click", doConfirm);
+  input.addEventListener("keydown", e=>{ if(e.key==="Enter") doConfirm(); if(e.key==="Escape") close(); });
+  backdrop.addEventListener("click", e=>{ if(e.target===backdrop) close(); });
+}
+
+/** The atomic join. Firestore's transaction retry-on-conflict is what guarantees that if two
+    people submit the SAME code at the same instant, only one of these transactions commits
+    with used:false→true; the loser re-reads used:true on retry and throws, so only one join
+    ever goes through — no matter how close together the two Confirm taps land. */
+async function joinChannelWithCode(channel, codeRaw){
+  const code = String(codeRaw||"").trim();
+  if(!code){ toast("Enter the code", "ic-close"); return false; }
+  if(guestBlock("join a channel")) return false;
+  if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return false; }
+  try{
+    await runTransaction(db, async tx=>{
+      const codeRef = doc(db,"channelCodes",code);
+      const codeSnap = await tx.get(codeRef);
+      if(!codeSnap.exists() || codeSnap.data().channelId !== channel.id || codeSnap.data().used){
+        const e = new Error("Wrong code"); e.code = "WRONGCODE"; throw e;
+      }
+      tx.update(codeRef, { used:true, usedBy: state.uid, usedAt: serverTimestamp() });
+      tx.set(doc(db,"channels",channel.id,"members",state.uid), {
+        uid: state.uid, name: state.username, photoURL: state.photoURL || "",
+        role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
+      });
+      tx.update(doc(db,"channels",channel.id), { memberCount: increment(1) });
+    });
+    toast("Joined " + channel.name);
+    return true;
+  }catch(e){
+    if(e && e.code === "WRONGCODE") toast("Wrong code", "ic-close");
+    else toast("Failed: " + (e.code||e.message), "ic-close");
+    return false;
+  }
+}
+
+async function openCreateChannelSheet(){
+  if(guestBlock("create a channel")) return;
+  if(!state.verified && !state.isOwner){ toast("Only blue-tick members can create a channel", "ic-close"); return; }
+  const v = await askText({ title:"Channel name", placeholder:"e.g. My VIP Channel", max:30, okLabel:"Create" });
+  if(v === null) return;
+  const nn = v.trim();
+  if(nn.length < 3){ toast("Name is too short", "ic-close"); return; }
+  try{
+    const ref = doc(collection(db,"channels"));
+    await setDoc(ref, {
+      name: nn, nameLower: lowerName(nn), photoURL: "",
+      ownerUid: state.uid, ownerName: state.username,
+      memberCount: 1, createdAt: serverTimestamp(), createdAtMs: Date.now()
+    });
+    await setDoc(doc(db,"channels",ref.id,"members",state.uid), {
+      uid: state.uid, name: state.username, photoURL: state.photoURL || "",
+      role: "owner", blocked: false, joinedAt: serverTimestamp(), viaCode: "owner"
+    });
+    toast("Channel created — add a photo and generate codes from Manage");
+    openChannelView(ref.id);
+  }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+}
+
+function closeChannelView(){
+  if(channelViewUnsub){ channelViewUnsub(); channelViewUnsub = null; }
+  const w = $("#chview-backdrop"); if(w) w.remove();
+}
+function openChannelView(channelId){
+  const ch = state.channels.find(c=>c.id===channelId);
+  if(!ch) return;
+  const isOwnerHere = ch.ownerUid === state.uid || state.isOwner;
+  closeChannelView();
+  const html = `
+  <div class="sheet-backdrop" id="chview-backdrop">
+    <div class="sheet" style="max-height:92vh;display:flex;flex-direction:column">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <div style="display:flex;align-items:center;gap:14px;padding:24px 18px 14px;">
+        ${avatarHtml(ch.name, ch.photoURL, "xl")}
+        <div><h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center">${escapeHtml(ch.name)}${tick(true)}</h2>
+        <div style="font-size:12px;color:var(--text-faint)">by ${escapeHtml(ch.ownerName||"—")} • ${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}</div></div>
+      </div>
+      <div style="display:flex;gap:10px;padding:0 18px 16px;flex-wrap:wrap">
+        <button class="btn btn-ghost" style="flex:1" id="chv-copy" type="button"><svg><use href="#ic-copy"/></svg> Copy link</button>
+        ${isOwnerHere
+          ? `<button class="btn btn-ghost" style="flex:1" id="chv-manage" type="button"><svg><use href="#ic-user"/></svg> Manage</button>
+             <button class="btn btn-primary btn-block" id="chv-upload" type="button" style="flex-basis:100%;margin-top:4px"><svg><use href="#ic-upload"/></svg> Upload content</button>`
+          : `<button class="btn btn-ghost" style="flex:1;color:var(--danger)" id="chv-leave" type="button">Leave channel</button>`}
+      </div>
+      <h3 class="section-title" style="margin:0 0 6px 18px">Content</h3>
+      <div class="settings-list" id="chv-content" style="margin:0 14px 24px;overflow-y:auto"><div class="mini-row" style="color:var(--text-faint)">Loading…</div></div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#chview-backdrop");
+  wrap.addEventListener("click", e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ closeChannelView(); return; }
+    if(e.target.closest("#chv-copy")){ copyChannelLink(ch); return; }
+    if(e.target.closest("#chv-manage")){ openChannelManageSheet(channelId); return; }
+    if(e.target.closest("#chv-upload")){ uploadChannelContent(channelId); return; }
+    if(e.target.closest("#chv-leave")){ leaveChannel(channelId); return; }
+    const dl = e.target.closest("[data-dl-file]");
+    if(dl){ const f = (channelFilesCache[channelId]||[]).find(x=>x.id===dl.dataset.dlFile); if(f) downloadChannelFile(f); return; }
+    const del = e.target.closest("[data-del-file]");
+    if(del){ deleteChannelFile(del.dataset.delFile); return; }
+  });
+  const q = query(collection(db,"channelFiles"), where("channelId","==",channelId));
+  channelViewUnsub = onSnapshot(q, snap=>{
+    const files = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
+    channelFilesCache[channelId] = files;
+    const box = $("#chv-content"); if(!box) return;
+    box.innerHTML = files.map(f=>`
+      <div class="mini-row">
+        <span class="uav"><svg width="18" height="18"><use href="#ic-cube"/></svg></span>
+        <div class="mini-main tap" data-dl-file="${f.id}"><b>${escapeHtml(f.name)}</b><small>${escapeHtml((f.ext||"").toUpperCase())} • ${escapeHtml(f.sizeLabel||"")}</small></div>
+        ${isOwnerHere
+          ? `<button class="icon-del" data-del-file="${f.id}"><svg><use href="#ic-trash"/></svg></button>`
+          : `<svg width="14" height="14" style="color:var(--text-faint)"><use href="#ic-download"/></svg>`}
+      </div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">${isOwnerHere ? "No content uploaded yet." : "The owner hasn't posted anything yet."}</div>`;
+  }, err=>{
+    console.warn("channel content listener", err);
+    const box = $("#chv-content"); if(box) box.innerHTML = `<div class="mini-row" style="color:var(--text-faint)">Could not load content.</div>`;
+  });
+}
+async function downloadChannelFile(f){
+  try{ await downloadInsideStore(f.fileUrl, f.name, ()=>{}); }
+  catch(e){ if(!e || e.name !== "AbortError") toast("Download failed", "ic-close"); }
+}
+async function deleteChannelFile(id){
+  if(!(await confirmSheet("Delete this file?", "This removes it from the channel permanently.", "Delete"))) return;
+  try{ await deleteDoc(doc(db,"channelFiles",id)); toast("Deleted"); }
+  catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+}
+async function copyChannelLink(ch){
+  const url = `${location.origin}${location.pathname}?channel=${ch.id}`;
+  const ok = await copyText(url);
+  toast(ok ? "Channel link copied" : "Could not copy — long-press to copy manually");
+}
+async function leaveChannel(channelId){
+  if(!(await confirmSheet("Leave this channel?", "You'll need a new code from the owner to rejoin.", "Leave"))) return;
+  try{
+    await deleteDoc(doc(db,"channels",channelId,"members",state.uid));
+    await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
+    toast("You left the channel");
+    closeChannelView();
+  }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+}
+/** Owner-only: pick a file (any of the listed extensions), send it to the same VPS
+    upload-api used for store apps, and record it privately in channelFiles. */
+function uploadChannelContent(channelId){
+  const ch = state.channels.find(c=>c.id===channelId);
+  if(!ch) return;
+  if(ch.ownerUid !== state.uid && !state.isOwner){ toast("Only the channel owner can upload content", "ic-close"); return; }
+  if(!storageReady()){ toast("Connect your VPS upload API first", "ic-close"); return; }
+  const input = $("#channel-content-input");
+  input.onchange = async e=>{
+    const file = e.target.files[0]; e.target.value = "";
+    if(!file) return;
+    toast("Uploading " + file.name + "…");
+    try{
+      // The Firestore doc ID must be the EXACT same string as the folder name the
+      // upload-api creates on disk (this is how pika-notifier finds it to delete),
+      // so build one id up front and reuse it for both.
+      const fid = "ch_" + channelId + "_" + generateAppId();
+      const res = await uploadFileToServer(file, fid, "file", null);
+      const ext = (file.name.split(".").pop() || "").toLowerCase();
+      await setDoc(doc(db,"channelFiles",fid), {
+        channelId, channelName: ch.name,
+        name: file.name, ext,
+        fileUrl: res.url, filePath: res.path,
+        sizeLabel: (file.size/1024/1024).toFixed(1) + " MB",
+        uploaderUid: state.uid, uploaderName: state.username,
+        createdAt: serverTimestamp(), createdAtMs: Date.now()
+      });
+      toast("Uploaded to channel");
+    }catch(err){ toast("Upload failed: " + (err.code||err.message), "ic-close"); }
+  };
+  input.click();
+}
+
+/** Generic "pick a store member" sheet, mirroring openAppPicker()'s search+list pattern. */
+function openUserPicker(onPick){
+  const html = `
+  <div class="sheet-backdrop dlg" id="upick-backdrop">
+    <div class="sheet" style="max-height:80vh;display:flex;flex-direction:column">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <h3 style="padding:22px 18px 8px;margin:0;font-size:17px">Add a member</h3>
+      <div class="field" style="margin:0 18px 10px"><input type="text" id="upick-search" placeholder="Search members…" autocomplete="off" /></div>
+      <div class="settings-list" id="upick-list" style="margin:0 14px 20px;overflow-y:auto"></div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#upick-backdrop"), list = $("#upick-list");
+  const entries = ()=> Object.entries(state.users).filter(([,u])=> !u.guest && !u.banned);
+  const draw = ()=>{
+    const q = $("#upick-search").value.trim();
+    let items = entries();
+    if(q) items = items.map(([uid,u])=>({uid,u,s:fuzzyScore(q,u.name||"")})).filter(x=>x.s>=40).sort((a,b)=>b.s-a.s).map(x=>[x.uid,x.u]);
+    list.innerHTML = items.map(([uid,u])=>`<div class="mini-row tap" data-pick="${uid}">${avatarHtml(u.name,u.photoURL)}<div class="mini-main"><b>${escapeHtml(u.name||"—")}${tick(u.verified)}</b></div></div>`).join("")
+      || `<div class="mini-row" style="color:var(--text-faint)">No members found.</div>`;
+  };
+  draw();
+  $("#upick-search").addEventListener("input", draw);
+  wrap.addEventListener("click", e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
+    const r = e.target.closest("[data-pick]");
+    if(r){ const uid = r.dataset.pick, u = state.users[uid]; wrap.remove(); if(u) onPick({ id:uid, name:u.name, photoURL:u.photoURL }); }
+  });
+}
+
+function openChannelManageSheet(channelId){
+  const ch = state.channels.find(c=>c.id===channelId);
+  if(!ch || (ch.ownerUid !== state.uid && !state.isOwner)) return;
+  const html = `
+  <div class="sheet-backdrop" id="chman-backdrop">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <h3 style="padding:22px 18px 10px;margin:0;font-size:17px">Manage channel</h3>
+      <div class="settings-list" style="margin:0 14px 24px">
+        <div class="row tap" data-act="rename"><div class="row-left"><svg><use href="#ic-user"/></svg> Channel name</div><span style="font-size:12px;color:var(--text-faint)">${escapeHtml(ch.name)}</span></div>
+        <div class="row tap" data-act="photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Channel photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+        <div class="row tap" data-act="members"><div class="row-left"><svg><use href="#ic-users"/></svg> Members</div><span style="font-size:12px;color:var(--text-faint)">${fmtCount(ch.memberCount||1)}</span></div>
+        <div class="row tap" data-act="add"><div class="row-left"><svg><use href="#ic-plus"/></svg> Add member</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+        <div class="row tap" data-act="codes"><div class="row-left"><svg><use href="#ic-key"/></svg> Secret codes</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+        <div class="row tap" data-act="delete"><div class="row-left" style="color:var(--danger)"><svg style="color:var(--danger)"><use href="#ic-trash"/></svg> Delete channel permanently</div></div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#chman-backdrop");
+  wrap.addEventListener("click", async e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
+    const act = e.target.closest("[data-act]"); if(!act) return;
+    const a = act.dataset.act;
+    if(a === "rename"){
+      const v = await askText({ title:"Rename channel", value: ch.name, placeholder:"Channel name", max:30 });
+      if(v === null) return;
+      const nn = v.trim(); if(nn.length < 3){ toast("Too short", "ic-close"); return; }
+      try{ await updateDoc(doc(db,"channels",channelId), { name: nn, nameLower: lowerName(nn) }); toast("Renamed"); wrap.remove(); openChannelManageSheet(channelId); }
+      catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+    } else if(a === "photo"){
+      wrap.remove();
+      const input = $("#channel-photo-input");
+      input.onchange = async e2=>{
+        const file = e2.target.files[0]; e2.target.value = "";
+        if(!file) return;
+        try{ const url = await uploadAvatar(file); await updateDoc(doc(db,"channels",channelId), { photoURL: url }); toast("Photo updated"); }
+        catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+      };
+      input.click();
+    } else if(a === "members"){
+      wrap.remove(); openChannelMembersSheet(channelId);
+    } else if(a === "add"){
+      wrap.remove();
+      openUserPicker(async u=>{
+        try{
+          await setDoc(doc(db,"channels",channelId,"members",u.id), { uid:u.id, name:u.name||"", photoURL:u.photoURL||"", role:"member", blocked:false, joinedAt: serverTimestamp(), viaCode:"added-by-owner" });
+          await updateDoc(doc(db,"channels",channelId), { memberCount: increment(1) });
+          toast("Added to channel");
+        }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+      });
+    } else if(a === "codes"){
+      wrap.remove(); openChannelCodesSheet(channelId);
+    } else if(a === "delete"){
+      wrap.remove();
+      if(!(await confirmSheet(`Delete "${ch.name}"?`, "This permanently deletes the channel, its member list and its content. Secret codes stay on record but stop working.", "Delete forever"))) return;
+      await deleteChannelForever(ch);
+    }
+  });
+}
+
+function openChannelMembersSheet(channelId){
+  const ch = state.channels.find(c=>c.id===channelId);
+  if(!ch) return;
+  const html = `
+  <div class="sheet-backdrop" id="chmem-backdrop">
+    <div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <h3 style="padding:22px 18px 10px;margin:0;font-size:17px">Members</h3>
+      <div class="settings-list" id="chmem-list" style="margin:0 14px 20px;overflow-y:auto"></div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#chmem-backdrop");
+  if(chMembersUnsub){ chMembersUnsub(); chMembersUnsub = null; }
+  chMembersUnsub = onSnapshot(collection(db,"channels",channelId,"members"), snap=>{
+    const members = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    const box = $("#chmem-list"); if(!box) return;
+    box.innerHTML = members.map(m=>`
+      <div class="mini-row">
+        ${avatarHtml(m.name, m.photoURL)}
+        <div class="mini-main"><b>${escapeHtml(m.name||"—")}${m.role==="owner" ? " (owner)" : ""}${m.blocked ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BLOCKED</span>' : ""}</b></div>
+        ${m.role !== "owner" ? `
+        <button class="icon-del" data-mem-act="${m.blocked ? "unblock" : "block"}" data-mem="${m.id}" title="${m.blocked ? "Unblock" : "Block"}"><svg width="16" height="16"><use href="#ic-lock"/></svg></button>
+        <button class="icon-del" data-mem-act="remove" data-mem="${m.id}" title="Remove"><svg width="16" height="16"><use href="#ic-trash"/></svg></button>` : ""}
+      </div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
+  }, err=> console.warn("channel members listener", err));
+  wrap.addEventListener("click", async e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ if(chMembersUnsub){ chMembersUnsub(); chMembersUnsub = null; } wrap.remove(); return; }
+    const btn = e.target.closest("[data-mem-act]"); if(!btn) return;
+    const uid = btn.dataset.mem, act = btn.dataset.memAct;
+    try{
+      if(act === "block") await updateDoc(doc(db,"channels",channelId,"members",uid), { blocked:true });
+      else if(act === "unblock") await updateDoc(doc(db,"channels",channelId,"members",uid), { blocked:false });
+      else if(act === "remove"){
+        if(!(await confirmSheet("Remove this member?", "They'll need a new code to rejoin.", "Remove"))) return;
+        await deleteDoc(doc(db,"channels",channelId,"members",uid));
+        await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
+      }
+      toast("Updated");
+    }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+  });
+}
+
+async function generateUniqueChannelCode(channelId, channelName){
+  // setDoc() on a brand-new doc ID succeeds; on a genuine collision the "create" rule no
+  // longer applies (the doc exists) and Firestore rejects it as an unauthorized update —
+  // that rejection IS the uniqueness check, so we just retry with a fresh random code.
+  for(let i=0;i<6;i++){
+    const code = randomCode(12);
+    try{
+      await setDoc(doc(db,"channelCodes",code), {
+        channelId, channelName, createdBy: state.uid,
+        createdAt: serverTimestamp(), createdAtMs: Date.now(),
+        used:false, usedBy:null, usedAt:null
+      });
+      return code;
+    }catch(e){ continue; }
+  }
+  throw new Error("Could not generate a unique code — please try again");
+}
+function openChannelCodesSheet(channelId){
+  const ch = state.channels.find(c=>c.id===channelId);
+  if(!ch) return;
+  const html = `
+  <div class="sheet-backdrop" id="chcodes-backdrop">
+    <div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <h3 style="padding:22px 18px 6px;margin:0;font-size:17px">Secret codes</h3>
+      <p class="hint-p" style="margin-bottom:12px">Give a code to one person so they can join "${escapeHtml(ch.name)}". Each code works once, and every code generated stays listed here forever, marked used or unused.</p>
+      <div class="settings-list" id="chcodes-list" style="margin:0 14px 10px;overflow-y:auto"></div>
+      <div style="padding:12px 18px 24px"><button class="btn btn-primary btn-block" id="chcodes-add">Generate new code</button></div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#chcodes-backdrop");
+  if(chCodesUnsub){ chCodesUnsub(); chCodesUnsub = null; }
+  chCodesUnsub = onSnapshot(query(collection(db,"channelCodes"), where("channelId","==",channelId)), snap=>{
+    const codes = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
+    const box = $("#chcodes-list"); if(!box) return;
+    box.innerHTML = codes.map(c=>`
+      <div class="mini-row">
+        <div class="mini-main"><b class="mono">${escapeHtml(c.id)}</b><small style="color:${c.used?"var(--danger)":"var(--accent-2)"}">${c.used?"used":"unused"}</small></div>
+        <button class="icon-del" data-copy-code="${escapeHtml(c.id)}" title="Copy"><svg width="16" height="16"><use href="#ic-copy"/></svg></button>
+      </div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No codes yet.</div>`;
+  }, err=> console.warn("channel codes listener", err));
+  wrap.addEventListener("click", async e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ if(chCodesUnsub){ chCodesUnsub(); chCodesUnsub = null; } wrap.remove(); return; }
+    const cp = e.target.closest("[data-copy-code]");
+    if(cp){ const ok = await copyText(cp.dataset.copyCode); toast(ok ? "Code copied" : "Could not copy"); return; }
+    if(e.target.closest("#chcodes-add")){
+      try{ const code = await generateUniqueChannelCode(channelId, ch.name); toast("New code: " + code); }
+      catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+    }
+  });
+}
+
+/** Best-effort cascade delete: removes the member list and content records from Firestore.
+    NOTE: this does not free the files on the VPS disk (see the module header comment) —
+    pika-notifier would need a matching watcher on 'channelFiles' deletions for that. */
+async function deleteChannelForever(ch){
+  try{
+    const memSnap = await getDocs(collection(db,"channels",ch.id,"members"));
+    for(const d of memSnap.docs) await deleteDoc(d.ref);
+    const fileSnap = await getDocs(query(collection(db,"channelFiles"), where("channelId","==",ch.id)));
+    for(const d of fileSnap.docs) await deleteDoc(d.ref);
+    await deleteDoc(doc(db,"channels",ch.id));
+    closeChannelView();
+    toast("Channel deleted");
+  }catch(e){ toast("Delete failed: " + (e.code||e.message), "ic-close"); }
 }
 
 /* ---------------------------------------------------------------------
