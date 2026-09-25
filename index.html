@@ -4013,6 +4013,10 @@ function openChannelEntry(channelId){
   if(guestBlock("open channels")) return;
   const ch = state.channels.find(c=>c.id===channelId);
   if(!ch) return;
+  // The store owner (Control Mode) can walk into ANY channel directly, no code needed —
+  // they can already manage/delete/ban on any channel via isAdmin() in the rules, so this
+  // just matches that same blanket access in the UI.
+  if(state.isOwner){ openChannelView(channelId); return; }
   const mine = state.myChannels[channelId];
   if(mine){
     if(mine.blocked){
@@ -4086,32 +4090,27 @@ async function joinChannelWithCode(channel, codeRaw){
   if(!code){ toast("Enter the code", "ic-close"); return false; }
   if(guestBlock("join a channel")) return false;
   if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return false; }
-  // DIAGNOSTIC BUILD: each write is done separately (not as one atomic transaction) so that
-  // if one of them is denied, the toast tells us EXACTLY which step failed. Once we've
-  // pinpointed and fixed the real rule, this goes back to the single runTransaction() version
-  // for proper race-safety.
-  const codeRef = doc(db,"channelCodes",code);
-  let codeSnap;
   try{
-    codeSnap = await getDoc(codeRef);
-  }catch(e){ toast("DIAG step 1 (read code) failed: " + (e.code||e.message), "ic-close"); return false; }
-  if(!codeSnap.exists() || codeSnap.data().channelId !== channel.id || codeSnap.data().used){
-    toast("Wrong code", "ic-close"); return false;
-  }
-  try{
-    await updateDoc(codeRef, { used:true, usedBy: state.uid, usedAt: serverTimestamp() });
-  }catch(e){ toast("DIAG step 2 (mark code used) failed: " + (e.code||e.message), "ic-close"); return false; }
-  try{
-    await setDoc(doc(db,"channels",channel.id,"members",state.uid), {
-      uid: state.uid, name: state.username, photoURL: state.photoURL || "",
-      role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
+    await runTransaction(db, async tx=>{
+      const codeRef = doc(db,"channelCodes",code);
+      const codeSnap = await tx.get(codeRef);
+      if(!codeSnap.exists() || codeSnap.data().channelId !== channel.id || codeSnap.data().used){
+        const e = new Error("Wrong code"); e.code = "WRONGCODE"; throw e;
+      }
+      tx.update(codeRef, { used:true, usedBy: state.uid, usedAt: serverTimestamp() });
+      tx.set(doc(db,"channels",channel.id,"members",state.uid), {
+        uid: state.uid, name: state.username, photoURL: state.photoURL || "",
+        role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
+      });
+      tx.update(doc(db,"channels",channel.id), { memberCount: increment(1) });
     });
-  }catch(e){ toast("DIAG step 3 (write member doc) failed: " + (e.code||e.message), "ic-close"); return false; }
-  try{
-    await updateDoc(doc(db,"channels",channel.id), { memberCount: increment(1) });
-  }catch(e){ toast("DIAG step 4 (update member count) failed: " + (e.code||e.message), "ic-close"); return false; }
-  toast("Joined " + channel.name);
-  return true;
+    toast("Joined " + channel.name);
+    return true;
+  }catch(e){
+    if(e && e.code === "WRONGCODE") toast("Wrong code", "ic-close");
+    else toast("Failed: " + (e.code||e.message), "ic-close");
+    return false;
+  }
 }
 
 async function openCreateChannelSheet(){
