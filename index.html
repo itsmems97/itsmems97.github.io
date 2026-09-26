@@ -2080,7 +2080,6 @@ function boot(){
   listenApps();
   listenCategories();
   listenChannels();
-  if(!state.isGuest) listenMyChannels();
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity();
   startHeartbeat();
@@ -3944,26 +3943,31 @@ function listenChannels(){
   onSnapshot(q, snap=>{
     state.channels = snap.docs.map(d=>({ id:d.id, ...d.data() }));
     state.channelsLoaded = true;
-    renderChannelsPage();
-    applyChannelDeepLink();
+    refreshMyChannels();
   }, err=>{ console.warn("channels listener", err); toast(`Channels sync error: ${err.code||""} ${err.message||err}`, "ic-close"); });
 }
-/** Every channel I belong to (owner or member), including ones where I've been blocked —
-    the "blocked" flag is what tells the UI to show a removed-notice instead of content. */
-function listenMyChannels(){
-  if(!firebaseReady || !state.uid) return;
-  const q = query(collectionGroup(db,"members"), where("uid","==",state.uid));
-  onSnapshot(q, snap=>{
-    const m = {};
-    snap.docs.forEach(d=>{
-      const cid = d.ref.parent.parent.id;
-      m[cid] = { ...d.data() };
-    });
-    state.myChannels = m;
-    state.myChannelsLoaded = true;
-    renderChannelsPage();
-    applyChannelDeepLink();
-  }, err=>{ console.warn("my-channels listener", err); toast("Channels membership sync error: " + (err.code||err.message), "ic-close"); });
+/** Every channel I belong to (owner or member), including ones where I've been blocked — the
+    "blocked" flag is what tells the UI to show a removed-notice instead of content.
+    Deliberately NOT a collectionGroup listener: a plain per-channel getDoc() on my own
+    membership doc is a simple, always-reliable "get" (self is always allowed to read their
+    own membership doc), whereas a collectionGroup "list" query needs Firestore to prove the
+    rule holds for the whole result set in advance, which turned out to be fragile in practice
+    for this account. This runs once per channels-list change, which is plenty for a personal
+    project's channel count. */
+async function refreshMyChannels(){
+  renderChannelsPage(); // show the channel list immediately; membership badges fill in a moment later
+  if(!firebaseReady || !state.uid || state.isGuest){ state.myChannelsLoaded = true; applyChannelDeepLink(); return; }
+  const entries = {};
+  await Promise.all(state.channels.map(async ch=>{
+    try{
+      const s = await getDoc(doc(db,"channels",ch.id,"members",state.uid));
+      if(s.exists()) entries[ch.id] = s.data();
+    }catch(e){ /* not a member of this one — fine, just means no entry */ }
+  }));
+  state.myChannels = entries;
+  state.myChannelsLoaded = true;
+  renderChannelsPage();
+  applyChannelDeepLink();
 }
 function renderChannelsPage(){
   const list = $("#channels-list"); if(!list) return;
@@ -4105,6 +4109,7 @@ async function joinChannelWithCode(channel, codeRaw){
       tx.update(doc(db,"channels",channel.id), { memberCount: increment(1) });
     });
     toast("Joined " + channel.name);
+    refreshMyChannels();
     return true;
   }catch(e){
     if(e && e.code === "WRONGCODE") toast("Wrong code", "ic-close");
@@ -4132,6 +4137,7 @@ async function openCreateChannelSheet(){
       role: "owner", blocked: false, joinedAt: serverTimestamp(), viaCode: "owner"
     });
     toast("Channel created — add a photo and generate codes from Manage");
+    refreshMyChannels();
     openChannelView(ref.id);
   }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
