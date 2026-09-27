@@ -661,6 +661,468 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 #ip-overlay .ip-install:active{ transform:scale(.96); filter:brightness(.9); }
 @keyframes ipFade{ from{opacity:0} to{opacity:1} }
 @keyframes ipSpring{ from{opacity:0; transform:scale(.8) translateY(20px)} to{opacity:1; transform:scale(1) translateY(0)} }
+
+/* =====================================================================
+   12. TELEGRAM-STYLE CHANNEL UI (integrated from channel.html)
+   Fully scoped under #pktg / .pktg-* to avoid conflicts with the
+   existing store styles above. Backend: Firestore (channelMessages
+   collection) + VPS upload API (uploadFileToServer), no IndexedDB.
+   ===================================================================== */
+#pktg{
+  position:fixed; inset:0; z-index:95;
+  display:none; flex-direction:column;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+}
+#pktg.open{ display:flex; }
+.pktg-wallpaper{
+  position:absolute; inset:0; z-index:0;
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255,198,26,.06), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(51,224,193,.06), transparent 40%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' opacity='0.05'%3E%3Cpath fill='%23FFFFFF' d='M20 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm40 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm35-15a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM15 65a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm85 10a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM50 85a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm40 25a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM20 105a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'/%3E%3C/svg%3E");
+  pointer-events:none;
+}
+.pktg-container{
+  position:relative; z-index:2;
+  display:flex; flex-direction:column; height:100%;
+  max-width:760px; margin:0 auto; width:100%;
+}
+.pktg-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:calc(8px + var(--safe-top)) 10px 8px;
+  background:var(--glass);
+  backdrop-filter:blur(20px) saturate(160%);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  border-bottom:1px solid var(--border);
+  z-index:10;
+}
+.pktg-header-btn{
+  width:40px; height:40px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; color:var(--text);
+  flex-shrink:0;
+}
+.pktg-header-btn:active{ background:rgba(128,128,128,.15); }
+.pktg-info{
+  display:flex; align-items:center; gap:10px;
+  background:var(--surface-2); border:1px solid var(--border);
+  border-radius:20px; padding:4px 14px 4px 5px;
+  cursor:pointer; max-width:60%; min-width:0;
+}
+.pktg-info:active{ transform:scale(.98); }
+.pktg-avatar{
+  width:32px; height:32px; border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#171200; display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:15px; flex-shrink:0; overflow:hidden;
+}
+.pktg-avatar img{ width:100%; height:100%; object-fit:cover; }
+.pktg-info-text{ display:flex; flex-direction:column; min-width:0; }
+.pktg-info-title{ font-size:14px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1; }
+.pktg-info-sub{ font-size:11px; color:var(--text-faint); line-height:1.1; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pktg-actions{ display:flex; gap:2px; }
+
+.pktg-feed{
+  flex:1; overflow-y:auto; overflow-x:hidden;
+  padding:12px 12px 120px;
+  display:flex; flex-direction:column; gap:8px;
+  scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch;
+}
+.pktg-date-badge{
+  align-self:center;
+  background:rgba(0,0,0,.35); color:#fff;
+  font-size:11px; padding:4px 12px; border-radius:12px;
+  backdrop-filter:blur(4px);
+  margin:8px 0; font-weight:600;
+}
+.pktg-msg{
+  align-self:flex-start;
+  max-width:min(92%, 560px);
+  background:var(--surface);
+  color:var(--text);
+  border-radius:16px; border-top-left-radius:5px;
+  padding:8px 10px 6px;
+  box-shadow:0 1px 2px rgba(0,0,0,.12), 0 4px 14px rgba(0,0,0,.035);
+  position:relative;
+  word-wrap:break-word;
+  animation:pktgFadeIn .22s ease;
+  transform-origin:left center;
+  transition:transform .22s ease, box-shadow .22s ease;
+}
+[data-theme="light"] .pktg-msg{ background:#FFFFFF; }
+@keyframes pktgFadeIn{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+.pktg-msg.pktg-me{
+  align-self:flex-end;
+  background:linear-gradient(135deg, var(--accent), #FFA800);
+  color:#171200;
+  border-top-left-radius:16px; border-top-right-radius:5px;
+}
+.pktg-msg.pktg-me .pktg-who{ color:#171200; opacity:.75; }
+.pktg-msg.pktg-me .pktg-reply-ref{ background:rgba(0,0,0,.1); }
+.pktg-msg.pktg-me .pktg-meta{ color:rgba(23,18,0,.65); }
+.pktg-msg.pktg-deleted{ opacity:.75; }
+.pktg-msg.pktg-reply-swiping{ box-shadow:0 4px 20px rgba(255,198,26,.28); }
+
+.pktg-who{
+  font-size:11px; font-weight:800; color:var(--accent);
+  margin-bottom:3px; display:flex; align-items:center; gap:4px;
+}
+.pktg-msg.pktg-me .pktg-who{ color:#171200; }
+
+.pktg-reply-ref{
+  width:100%; display:flex; align-items:center; text-align:left;
+  border:0; border-radius:8px;
+  background:rgba(51,224,193,.08);
+  padding:5px 8px; margin-bottom:6px;
+  cursor:pointer; overflow:hidden; color:inherit;
+  font-family:inherit;
+}
+.pktg-reply-ref.pktg-deleted-ref{ background:rgba(255,92,108,.08); }
+.pktg-reply-accent{ width:3px; align-self:stretch; border-radius:3px; background:var(--accent-2); margin-right:7px; flex:none; }
+.pktg-reply-ref.pktg-deleted-ref .pktg-reply-accent{ background:var(--danger); }
+.pktg-reply-copy{ min-width:0; display:flex; flex-direction:column; gap:1px; flex:1; }
+.pktg-reply-copy strong{ font-size:11px; color:var(--accent-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pktg-reply-copy span{ font-size:11px; color:var(--text-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pktg-quote-thumb{ width:34px; height:34px; border-radius:6px; object-fit:cover; margin-left:6px; flex:none; }
+
+.pktg-media{
+  width:100%; border-radius:12px; overflow:hidden;
+  margin:-1px -1px 6px; background:#000;
+  cursor:pointer;
+}
+.pktg-media img, .pktg-media video{
+  width:100%; max-height:430px; object-fit:cover;
+  display:block; border-radius:12px;
+}
+.pktg-voice-row{ display:flex; align-items:center; gap:8px; }
+.pktg-voice-icon{
+  width:36px; height:36px; border-radius:50%;
+  display:grid; place-items:center;
+  background:rgba(51,224,193,.14); color:var(--accent-2); flex:none;
+}
+.pktg-voice-row audio{ width:190px; max-width:calc(100vw - 120px); }
+
+.pktg-file-card{
+  display:flex; align-items:center; gap:10px;
+  background:rgba(128,128,128,.08);
+  padding:8px; border-radius:10px;
+  margin-bottom:6px;
+  border:0; color:inherit; width:100%;
+  text-align:left; cursor:pointer; font-family:inherit;
+  position:relative; flex-wrap:wrap;
+}
+.pktg-file-card:active{ transform:scale(.985); }
+.pktg-file-icon{
+  width:40px; height:40px; border-radius:11px;
+  background:var(--accent-2); color:#0B0E14;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.pktg-file-icon svg{ width:20px; height:20px; }
+.pktg-file-info{ flex:1; min-width:0; overflow:hidden; }
+.pktg-file-name{ font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+.pktg-file-size{ font-size:11px; color:var(--text-faint); }
+.pktg-dl-btn{
+  width:36px; height:36px; border-radius:50%;
+  display:grid; place-items:center;
+  background:rgba(51,224,193,.1); color:var(--accent-2);
+  flex:none;
+}
+.pktg-dl-progress{
+  flex-basis:100%; order:10; height:3px;
+  background:rgba(128,128,128,.2); overflow:hidden;
+  margin-top:5px; border-radius:4px; display:none;
+}
+.pktg-dl-progress.active{ display:block; }
+.pktg-dl-fill{ height:100%; width:0; background:var(--accent-2); transition:width .1s; }
+
+.pktg-caption{ font-size:14px; line-height:1.35; margin-bottom:4px; }
+.pktg-caption a{ color:var(--accent-2); text-decoration:none; }
+.pktg-meta{
+  display:flex; align-items:center; justify-content:flex-end;
+  gap:4px; font-size:10px; color:var(--text-faint);
+  margin-top:2px; padding-top:2px;
+}
+.pktg-deleted-body{
+  display:flex; align-items:center; gap:7px;
+  color:var(--text-faint); font-style:italic; padding:6px 2px;
+}
+
+.pktg-composer{
+  position:absolute; bottom:max(8px, var(--safe-bottom));
+  left:8px; right:8px; z-index:10;
+  display:flex; flex-direction:column; gap:6px;
+}
+.pktg-reply-banner{
+  display:none; align-items:center; justify-content:space-between;
+  background:var(--bg-elevated); border:1px solid var(--border);
+  padding:8px 12px; border-radius:14px;
+  box-shadow:var(--shadow);
+  border-left:4px solid var(--accent-2);
+  font-size:12px;
+  animation:pktgReplyIn .22s ease;
+}
+@keyframes pktgReplyIn{ from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none} }
+.pktg-reply-banner.active{ display:flex; }
+.pktg-reply-banner .pktg-rb-main{ flex:1; min-width:0; }
+.pktg-reply-banner .pktg-rb-title{ color:var(--accent-2); font-weight:700; font-size:12px; }
+.pktg-reply-banner .pktg-rb-preview{ color:var(--text-dim); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.pktg-bar{
+  display:flex; align-items:center;
+  background:var(--bg-elevated); border:1px solid var(--border);
+  border-radius:26px; padding:4px 6px; gap:3px;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  min-height:50px;
+}
+.pktg-input{
+  flex:1; border:none; outline:none; background:transparent;
+  padding:10px 8px; font-size:15px; color:var(--text);
+  max-height:100px; resize:none; font-family:inherit;
+  -webkit-user-select:text; user-select:text;
+}
+.pktg-input::placeholder{ color:var(--text-faint); }
+.pktg-action-btn{
+  width:38px; height:38px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--text-dim); flex-shrink:0;
+  background:transparent;
+}
+.pktg-action-btn:active{ background:rgba(128,128,128,.15); }
+.pktg-action-btn svg{ width:22px; height:22px; }
+.pktg-send{
+  background:var(--accent); color:#171200;
+  width:40px; height:40px;
+}
+.pktg-send:active{ transform:scale(.9); }
+.pktg-send svg{ width:18px; height:18px; }
+
+/* Emoji picker */
+.pktg-emoji{
+  position:absolute; left:0; right:0; bottom:calc(58px + var(--safe-bottom));
+  z-index:14; display:none; flex-direction:column;
+  max-height:min(48dvh,420px);
+  background:var(--bg-elevated); border:1px solid var(--border);
+  border-radius:22px; box-shadow:var(--shadow);
+  overflow:hidden;
+  animation:pktgEmojiIn .22s ease;
+}
+.pktg-emoji.active{ display:flex; }
+@keyframes pktgEmojiIn{ from{opacity:0; transform:translateY(12px) scale(.98)} to{opacity:1; transform:none} }
+.pktg-emoji-search-wrap{ padding:9px 10px 6px; }
+.pktg-emoji-search{
+  width:100%; border:1px solid var(--border); outline:none;
+  border-radius:14px; background:var(--surface-2);
+  color:var(--text); padding:10px 12px; font-size:13px;
+  font-family:inherit;
+}
+.pktg-emoji-cats{
+  display:flex; gap:4px; padding:4px 8px 7px;
+  overflow-x:auto; border-bottom:1px solid var(--border);
+}
+.pktg-emoji-cat{
+  min-width:39px; height:35px; border:0; border-radius:11px;
+  background:transparent; color:var(--text); font-size:19px;
+}
+.pktg-emoji-cat.active{ background:rgba(255,198,26,.15); }
+.pktg-emoji-grid{
+  overflow:auto; padding:8px;
+  display:grid; grid-template-columns:repeat(8,1fr); gap:3px;
+}
+.pktg-emoji-item{
+  border:0; background:transparent; border-radius:10px;
+  min-height:40px; font-size:25px;
+  display:grid; place-items:center;
+}
+.pktg-emoji-item:active{ background:rgba(255,198,26,.2); transform:scale(.88); }
+.pktg-emoji-empty{ grid-column:1/-1; text-align:center; color:var(--text-faint); padding:25px; }
+
+/* Attachment sheet */
+.pktg-sheet-overlay{
+  display:none; position:fixed; inset:0; z-index:100;
+  background:rgba(0,0,0,.5); backdrop-filter:blur(2px);
+}
+.pktg-sheet-overlay.active{ display:block; }
+.pktg-sheet{
+  position:fixed; bottom:0; left:0; right:0;
+  background:var(--bg-elevated); color:var(--text);
+  border-top-left-radius:22px; border-top-right-radius:22px;
+  padding:18px 16px calc(18px + var(--safe-bottom));
+  z-index:101; max-width:760px; margin:0 auto;
+  transform:translateY(100%);
+  transition:transform .28s var(--ease-spring);
+}
+.pktg-sheet.active{ transform:translateY(0); }
+.pktg-sheet-grid{
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:14px; padding:8px 0;
+}
+.pktg-sheet-item{
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  cursor:pointer;
+}
+.pktg-sheet-icon{
+  width:54px; height:54px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  color:#fff;
+}
+.pktg-sheet-label{ font-size:11.5px; color:var(--text); font-weight:600; }
+
+/* Image viewer */
+.pktg-viewer{
+  display:none; position:fixed; inset:0; z-index:300;
+  background:#000; flex-direction:column;
+}
+.pktg-viewer.active{ display:flex; }
+.pktg-viewer-header{
+  display:flex; justify-content:space-between;
+  padding:calc(10px + var(--safe-top)) 10px 10px;
+}
+.pktg-viewer-header button{
+  color:#fff; width:44px; height:44px;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:50%;
+}
+.pktg-viewer-header button:active{ background:rgba(255,255,255,.15); }
+.pktg-viewer-body{
+  flex:1; display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+}
+.pktg-viewer-body img{ max-width:100%; max-height:100%; object-fit:contain; }
+
+/* Context menu */
+.pktg-ctx{
+  display:none; position:fixed;
+  background:var(--bg-elevated); color:var(--text);
+  border:1px solid var(--border);
+  border-radius:14px; box-shadow:var(--shadow);
+  z-index:250; width:180px; overflow:hidden;
+  animation:pktgFadeIn .15s ease;
+}
+.pktg-ctx.active{ display:block; }
+.pktg-ctx-item{
+  padding:11px 14px; font-size:13.5px;
+  display:flex; align-items:center; gap:10px;
+  cursor:pointer; color:var(--text);
+  width:100%; text-align:left;
+  font-family:inherit; border-radius:0;
+}
+.pktg-ctx-item:active{ background:var(--surface-2); }
+.pktg-ctx-item.pktg-danger{ color:var(--danger); }
+.pktg-ctx-item svg{ width:16px; height:16px; flex-shrink:0; }
+
+/* Upload progress bar */
+.pktg-upload{
+  display:none; margin:0 4px 6px;
+  background:var(--bg-elevated); border:1px solid var(--border);
+  border-radius:14px; padding:10px 12px;
+  box-shadow:var(--shadow);
+}
+.pktg-upload.active{ display:block; }
+.pktg-upload-head{
+  display:flex; justify-content:space-between;
+  font-size:11px; color:var(--text-dim); margin-bottom:6px;
+}
+.pktg-upload-track{
+  height:5px; border-radius:6px;
+  background:var(--surface-2); overflow:hidden;
+}
+.pktg-upload-fill{
+  height:100%; width:0;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  transition:width .12s linear;
+}
+.pktg-upload-cancel{
+  float:right; border:0; background:none;
+  color:var(--danger); font-size:11px; margin-top:6px;
+  font-family:inherit;
+}
+
+.pktg-empty{
+  align-self:center; margin:auto 0;
+  color:var(--text-faint); display:flex; flex-direction:column;
+  align-items:center; gap:6px; font-size:13px; text-align:center;
+  padding:0 20px;
+}
+.pktg-empty-icon{
+  width:52px; height:52px; border-radius:50%;
+  display:grid; place-items:center;
+  background:rgba(255,198,26,.14); color:var(--accent);
+  font-size:26px;
+}
+
+/* Channel-list home for the Telegram UI (opened from channels list) */
+.pktg-home{
+  position:absolute; inset:0; z-index:20;
+  background:var(--bg); display:flex; flex-direction:column;
+  transform:translateX(0);
+  transition:transform .32s var(--ease-spring), opacity .22s;
+}
+.pktg-home.hidden{ transform:translateX(-100%); opacity:0; pointer-events:none; }
+.pktg-home-top{
+  padding:calc(12px + var(--safe-top)) 16px 12px;
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  background:var(--glass);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+}
+.pktg-home-title{ font-size:22px; font-weight:800; letter-spacing:-.4px; }
+.pktg-home-list{ flex:1; overflow-y:auto; padding:8px 12px 100px; }
+.pktg-home-section{ padding:14px 6px 8px; font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--text-faint); font-weight:700; }
+.pktg-chat-row{
+  position:relative; margin:3px 0 8px;
+  padding:11px 12px; min-height:72px;
+  border:1px solid var(--border); border-radius:20px;
+  background:var(--surface);
+  display:flex; align-items:center; gap:12px;
+  cursor:pointer;
+  transition:background .18s, transform .18s;
+  text-align:left; width:100%; font-family:inherit;
+}
+.pktg-chat-row:active{ background:var(--surface-2); transform:scale(.985); }
+.pktg-chat-av{
+  width:54px; height:54px; border-radius:18px;
+  display:grid; place-items:center; flex:none;
+  color:#0B0E14; font-weight:800; font-size:22px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  overflow:hidden;
+}
+.pktg-chat-av img{ width:100%; height:100%; object-fit:cover; }
+.pktg-chat-main{ min-width:0; flex:1; }
+.pktg-chat-line{ display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
+.pktg-chat-name{ font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pktg-chat-time{ font-size:11px; color:var(--text-faint); flex-shrink:0; }
+.pktg-chat-preview{
+  margin-top:4px; font-size:12.5px; color:var(--text-dim);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.pktg-chat-badge{
+  min-width:22px; height:22px; padding:0 6px;
+  border-radius:11px; background:var(--accent); color:#171200;
+  font-size:11px; font-weight:800;
+  display:grid; place-items:center;
+  margin-left:8px;
+}
+
+/* Search overlay inside pktg */
+.pktg-search{
+  display:none; position:absolute; inset:0; z-index:22;
+  background:var(--bg);
+  padding:calc(10px + var(--safe-top)) 12px 10px;
+  align-items:center; gap:8px;
+}
+.pktg-search.active{ display:flex; }
+.pktg-search input{
+  flex:1; border:1px solid var(--border); outline:none;
+  background:var(--surface-2); color:var(--text);
+  padding:10px 14px; border-radius:14px; font-size:15px;
+  font-family:inherit;
+}
 </style>
 </head>
 <body>
@@ -711,6 +1173,15 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 <symbol id="ic-channel" viewBox="0 0 24 24"><path d="M3.5 10.2 19 4.8v14.4L3.5 13.8Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 13.2v5a1 1 0 0 0 1 1h1.2a1 1 0 0 0 1-1.2L9.4 13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M19 9.2a3 3 0 0 1 0 5.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
 <symbol id="ic-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="3.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 12.5 19 4M19 4v3.5M19 4h-3.5M16 7l2 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="ic-verified" viewBox="0 0 24 24"><path d="M12 1.8l2.5 1.9 3.1-.3 1.2 2.9 2.8 1.4-.6 3.1L22 12l-1.9 2.2.6 3.1-2.8 1.4-1.2 2.9-3.1-.3L12 22.2l-2.5-1.9-3.1.3-1.2-2.9-2.8-1.4.6-3.1L2 12l1.9-2.2-.6-3.1 2.8-1.4 1.2-2.9 3.1.3Z" fill="#1D9BF0"/><path d="m7.8 12.3 3 3 5.6-5.8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-mic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="ic-emoji" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="ic-clip" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="ic-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="ic-video" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="1" y="5" width="15" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="ic-more-vert" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></symbol>
+<symbol id="ic-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-forward" viewBox="0 0 24 24"><path d="M15 17l5-5-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 18v-2a4 4 0 0 1 4-4h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
 </svg>
 
 <!-- =========================================================
@@ -1019,6 +1490,115 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 </div>
 
 <!-- =========================================================
+     TELEGRAM-STYLE CHANNEL UI (integrated from channel.html)
+     Backend: Firestore channelMessages + VPS uploadFileToServer
+     ========================================================= -->
+<div id="pktg">
+  <div class="pktg-wallpaper"></div>
+
+  <!-- Channel list home (Telegram-style) -->
+  <div class="pktg-home" id="pktg-home">
+    <div class="pktg-home-top">
+      <button class="pktg-header-btn" id="pktg-home-close" aria-label="Close">
+        <svg width="22" height="22"><use href="#ic-back"/></svg>
+      </button>
+      <div class="pktg-home-title">Channels</div>
+      <button class="pktg-header-btn" id="pktg-home-new" aria-label="New channel">
+        <svg width="22" height="22"><use href="#ic-plus"/></svg>
+      </button>
+    </div>
+    <div class="pktg-home-list" id="pktg-home-list"></div>
+  </div>
+
+  <!-- Channel conversation view -->
+  <div class="pktg-container" id="pktg-conv" style="display:none">
+    <header class="pktg-header">
+      <button class="pktg-header-btn" id="pktg-back" aria-label="Back">
+        <svg width="22" height="22"><use href="#ic-back"/></svg>
+      </button>
+      <div class="pktg-info" id="pktg-info">
+        <div class="pktg-avatar" id="pktg-avatar">P</div>
+        <div class="pktg-info-text">
+          <div class="pktg-info-title" id="pktg-title">Pika Store</div>
+          <div class="pktg-info-sub" id="pktg-subs">0 members</div>
+        </div>
+      </div>
+      <div class="pktg-actions">
+        <button class="pktg-header-btn" id="pktg-search-btn" aria-label="Search">
+          <svg width="22" height="22"><use href="#ic-search"/></svg>
+        </button>
+        <button class="pktg-header-btn" id="pktg-menu-btn" aria-label="Menu">
+          <svg width="22" height="22"><use href="#ic-more-vert"/></svg>
+        </button>
+      </div>
+      <div class="pktg-search" id="pktg-search">
+        <button class="pktg-header-btn" id="pktg-search-close"><svg width="22" height="22"><use href="#ic-back"/></svg></button>
+        <input type="text" id="pktg-search-input" placeholder="Search messages…" />
+      </div>
+    </header>
+
+    <main class="pktg-feed" id="pktg-feed"></main>
+
+    <div class="pktg-composer">
+      <div class="pktg-upload" id="pktg-upload">
+        <div class="pktg-upload-head"><span id="pktg-upload-name">Uploading…</span><span id="pktg-upload-pct">0%</span></div>
+        <div class="pktg-upload-track"><div class="pktg-upload-fill" id="pktg-upload-fill"></div></div>
+        <button class="pktg-upload-cancel" id="pktg-upload-cancel">Cancel</button>
+      </div>
+      <div class="pktg-reply-banner" id="pktg-reply">
+        <div class="pktg-rb-main">
+          <div class="pktg-rb-title" id="pktg-reply-title">Replying to</div>
+          <div class="pktg-rb-preview" id="pktg-reply-preview">…</div>
+        </div>
+        <button class="pktg-header-btn" id="pktg-reply-cancel"><svg width="16" height="16"><use href="#ic-close"/></svg></button>
+      </div>
+      <div class="pktg-emoji" id="pktg-emoji" aria-hidden="true">
+        <div class="pktg-emoji-search-wrap"><input class="pktg-emoji-search" id="pktg-emoji-search" placeholder="Search emoji…" autocomplete="off"></div>
+        <div class="pktg-emoji-cats" id="pktg-emoji-cats"></div>
+        <div class="pktg-emoji-grid" id="pktg-emoji-grid"></div>
+      </div>
+      <div class="pktg-bar">
+        <button class="pktg-action-btn" id="pktg-emoji-btn" aria-label="Emoji"><svg><use href="#ic-emoji"/></svg></button>
+        <textarea class="pktg-input" id="pktg-input" rows="1" placeholder="Broadcast"></textarea>
+        <button class="pktg-action-btn" id="pktg-attach-btn" aria-label="Attach"><svg><use href="#ic-clip"/></svg></button>
+        <button class="pktg-action-btn pktg-send" id="pktg-send-btn" aria-label="Send"><svg><use href="#ic-mic"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attachment sheet -->
+  <div class="pktg-sheet-overlay" id="pktg-sheet-overlay"></div>
+  <div class="pktg-sheet" id="pktg-sheet">
+    <div class="pktg-sheet-grid">
+      <div class="pktg-sheet-item" id="pktg-attach-gallery"><div class="pktg-sheet-icon" style="background:#007aff"><svg width="24" height="24"><use href="#ic-image"/></svg></div><span class="pktg-sheet-label">Gallery</span></div>
+      <div class="pktg-sheet-item" id="pktg-attach-video"><div class="pktg-sheet-icon" style="background:#ff9500"><svg width="24" height="24"><use href="#ic-video"/></svg></div><span class="pktg-sheet-label">Video</span></div>
+      <div class="pktg-sheet-item" id="pktg-attach-file"><div class="pktg-sheet-icon" style="background:#5856d6"><svg width="24" height="24"><use href="#ic-cube"/></svg></div><span class="pktg-sheet-label">File</span></div>
+      <div class="pktg-sheet-item" id="pktg-attach-camera"><div class="pktg-sheet-icon" style="background:#ff2d55"><svg width="24" height="24"><use href="#ic-camera"/></svg></div><span class="pktg-sheet-label">Camera</span></div>
+    </div>
+  </div>
+  <input type="file" id="pktg-input-gallery" accept="image/*" style="display:none">
+  <input type="file" id="pktg-input-video" accept="video/*" style="display:none">
+  <input type="file" id="pktg-input-file" accept="*/*" style="display:none">
+  <input type="file" id="pktg-input-camera" accept="image/*" capture="environment" style="display:none">
+
+  <!-- Image viewer -->
+  <div class="pktg-viewer" id="pktg-viewer">
+    <div class="pktg-viewer-header">
+      <button id="pktg-viewer-close"><svg width="22" height="22"><use href="#ic-close"/></svg></button>
+      <button id="pktg-viewer-save"><svg width="22" height="22"><use href="#ic-download"/></svg></button>
+    </div>
+    <div class="pktg-viewer-body"><img id="pktg-viewer-img" alt="" src=""></div>
+  </div>
+
+  <!-- Context menu -->
+  <div class="pktg-ctx" id="pktg-ctx">
+    <button class="pktg-ctx-item" data-ctx="reply"><svg><use href="#ic-chat"/></svg> Reply</button>
+    <button class="pktg-ctx-item" data-ctx="copy"><svg><use href="#ic-copy"/></svg> Copy</button>
+    <button class="pktg-ctx-item pktg-danger" data-ctx="delete"><svg><use href="#ic-trash"/></svg> Delete</button>
+  </div>
+</div>
+
+<!-- =========================================================
      Templates rendered by JS (kept out of the DOM until needed)
      ========================================================= -->
 <template id="tmpl-app-card">
@@ -1052,6 +1632,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
    10. Upload wizard
    11. Group chat
    12. Native-app hardening (zoom / long-press / etc.) — see also <style>
+   13. Telegram-style channel UI (integrated from channel.html)
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
@@ -1299,7 +1880,22 @@ const state = {
   myChannels: {},        // live, collectionGroup 'members' where uid==me: channelId -> {role, blocked, ...}
   myChannelsLoaded: false,
   channelsLoaded: false,
-  upload: { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"", hasUrl:false, url:"" }
+  upload: { file:null, format:"APK", thumb:null, screenshots:[], name:"", desc:"", category:"", hasPassword:false, password:"", hasUrl:false, url:"" },
+  // ---- Telegram UI state (integrated from channel.html) ----
+  tg: {
+    channelId: null,
+    channel: null,
+    messages: [],
+    unsub: null,
+    replyTo: null,
+    contextMsg: null,
+    searchQuery: "",
+    uploadAbort: null,
+    unsubTyping: null,
+    typingTimer: null,
+    lastTypingAt: 0,
+    panelOpen: false
+  }
 };
 
 const PIKA_LOGO_URL = "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png";
@@ -1314,11 +1910,22 @@ function toast(msg, icon="ic-check"){
   setTimeout(()=>{ el.style.opacity="0"; el.style.transform="translateY(-10px)"; el.style.transition="all .3s"; }, 2400);
   setTimeout(()=>el.remove(), 2800);
 }
-function escapeHtml(s=""){ return s.replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c])); }
+function escapeHtml(s=""){
+  return String(s).replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
 function fmtCount(n=0){ if(n>=1000000) return (n/1000000).toFixed(1)+"M"; if(n>=1000) return (n/1000).toFixed(1)+"k"; return String(n); }
+function fmtBytes(bytes){
+  if(!bytes) return "0 B";
+  const u = ["B","KB","MB","GB","TB"];
+  const i = Math.min(Math.floor(Math.log(bytes)/Math.log(1024)), u.length-1);
+  return (bytes/Math.pow(1024, i)).toFixed(i ? 1 : 0) + " " + u[i];
+}
 async function sha256(text){
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function safeImg(u){
+  return (typeof u === "string" && (u.startsWith("https://") || u.startsWith("data:image/"))) ? u : "";
 }
 
 /* ---------------------------------------------------------------------
@@ -2073,6 +2680,7 @@ function boot(){
   initProfileActions();
   initUsersPage();
   initChannelsPage();
+  initTelegramUI();
   initHomeCategories();
   if(!state.isGuest) loadMyPhone();
   listenUsers();
@@ -2140,6 +2748,7 @@ function listenUsers(){
     renderProfile();
     renderUsersPage();
     renderChatLog();
+    renderTelegramHome();
   }, err=>{ console.warn("users listener", err); toast(`Users sync error: ${err.code || ""} ${err.message || err}`, "ic-close"); });
 }
 function listenCodes(){
@@ -2910,9 +3519,9 @@ function initUploadWizard(){
       <div><b>Format:</b> ${u.format}</div>
       <div><b>Category:</b> ${escapeHtml(u.category||"Uncategorized")}</div>
       <div><b>Screenshots:</b> ${u.screenshots.length}</div>
-      <div><b>Password:</b> ${u.hasPassword ? "Enabled 🔒" : "Not set"}</div>
+      <div><b>Password:</b> ${u.hasPassword ? "Enabled" : "Not set"}</div>
       ${u.hasUrl && u.url.trim() ? `<div><b>WhatsApp:</b> ${escapeHtml(u.url.trim().slice(0,4))}••••</div>` : ""}
-    `.replace("🔒",""); // no emoji — text label only
+    `;
   }
 
   async function submitUpload(){
@@ -3059,7 +3668,6 @@ function updateChatBadge(){
   if(chatUnread>0){ badge.hidden=false; badge.textContent = chatUnread>9?"9+":chatUnread; }
   else{ badge.hidden = true; }
 }
-function safeImg(u){ return (typeof u === "string" && (u.startsWith("https://") || u.startsWith("data:image/"))) ? u : ""; }
 function renderChatLog(){
   const log = document.getElementById("chat-log-el");
   if(!log) return;
@@ -3462,12 +4070,6 @@ function openUserSheet(uid){
   const apps = state.apps.filter(a=> a.uploaderUid === uid);
   const dl = apps.reduce((s,a)=> s + (a.downloadCount||0), 0);
   const jm = joinedMs(raw);
-  // A DM is allowed by the security rules whenever EITHER side is ticked (or
-  // the viewer is the owner) — isAdmin() || isTicked(from) || isTicked(to).
-  // The old check here only looked at the viewed person's tick, so the owner
-  // (and any verified member) could never open a first DM with someone who
-  // didn't have a blue tick yet — exactly the "my message never reaches a
-  // non-blue-tick member" bug, because the button never even appeared.
   const canDm = uid !== state.uid && !raw.guest && (u.verified || state.verified || state.isOwner);
   const canWa = uid !== state.uid && !raw.guest && (u.verified || state.isOwner);
   const contactBtns = canDm ? `
@@ -3918,15 +4520,11 @@ function initProfileActions(){
      channels/{channelId}                        — name, photoURL, ownerUid, ownerName, memberCount
      channels/{channelId}/members/{uid}           — {uid, name, photoURL, role, blocked, joinedAt, viaCode}
      channelCodes/{code}                          — 12-char one-time join code; doc ID = code itself
-     channelFiles/{id}                            — private content uploaded by the channel owner
+     channelMessages/{id}                         — messages posted in a channel (Telegram UI)
    Kept as separate collections from "apps" on purpose: apps/categories rely on
    an open "allow read: if true" for the public Home feed, and mixing private
    per-channel content into that same collection/rule would either leak
-   private files publicly or risk breaking the open Home query. The trade-off:
-   pika-notifier (the VPS cleanup service) currently only watches the "apps"
-   collection for deletions, so deleting channel content here removes the
-   Firestore record but NOT the file on the VPS disk yet — see the note at
-   the end of this file for the small addition pika-notifier would need.
+   private files publicly or risk breaking the open Home query.
    --------------------------------------------------------------------- */
 const CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 function randomCode(len = 12){
@@ -3944,6 +4542,7 @@ function listenChannels(){
     state.channels = snap.docs.map(d=>({ id:d.id, ...d.data() }));
     state.channelsLoaded = true;
     refreshMyChannels();
+    renderTelegramHome();
   }, err=>{ console.warn("channels listener", err); toast(`Channels sync error: ${err.code||""} ${err.message||err}`, "ic-close"); });
 }
 /** Every channel I belong to (owner or member), including ones where I've been blocked — the
@@ -3956,6 +4555,7 @@ function listenChannels(){
     project's channel count. */
 async function refreshMyChannels(){
   renderChannelsPage(); // show the channel list immediately; membership badges fill in a moment later
+  renderTelegramHome();
   if(!firebaseReady || !state.uid || state.isGuest){ state.myChannelsLoaded = true; applyChannelDeepLink(); return; }
   const entries = {};
   await Promise.all(state.channels.map(async ch=>{
@@ -3967,6 +4567,7 @@ async function refreshMyChannels(){
   state.myChannels = entries;
   state.myChannelsLoaded = true;
   renderChannelsPage();
+  renderTelegramHome();
   applyChannelDeepLink();
 }
 function renderChannelsPage(){
@@ -4020,7 +4621,7 @@ function openChannelEntry(channelId){
   // The store owner (Control Mode) can walk into ANY channel directly, no code needed —
   // they can already manage/delete/ban on any channel via isAdmin() in the rules, so this
   // just matches that same blanket access in the UI.
-  if(state.isOwner){ openChannelView(channelId); return; }
+  if(state.isOwner){ openTelegramChannel(channelId); return; }
   const mine = state.myChannels[channelId];
   if(mine){
     if(mine.blocked){
@@ -4036,7 +4637,7 @@ function openChannelEntry(channelId){
       w.addEventListener("click", e=>{ if(e.target===w || e.target.closest("[data-close]")) w.remove(); });
       return;
     }
-    openChannelView(channelId);
+    openTelegramChannel(channelId);
   } else {
     askChannelPassword(ch);
   }
@@ -4078,7 +4679,7 @@ function askChannelPassword(channel){
   $("#chpw-cancel").addEventListener("click", close);
   const doConfirm = async ()=>{
     const ok = await joinChannelWithCode(channel, input.value);
-    if(ok){ close(); openChannelView(channel.id); }
+    if(ok){ close(); openTelegramChannel(channel.id); }
   };
   $("#chpw-ok").addEventListener("click", doConfirm);
   input.addEventListener("keydown", e=>{ if(e.key==="Enter") doConfirm(); if(e.key==="Escape") close(); });
@@ -4138,7 +4739,7 @@ async function openCreateChannelSheet(){
     });
     toast("Channel created — add a photo and generate codes from Manage");
     refreshMyChannels();
-    openChannelView(ref.id);
+    openTelegramChannel(ref.id);
   }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
 
@@ -4147,61 +4748,8 @@ function closeChannelView(){
   const w = $("#chview-backdrop"); if(w) w.remove();
 }
 function openChannelView(channelId){
-  const ch = state.channels.find(c=>c.id===channelId);
-  if(!ch) return;
-  const isOwnerHere = ch.ownerUid === state.uid || state.isOwner;
-  closeChannelView();
-  const html = `
-  <div class="sheet-backdrop" id="chview-backdrop">
-    <div class="sheet" style="max-height:92vh;display:flex;flex-direction:column">
-      <div class="sheet-handle"></div>
-      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
-      <div style="display:flex;align-items:center;gap:14px;padding:24px 18px 14px;">
-        ${avatarHtml(ch.name, ch.photoURL, "xl")}
-        <div><h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center">${escapeHtml(ch.name)}${tick(true)}</h2>
-        <div style="font-size:12px;color:var(--text-faint)">by ${escapeHtml(ch.ownerName||"—")} • ${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}</div></div>
-      </div>
-      <div style="display:flex;gap:10px;padding:0 18px 16px;flex-wrap:wrap">
-        <button class="btn btn-ghost" style="flex:1" id="chv-copy" type="button"><svg><use href="#ic-copy"/></svg> Copy link</button>
-        ${isOwnerHere
-          ? `<button class="btn btn-ghost" style="flex:1" id="chv-manage" type="button"><svg><use href="#ic-user"/></svg> Manage</button>
-             <button class="btn btn-primary btn-block" id="chv-upload" type="button" style="flex-basis:100%;margin-top:4px"><svg><use href="#ic-upload"/></svg> Upload content</button>`
-          : `<button class="btn btn-ghost" style="flex:1;color:var(--danger)" id="chv-leave" type="button">Leave channel</button>`}
-      </div>
-      <h3 class="section-title" style="margin:0 0 6px 18px">Content</h3>
-      <div class="settings-list" id="chv-content" style="margin:0 14px 24px;overflow-y:auto"><div class="mini-row" style="color:var(--text-faint)">Loading…</div></div>
-    </div>
-  </div>`;
-  document.body.insertAdjacentHTML("beforeend", html);
-  const wrap = $("#chview-backdrop");
-  wrap.addEventListener("click", e=>{
-    if(e.target === wrap || e.target.closest("[data-close]")){ closeChannelView(); return; }
-    if(e.target.closest("#chv-copy")){ copyChannelLink(ch); return; }
-    if(e.target.closest("#chv-manage")){ openChannelManageSheet(channelId); return; }
-    if(e.target.closest("#chv-upload")){ uploadChannelContent(channelId); return; }
-    if(e.target.closest("#chv-leave")){ leaveChannel(channelId); return; }
-    const dl = e.target.closest("[data-dl-file]");
-    if(dl){ const f = (channelFilesCache[channelId]||[]).find(x=>x.id===dl.dataset.dlFile); if(f) downloadChannelFile(f); return; }
-    const del = e.target.closest("[data-del-file]");
-    if(del){ deleteChannelFile(del.dataset.delFile); return; }
-  });
-  const q = query(collection(db,"channelFiles"), where("channelId","==",channelId));
-  channelViewUnsub = onSnapshot(q, snap=>{
-    const files = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
-    channelFilesCache[channelId] = files;
-    const box = $("#chv-content"); if(!box) return;
-    box.innerHTML = files.map(f=>`
-      <div class="mini-row">
-        <span class="uav"><svg width="18" height="18"><use href="#ic-cube"/></svg></span>
-        <div class="mini-main tap" data-dl-file="${f.id}"><b>${escapeHtml(f.name)}</b><small>${escapeHtml((f.ext||"").toUpperCase())} • ${escapeHtml(f.sizeLabel||"")}</small></div>
-        ${isOwnerHere
-          ? `<button class="icon-del" data-del-file="${f.id}"><svg><use href="#ic-trash"/></svg></button>`
-          : `<svg width="14" height="14" style="color:var(--text-faint)"><use href="#ic-download"/></svg>`}
-      </div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">${isOwnerHere ? "No content uploaded yet." : "The owner hasn't posted anything yet."}</div>`;
-  }, err=>{
-    console.warn("channel content listener", err);
-    const box = $("#chv-content"); if(box) box.innerHTML = `<div class="mini-row" style="color:var(--text-faint)">Could not load content.</div>`;
-  });
+  // Alias so any older code path still works — delegates to the Telegram UI.
+  openTelegramChannel(channelId);
 }
 async function downloadChannelFile(f){
   try{ await downloadInsideStore(f.fileUrl, f.name, ()=>{}); }
@@ -4209,7 +4757,7 @@ async function downloadChannelFile(f){
 }
 async function deleteChannelFile(id){
   if(!(await confirmSheet("Delete this file?", "This removes it from the channel permanently.", "Delete"))) return;
-  try{ await deleteDoc(doc(db,"channelFiles",id)); toast("Deleted"); }
+  try{ await deleteDoc(doc(db,"channelMessages",id)); toast("Deleted"); }
   catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
 async function copyChannelLink(ch){
@@ -4223,40 +4771,8 @@ async function leaveChannel(channelId){
     await deleteDoc(doc(db,"channels",channelId,"members",state.uid));
     await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
     toast("You left the channel");
-    closeChannelView();
+    closeTelegramChannel();
   }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
-}
-/** Owner-only: pick a file (any of the listed extensions), send it to the same VPS
-    upload-api used for store apps, and record it privately in channelFiles. */
-function uploadChannelContent(channelId){
-  const ch = state.channels.find(c=>c.id===channelId);
-  if(!ch) return;
-  if(ch.ownerUid !== state.uid && !state.isOwner){ toast("Only the channel owner can upload content", "ic-close"); return; }
-  if(!storageReady()){ toast("Connect your VPS upload API first", "ic-close"); return; }
-  const input = $("#channel-content-input");
-  input.onchange = async e=>{
-    const file = e.target.files[0]; e.target.value = "";
-    if(!file) return;
-    toast("Uploading " + file.name + "…");
-    try{
-      // The Firestore doc ID must be the EXACT same string as the folder name the
-      // upload-api creates on disk (this is how pika-notifier finds it to delete),
-      // so build one id up front and reuse it for both.
-      const fid = "ch_" + channelId + "_" + generateAppId();
-      const res = await uploadFileToServer(file, fid, "file", null);
-      const ext = (file.name.split(".").pop() || "").toLowerCase();
-      await setDoc(doc(db,"channelFiles",fid), {
-        channelId, channelName: ch.name,
-        name: file.name, ext,
-        fileUrl: res.url, filePath: res.path,
-        sizeLabel: (file.size/1024/1024).toFixed(1) + " MB",
-        uploaderUid: state.uid, uploaderName: state.username,
-        createdAt: serverTimestamp(), createdAtMs: Date.now()
-      });
-      toast("Uploaded to channel");
-    }catch(err){ toast("Upload failed: " + (err.code||err.message), "ic-close"); }
-  };
-  input.click();
 }
 
 /** Generic "pick a store member" sheet, mirroring openAppPicker()'s search+list pattern. */
@@ -4450,19 +4966,587 @@ function openChannelCodesSheet(channelId){
   });
 }
 
-/** Best-effort cascade delete: removes the member list and content records from Firestore.
-    NOTE: this does not free the files on the VPS disk (see the module header comment) —
-    pika-notifier would need a matching watcher on 'channelFiles' deletions for that. */
+/** Best-effort cascade delete: removes the member list and content records from Firestore. */
 async function deleteChannelForever(ch){
   try{
     const memSnap = await getDocs(collection(db,"channels",ch.id,"members"));
     for(const d of memSnap.docs) await deleteDoc(d.ref);
-    const fileSnap = await getDocs(query(collection(db,"channelFiles"), where("channelId","==",ch.id)));
+    const fileSnap = await getDocs(query(collection(db,"channelMessages"), where("channelId","==",ch.id)));
     for(const d of fileSnap.docs) await deleteDoc(d.ref);
     await deleteDoc(doc(db,"channels",ch.id));
-    closeChannelView();
+    closeTelegramChannel();
     toast("Channel deleted");
   }catch(e){ toast("Delete failed: " + (e.code||e.message), "ic-close"); }
+}
+
+/* ---------------------------------------------------------------------
+   13. TELEGRAM-STYLE CHANNEL UI — integrated from channel.html
+   Data: Firestore `channelMessages` (one doc per message, fields below)
+         Files: uploaded via uploadFileToServer() to the VPS, mediaUrl is
+         the permanent static file URL.
+   Message doc schema:
+   {
+     channelId, type ("text"|"image"|"video"|"file"|"audio"),
+     text, caption, filename, mimeType, size, mediaUrl,
+     senderUid, senderName, senderPhoto,
+     createdAt (serverTimestamp), createdAtMs,
+     deleted: false,
+     replyTo: { id, name, preview, type } | null,
+     views: 0
+   }
+   --------------------------------------------------------------------- */
+const EMOJI_CATEGORIES = {
+  '😀': '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😙 😚 😋 😛 😝 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🤭 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👹 👺 🤡 💩 👻 💀 ☠️ 👽 👾 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾'.split(' '),
+  '❤️': '❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 💌 💋 👥 👤 💯 💢 💥 💫 💦 💨 🕳️ 💣 💬 👁️ 🗨️ 🗯️ 💭 💤 ✨ ⭐ 🌟 💫 🔥 🌈 ☀️ 🌤️ ☁️ ❄️ ⚡ ☔ 💧 🌊 🌙 🌛 🌜 🌚 🌝 🌞 🪐'.split(' '),
+  '👍': '👍 👎 👌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤏 💪 🖕 🙏 👏 🙌 👐 🤝 💅 🤳 💃 🕺 👶 🧒 👦 👧 🧑 👨 👩 🧓 👴 👵 🧔 👮 👷 💂 🕵️ 👩‍⚕️ 👨‍⚕️ 👩‍🎓 👨‍🎓 👩‍💻 👨‍💻 👩‍🍳 👨‍🍳 👩‍🚀 👨‍🚀 👑 👒 🎩 🧢 🕶️ 💍'.split(' '),
+  '🐶': '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐽 🐸 🐵 🙈 🙉 🙊 🐒 🐔 🐧 🐦 🐤 🐣 🦆 🦅 🦉 🦇 🐺 🐗 🐴 🦄 🐝 🐛 🦋 🐌 🐞 🐜 🕷️ 🦂 🐢 🐍 🦎 🦖 🦕 🐙 🦑 🦀 🦞 🐠 🐟 🐡 🐬 🐳 🐋 🦈 🐊 🐅 🐆 🦓 🦍 🐘 🦏 🦛 🐪 🐫 🦒 🦘 🦬 🐃 🐂 🐄 🐎 🐖 🐏 🐑 🦙 🐐 🦌 🐕 🐈 🐓 🦃 🕊️ 🦢 🦩 🦚 🦜 🦦 🦥 🦨 🦘 🦡 🐿️ 🦔'.split(' '),
+  '🍎': '🍏 🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🫐 🍈 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🥑 🍆 🥔 🥕 🌽 🌶️ 🫑 🥒 🥬 🥦 🧄 🧅 🍞 🥐 🥖 🥨 🧀 🥚 🍳 🧈 🥞 🧇 🥓 🥩 🍗 🍖 🌭 🍔 🍟 🍕 🥪 🥙 🧆 🌮 🌯 🥗 🥘 🍝 🍜 🍲 🍛 🍣 🍱 🥟 🦪 🍤 🍚 🍙 🍘 🍥 🥠 🥮 🍡 🍧 🍨 🍦 🧁 🍰 🎂 🍮 🍭 🍬 🍫 🍿 ☕ 🍵 🧃 🥤 🧋 🧊 🍺 🍻 🍷 🥂 🥃 🍸 🍹 🧉'.split(' '),
+  '⚽': '⚽ 🏀 🏈 ⚾ 🥎 🎾 🏐 🏉 🥏 🎱 🪀 🏓 🏸 🏒 🏑 🥍 🏏 ⛳ 🪁 🏹 🎣 🤿 🥊 🥋 🎽 🛹 🛷 ⛸️ 🥌 🎿 ⛷️ 🏂 🪂 🏋️ 🤼 🤸 ⛹️ 🤺 🤾 🏌️ 🏇 🧘 🏄 🏊 🤽 🚣 🧗 🚵 🚴 🏆 🥇 🥈 🥉 🏅 🎖️ 🏵️ 🎗️'.split(' '),
+  '🚗': '🚗 🚕 🚙 🚌 🚎 🏎️ 🚓 🚑 🚒 🚐 🚚 🚛 🚜 🛵 🏍️ 🚲 🛴 🚨 🚔 🚍 🚘 🚖 ✈️ 🛫 🛬 🛩️ 🚁 🚀 🛸 🚢 ⛵ 🚤 🛥️ 🚂 🚆 🚇 🚊 🚉 🚝 🚞 🚋 🚃 🚟 🚠 🚡 🚁 🗺️ 🗽 🗼 🏰 🏯 🏟️ 🎡 🎢 🎠 ⛲ 🏖️ 🏝️ 🏜️ 🏕️ ⛺ 🏠 🏡 🏢 🏥 🏦 🏨 🏪 🏫 🏭 🏬 🕌 ⛪ 🛕 🕍 🕋'.split(' '),
+  '💻': '⌚ 📱 💻 🖥️ 🖨️ ⌨️ 🖱️ 💽 💾 💿 📀 📷 📸 📹 🎥 📞 ☎️ 📺 📻 🎙️ 🎚️ 🎛️ 🧭 ⏱️ ⏰ ⌛ ⏳ 🔋 🔌 💡 🔦 🕯️ 🧯 🛒 💰 💳 💎 ⚖️ 🔧 🔨 ⚒️ 🛠️ ⛏️ 🔪 🛡️ 🔑 🔒 🔓 🔐 🔍 🔎 📝 ✏️ 🖊️ 📌 📍 📎 📁 📂 🗂️ 📅 📆 📊 📈 📉 🗒️ 📄 📰 🗞️ 📚 📖 🔖'.split(' '),
+  '🎉': '🎉 🎊 🎈 🎂 🎁 🎀 🪅 🪩 🎗️ 🎟️ 🎫 🎖️ 🏆 🥇 🥳 🎭 🎨 🎬 🎤 🎧 🎼 🎵 🎶 🎹 🥁 🎷 🎺 🎸 🪕 🎻 🎮 🕹️ 🎲 ♟️ 🧩 🧸 🪆 🪄 🔮 🧿 🪬 🧨 🎆 🎇 ✨ 🌟 ⭐ 💫 🌠 🎄 🎃 🧧 🪔 🕯️'.split(' ')
+};
+let tgEmojiCategory = '😀';
+
+function initTelegramUI(){
+  const P = id => document.getElementById(id);
+  // Home (channel list)
+  P("pktg-home-close").addEventListener("click", closeTelegramUI);
+  P("pktg-home-new").addEventListener("click", ()=>{ openCreateChannelSheet(); });
+  P("pktg-home-list").addEventListener("click", e=>{
+    const r = e.target.closest("[data-tg-open]");
+    if(r) openChannelEntry(r.dataset.tgOpen);
+  });
+  // Conversation header
+  P("pktg-back").addEventListener("click", ()=>{ closeTelegramChannel(); });
+  P("pktg-info").addEventListener("click", ()=>{
+    if(!state.tg.channel) return;
+    const ch = state.tg.channel;
+    const isOwnerHere = ch.ownerUid === state.uid || state.isOwner;
+    if(isOwnerHere) openChannelManageSheet(ch.id);
+    else copyChannelLink(ch);
+  });
+  P("pktg-search-btn").addEventListener("click", ()=>{ P("pktg-search").classList.add("active"); P("pktg-search-input").focus(); });
+  P("pktg-search-close").addEventListener("click", ()=>{ P("pktg-search").classList.remove("active"); P("pktg-search-input").value = ""; state.tg.searchQuery = ""; renderTelegramFeed(); });
+  P("pktg-search-input").addEventListener("input", e=>{ state.tg.searchQuery = e.target.value; renderTelegramFeed(); });
+  P("pktg-menu-btn").addEventListener("click", ()=>{
+    if(!state.tg.channel) return;
+    const ch = state.tg.channel;
+    const isOwnerHere = ch.ownerUid === state.uid || state.isOwner;
+    if(isOwnerHere) openChannelManageSheet(ch.id);
+    else {
+      const bd = document.createElement("div");
+      bd.className = "sheet-backdrop dlg";
+      bd.innerHTML = `<div class="sheet" style="padding:20px 20px calc(20px + var(--safe-bottom));">
+        <button class="btn btn-ghost btn-block" id="tg-leave" type="button" style="color:var(--danger)">Leave channel</button>
+        <button class="btn btn-ghost btn-block" id="tg-cancel" type="button" style="margin-top:10px">Cancel</button>
+      </div>`;
+      document.body.appendChild(bd);
+      bd.querySelector("#tg-cancel").onclick = ()=> bd.remove();
+      bd.querySelector("#tg-leave").onclick = ()=>{ bd.remove(); leaveChannel(ch.id); };
+      bd.addEventListener("click", ev=>{ if(ev.target === bd) bd.remove(); });
+    }
+  });
+  // Composer
+  const input = P("pktg-input");
+  input.addEventListener("input", ()=>{
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 100) + "px";
+    pingTyping();
+  });
+  input.addEventListener("keydown", e=>{
+    if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); tgSendText(); }
+  });
+  P("pktg-send-btn").addEventListener("click", tgSendText);
+  P("pktg-attach-btn").addEventListener("click", ()=>{ closeTgEmoji(); openTgSheet(); });
+  P("pktg-reply-cancel").addEventListener("click", ()=>{ state.tg.replyTo = null; updateTgReplyBar(); });
+  // Attachment sheet
+  P("pktg-sheet-overlay").addEventListener("click", closeTgSheet);
+  P("pktg-attach-gallery").addEventListener("click", ()=>{ P("pktg-input-gallery").click(); closeTgSheet(); });
+  P("pktg-attach-video").addEventListener("click", ()=>{ P("pktg-input-video").click(); closeTgSheet(); });
+  P("pktg-attach-file").addEventListener("click", ()=>{ P("pktg-input-file").click(); closeTgSheet(); });
+  P("pktg-attach-camera").addEventListener("click", ()=>{ P("pktg-input-camera").click(); closeTgSheet(); });
+  P("pktg-input-gallery").addEventListener("change", e=> tgHandleFile(e, "image"));
+  P("pktg-input-video").addEventListener("change", e=> tgHandleFile(e, "video"));
+  P("pktg-input-file").addEventListener("change", e=> tgHandleFile(e, "file"));
+  P("pktg-input-camera").addEventListener("change", e=> tgHandleFile(e, "image"));
+  // Emoji
+  P("pktg-emoji-btn").addEventListener("click", ()=> openTgEmoji());
+  P("pktg-emoji-search").addEventListener("input", renderTgEmojiGrid);
+  document.addEventListener("click", e=>{
+    const em = P("pktg-emoji");
+    if(em && em.classList.contains("active") && !e.target.closest("#pktg-emoji") && !e.target.closest("#pktg-emoji-btn")) closeTgEmoji();
+    const ctx = P("pktg-ctx");
+    if(ctx && ctx.classList.contains("active") && !e.target.closest("#pktg-ctx")) closeTgCtx();
+  });
+  // Viewer
+  P("pktg-viewer-close").addEventListener("click", ()=>{ P("pktg-viewer").classList.remove("active"); });
+  P("pktg-viewer-save").addEventListener("click", ()=>{
+    const src = P("pktg-viewer-img").src;
+    if(!src) return;
+    const a = document.createElement("a"); a.href = src; a.download = "image"; a.target = "_blank"; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+  // Context menu
+  P("pktg-ctx").addEventListener("click", async e=>{
+    const b = e.target.closest("[data-ctx]"); if(!b) return;
+    const m = state.tg.contextMsg; if(!m){ closeTgCtx(); return; }
+    const act = b.dataset.ctx;
+    closeTgCtx();
+    if(act === "reply"){
+      if(m.deleted){ toast("This message was deleted", "ic-close"); return; }
+      state.tg.replyTo = m;
+      updateTgReplyBar();
+      P("pktg-input").focus();
+    } else if(act === "copy"){
+      const t = m.text || m.caption || m.filename || "";
+      const ok = await copyText(t);
+      toast(ok ? "Copied" : "Copy failed", ok ? "ic-check" : "ic-close");
+    } else if(act === "delete"){
+      const mine = m.senderUid === state.uid;
+      if(!state.isOwner && !mine){ toast("You can only delete your own messages", "ic-close"); return; }
+      if(!(await confirmSheet("Delete message?", "This message will be removed for everyone in this channel.", "Delete"))) return;
+      try{
+        await updateDoc(doc(db,"channelMessages", m.id), { deleted: true, deletedAt: serverTimestamp() });
+        toast("Message deleted");
+      }catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
+    }
+  });
+  // Upload cancel
+  P("pktg-upload-cancel").addEventListener("click", ()=>{ if(state.tg.uploadAbort){ try{ state.tg.uploadAbort(); }catch(e){} } hideTgUpload(); });
+}
+
+/* ---------- Open / close the whole Telegram UI ---------- */
+function openTelegramUI(){
+  const root = $("#pktg");
+  root.classList.add("open");
+  $("#pktg-home").classList.remove("hidden");
+  $("#pktg-conv").style.display = "none";
+  renderTelegramHome();
+  state.tg.panelOpen = true;
+}
+function closeTelegramUI(){
+  $("#pktg").classList.remove("open");
+  state.tg.panelOpen = false;
+}
+function closeTelegramChannel(){
+  if(state.tg.unsub){ state.tg.unsub(); state.tg.unsub = null; }
+  if(state.tg.unsubTyping){ state.tg.unsubTyping(); state.tg.unsubTyping = null; }
+  state.tg.channelId = null;
+  state.tg.channel = null;
+  state.tg.messages = [];
+  state.tg.replyTo = null;
+  state.tg.contextMsg = null;
+  state.tg.searchQuery = "";
+  $("#pktg-conv").style.display = "none";
+  $("#pktg-home").classList.remove("hidden");
+  renderTelegramHome();
+}
+function renderTelegramHome(){
+  const list = $("#pktg-home-list"); if(!list) return;
+  const joined = state.channels.filter(ch=> state.isOwner || (state.myChannels[ch.id] && !state.myChannels[ch.id].blocked));
+  if(!joined.length){
+    list.innerHTML = `<div class="pktg-empty" style="padding-top:60px"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-channel"/></svg></div><b>No channels yet</b><span>Join one from the Channels tab, or create your own if you have a blue tick.</span></div>`;
+    return;
+  }
+  list.innerHTML = `<div class="pktg-home-section">Your channels</div>` + joined.map(ch=>{
+    const mine = state.myChannels[ch.id];
+    const role = state.isOwner ? "owner" : (mine ? mine.role : "member");
+    return `<button class="pktg-chat-row" type="button" data-tg-open="${ch.id}">
+      <div class="pktg-chat-av">${ch.photoURL ? `<img src="${escapeHtml(ch.photoURL)}" alt="">` : escapeHtml((ch.name||"?").trim().slice(0,1).toUpperCase())}</div>
+      <div class="pktg-chat-main">
+        <div class="pktg-chat-line">
+          <span class="pktg-chat-name">${escapeHtml(ch.name)}</span>
+          <span class="pktg-chat-time">${role === "owner" ? "owner" : ""}</span>
+        </div>
+        <div class="pktg-chat-preview">${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"} • tap to open</div>
+      </div>
+    </button>`;
+  }).join("");
+}
+
+/* ---------- Open a single channel (Telegram conversation view) ---------- */
+async function openTelegramChannel(channelId){
+  const ch = state.channels.find(c=>c.id===channelId);
+  if(!ch){ toast("Channel not found", "ic-close"); return; }
+  openTelegramUI();
+  state.tg.channelId = channelId;
+  state.tg.channel = ch;
+  state.tg.messages = [];
+  state.tg.replyTo = null;
+  $("#pktg-home").classList.add("hidden");
+  $("#pktg-conv").style.display = "flex";
+  // Header
+  $("#pktg-title").textContent = ch.name;
+  $("#pktg-subs").textContent = `${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}`;
+  const av = $("#pktg-avatar");
+  av.innerHTML = ch.photoURL ? `<img src="${escapeHtml(ch.photoURL)}" alt="">` : escapeHtml((ch.name||"?").trim().slice(0,1).toUpperCase());
+  $("#pktg-input").placeholder = `Message ${ch.name}…`;
+  // Real-time message feed
+  if(state.tg.unsub){ state.tg.unsub(); state.tg.unsub = null; }
+  const q = query(collection(db,"channelMessages"), where("channelId","==",channelId));
+  state.tg.unsub = onSnapshot(q, snap=>{
+    const all = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    all.sort((a,b)=> (a.createdAtMs||0) - (b.createdAtMs||0));
+    state.tg.messages = all;
+    renderTelegramFeed();
+  }, err=>{
+    console.warn("channel messages listener", err);
+    $("#pktg-feed").innerHTML = `<div class="pktg-empty"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-lock"/></svg></div><b>Could not load messages</b><span>${escapeHtml(err.code || err.message || "")}</span></div>`;
+  });
+  // Typing indicator on this channel
+  if(state.tg.unsubTyping){ state.tg.unsubTyping(); state.tg.unsubTyping = null; }
+  state.tg.unsubTyping = onSnapshot(doc(db,"typing","ch_"+channelId), s=>{
+    const d = s.exists() ? s.data() : null;
+    const active = d && d.byUid && d.byUid !== state.uid && d.at && d.at.toMillis && (Date.now()-d.at.toMillis()) < 6000;
+    const sub = $("#pktg-subs");
+    if(active){
+      const u = state.users[d.byUid];
+      sub.textContent = (u && u.name ? u.name : "Someone") + " is typing…";
+    } else {
+      sub.textContent = `${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}`;
+    }
+  }, ()=>{});
+}
+
+/* ---------- Feed rendering ---------- */
+function renderTelegramFeed(){
+  const feed = $("#pktg-feed"); if(!feed) return;
+  const wasNearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 140;
+  const q = (state.tg.searchQuery || "").trim().toLowerCase();
+  const items = state.tg.messages.filter(m=>{
+    if(!q) return true;
+    return `${m.text||""} ${m.caption||""} ${m.filename||""}`.toLowerCase().includes(q);
+  });
+  if(!items.length){
+    feed.innerHTML = `<div class="pktg-empty"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-channel"/></svg></div><b>No messages yet</b><span>Broadcast the first message to this channel.</span></div>`;
+    return;
+  }
+  feed.innerHTML = `<div class="pktg-date-badge">Messages</div>`;
+  items.forEach(m=> feed.appendChild(buildTelegramMsg(m)));
+  if(wasNearBottom || q) feed.scrollTop = feed.scrollHeight;
+  bindTgSwipe();
+  bindTgLongPress();
+}
+function tgMsgLabel(m){
+  if(!m) return "Message";
+  if(m.deleted) return "Attached Item Deleted";
+  if(m.type === "image") return m.caption || m.filename || "Photo";
+  if(m.type === "video") return m.caption || m.filename || "Video";
+  if(m.type === "audio") return m.caption || "Voice message";
+  if(m.type === "file") return m.filename || m.caption || "Document";
+  return m.text || m.caption || "Message";
+}
+function buildTelegramMsg(m){
+  const card = document.createElement("article");
+  const mine = m.senderUid === state.uid;
+  card.className = "pktg-msg" + (mine ? " pktg-me" : "") + (m.deleted ? " pktg-deleted" : "");
+  card.dataset.id = m.id;
+  let html = "";
+  // Reply quote
+  if(m.replyTo && m.replyTo.id){
+    const parent = state.tg.messages.find(x=>x.id === m.replyTo.id);
+    const del = !parent || parent.deleted;
+    const preview = del ? "This attached item is no longer available." : (parent ? tgMsgLabel(parent) : (m.replyTo.preview || "Message"));
+    const name = m.replyTo.name || (parent ? (parent.senderName || "Member") : "Member");
+    html += `<button class="pktg-reply-ref${del?" pktg-deleted-ref":""}" type="button" data-tg-jump="${escapeHtml(m.replyTo.id)}">
+      <span class="pktg-reply-accent"></span>
+      <span class="pktg-reply-copy"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(preview)}</span></span>
+    </button>`;
+  }
+  // Who
+  if(!mine){
+    const u = userView(m.senderUid, m.senderName, false);
+    html += `<div class="pktg-who">${avatarHtml(u.name, u.photo)}${escapeHtml(u.name)}${tick(u.verified)}</div>`;
+  }
+  // Body
+  if(m.deleted){
+    html += `<div class="pktg-deleted-body"><span style="opacity:.5">🚫</span><span>This message was deleted</span></div>`;
+  } else if(m.type === "image"){
+    html += `<div class="pktg-media" data-tg-view="${escapeHtml(m.mediaUrl || "")}"><img src="${escapeHtml(m.mediaUrl || "")}" loading="lazy" alt=""/></div>`;
+  } else if(m.type === "video"){
+    html += `<div class="pktg-media"><video src="${escapeHtml(m.mediaUrl || "")}" controls playsinline preload="metadata"></video></div>`;
+  } else if(m.type === "audio"){
+    html += `<div class="pktg-voice-row"><div class="pktg-voice-icon"><svg width="18" height="18"><use href="#ic-play"/></svg></div><audio src="${escapeHtml(m.mediaUrl || "")}" controls></audio></div>`;
+  } else if(m.type === "file"){
+    html += `<button type="button" class="pktg-file-card" data-tg-file="${m.id}">
+      <span class="pktg-file-icon"><svg><use href="#ic-cube"/></svg></span>
+      <span class="pktg-file-info">
+        <span class="pktg-file-name">${escapeHtml(m.filename || "Document")}</span>
+        <span class="pktg-file-size">${escapeHtml(fmtBytes(m.size || 0))}</span>
+      </span>
+      <span class="pktg-dl-btn" data-tg-dl="${m.id}" title="Download"><svg><use href="#ic-download"/></svg></span>
+      <span class="pktg-dl-progress" id="tg-dl-${m.id}"><span class="pktg-dl-fill" id="tg-df-${m.id}"></span></span>
+    </button>`;
+  }
+  const body = m.caption || m.text;
+  if(body && !m.deleted) html += `<div class="pktg-caption">${escapeHtml(body)}</div>`;
+  const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
+  html += `<div class="pktg-meta"><span>${m.views || 0} views</span><span>•</span><span>${time}</span></div>`;
+  card.innerHTML = html;
+  // Wire interactions
+  const ref = card.querySelector("[data-tg-jump]");
+  if(ref) ref.addEventListener("click", e=>{
+    e.stopPropagation();
+    const t = document.querySelector(`.pktg-msg[data-id="${CSS.escape(ref.dataset.tgJump)}"]`);
+    if(t){ t.scrollIntoView({ behavior:"smooth", block:"center" }); t.style.boxShadow = "0 0 0 4px rgba(255,198,26,.28)"; setTimeout(()=> t.style.boxShadow = "", 1200); }
+    else toast("Original message is not in this chat", "ic-close");
+  });
+  const media = card.querySelector("[data-tg-view]");
+  if(media) media.addEventListener("click", ()=> openTgViewer(media.dataset.tgView));
+  const fileBtn = card.querySelector("[data-tg-file]");
+  if(fileBtn) fileBtn.addEventListener("click", e=>{
+    e.preventDefault(); e.stopPropagation();
+    if(e.target.closest("[data-tg-dl]")) return;
+    // Plain tap on a document is inert, matching the Telegram-style behavior from channel.html.
+  });
+  const dl = card.querySelector("[data-tg-dl]");
+  if(dl) dl.addEventListener("click", e=>{ e.stopPropagation(); tgDownloadMessage(m); });
+  card.addEventListener("contextmenu", e=>{ e.preventDefault(); showTgCtx(e.clientX, e.clientY, m); });
+  return card;
+}
+function bindTgSwipe(){
+  const feed = $("#pktg-feed"); if(!feed) return;
+  feed.querySelectorAll(".pktg-msg").forEach(card=>{
+    let startX = 0, startY = 0, lastX = 0, swiping = false;
+    card.addEventListener("touchstart", e=>{
+      if(e.touches.length !== 1) return;
+      const t = e.touches[0]; startX = t.clientX; startY = t.clientY; lastX = startX; swiping = false;
+    }, { passive:true });
+    card.addEventListener("touchmove", e=>{
+      if(e.touches.length !== 1) return;
+      const t = e.touches[0], dx = t.clientX - startX, dy = t.clientY - startY;
+      lastX = t.clientX;
+      if(dx > 10 && Math.abs(dx) > Math.abs(dy) * 1.15){
+        swiping = true;
+        const amount = Math.min(dx, 92);
+        card.style.transform = `translateX(${amount}px)`;
+        card.style.transition = "none";
+        card.classList.add("pktg-reply-swiping");
+      }
+    }, { passive:true });
+    card.addEventListener("touchend", ()=>{
+      const dx = lastX - startX;
+      card.style.transition = "transform .22s cubic-bezier(.2,.8,.2,1)";
+      card.style.transform = "";
+      card.classList.remove("pktg-reply-swiping");
+      if(swiping && dx > 55){
+        const m = state.tg.messages.find(x=>x.id === card.dataset.id);
+        if(m && !m.deleted){
+          state.tg.replyTo = m;
+          updateTgReplyBar();
+          $("#pktg-input").focus();
+        }
+      }
+    }, { passive:true });
+  });
+}
+function bindTgLongPress(){
+  const feed = $("#pktg-feed"); if(!feed) return;
+  feed.querySelectorAll(".pktg-msg").forEach(card=>{
+    let timer = null;
+    card.addEventListener("touchstart", e=>{
+      if(e.touches.length !== 1) return;
+      const t = e.touches[0];
+      timer = setTimeout(()=>{
+        const m = state.tg.messages.find(x=>x.id === card.dataset.id);
+        if(m) showTgCtx(t.clientX, t.clientY, m);
+      }, 500);
+    }, { passive:true });
+    ["touchend","touchmove","touchcancel"].forEach(ev=> card.addEventListener(ev, ()=>{ if(timer){ clearTimeout(timer); timer = null; } }, { passive:true }));
+  });
+}
+function showTgCtx(x, y, msg){
+  state.tg.contextMsg = msg;
+  const ctx = $("#pktg-ctx");
+  ctx.classList.add("active");
+  const left = Math.min(Math.max(8, x), window.innerWidth - 190);
+  const top = Math.min(Math.max(60, y), window.innerHeight - 200);
+  ctx.style.left = left + "px";
+  ctx.style.top = top + "px";
+}
+function closeTgCtx(){ const ctx = $("#pktg-ctx"); if(ctx) ctx.classList.remove("active"); }
+
+function openTgViewer(url){
+  if(!url) return;
+  $("#pktg-viewer-img").src = url;
+  $("#pktg-viewer").classList.add("active");
+}
+
+async function tgDownloadMessage(m){
+  if(!m || m.deleted){ toast("Attached Item Deleted", "ic-close"); return; }
+  if(!m.mediaUrl){ toast("File data unavailable", "ic-close"); return; }
+  const prog = document.getElementById("tg-dl-" + m.id);
+  const fill = document.getElementById("tg-df-" + m.id);
+  if(prog) prog.classList.add("active");
+  try{
+    await downloadInsideStore(m.mediaUrl, m.filename || "download", pct=>{ if(fill && pct !== null) fill.style.width = pct + "%"; });
+    toast("Download started");
+  }catch(e){
+    if(!e || e.name !== "AbortError"){
+      const a = document.createElement("a"); a.href = m.mediaUrl; a.target = "_blank"; a.rel = "noopener";
+      document.body.appendChild(a); a.click(); a.remove();
+      toast("Download opened in your browser");
+    } else {
+      toast("Download cancelled");
+    }
+  }finally{
+    setTimeout(()=> prog?.classList.remove("active"), 500);
+  }
+}
+
+/* ---------- Send messages ---------- */
+async function tgSendText(){
+  const input = $("#pktg-input");
+  const text = input.value.trim();
+  if(!text){ toast("Type a message first"); return; }
+  if(!state.tg.channelId){ toast("Open a channel first", "ic-close"); return; }
+  if(guestBlock("broadcast in channels")) return;
+  const problem = checkChatText(text, state.verified, state.isOwner);
+  if(problem){ toast(problem, "ic-close"); return; }
+  input.value = "";
+  input.style.height = "auto";
+  try{
+    await addDoc(collection(db,"channelMessages"), {
+      channelId: state.tg.channelId,
+      type: "text",
+      text: text.slice(0, 4000),
+      senderUid: state.uid,
+      senderName: state.username,
+      senderPhoto: state.photoURL || "",
+      createdAt: serverTimestamp(),
+      createdAtMs: Date.now(),
+      deleted: false,
+      replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null,
+      views: 0
+    });
+    state.tg.replyTo = null;
+    updateTgReplyBar();
+  }catch(e){ toast("Send failed: " + (e.code||e.message), "ic-close"); }
+}
+function updateTgReplyBar(){
+  const bar = $("#pktg-reply");
+  if(!state.tg.replyTo){ bar.classList.remove("active"); bar.innerHTML = ""; return; }
+  bar.classList.add("active");
+  $("#pktg-reply-title").textContent = "Replying to " + (state.tg.replyTo.senderName || "message");
+  $("#pktg-reply-preview").textContent = tgMsgLabel(state.tg.replyTo);
+}
+async function tgHandleFile(e, kind){
+  const file = e.target.files?.[0];
+  e.target.value = "";
+  if(!file) return;
+  if(!state.tg.channelId){ toast("Open a channel first", "ic-close"); return; }
+  if(guestBlock("broadcast in channels")) return;
+  if(!storageReady()){ toast("Connect your VPS upload API first", "ic-close"); return; }
+  const msgId = "chmsg_" + state.tg.channelId + "_" + generateAppId();
+  showTgUpload(file.name);
+  let cancelled = false;
+  state.tg.uploadAbort = ()=>{ cancelled = true; };
+  try{
+    const res = await uploadFileToServer(file, msgId, "file", p=> setTgUpload(p));
+    if(cancelled) throw new Error("Cancelled");
+    setTgUpload(100);
+    const type = kind === "image" ? "image" : kind === "video" ? "video" : (file.type && file.type.startsWith("audio/") ? "audio" : "file");
+    await addDoc(collection(db,"channelMessages"), {
+      channelId: state.tg.channelId,
+      type,
+      text: "",
+      caption: file.name,
+      filename: file.name,
+      mimeType: file.type || "",
+      size: file.size,
+      mediaUrl: res.url,
+      senderUid: state.uid,
+      senderName: state.username,
+      senderPhoto: state.photoURL || "",
+      createdAt: serverTimestamp(),
+      createdAtMs: Date.now(),
+      deleted: false,
+      replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null,
+      views: 0
+    });
+    state.tg.replyTo = null;
+    updateTgReplyBar();
+    toast("Uploaded to channel");
+  }catch(err){
+    if(!cancelled) toast(err.message || "Upload failed", "ic-close");
+  }finally{
+    state.tg.uploadAbort = null;
+    hideTgUpload();
+  }
+}
+function showTgUpload(name){
+  const box = $("#pktg-upload");
+  box.classList.add("active");
+  $("#pktg-upload-name").textContent = name;
+  $("#pktg-upload-pct").textContent = "0%";
+  $("#pktg-upload-fill").style.width = "0%";
+}
+function setTgUpload(p){
+  $("#pktg-upload-fill").style.width = p + "%";
+  $("#pktg-upload-pct").textContent = p + "%";
+}
+function hideTgUpload(){ $("#pktg-upload").classList.remove("active"); }
+
+/* ---------- Typing indicator on the channel ---------- */
+function pingTyping(){
+  if(!state.tg.channelId) return;
+  const now = Date.now();
+  if(now - state.tg.lastTypingAt < 1500) return;   // throttle
+  state.tg.lastTypingAt = now;
+  setDoc(doc(db,"typing","ch_"+state.tg.channelId), { byUid: state.uid, at: serverTimestamp() }).catch(()=>{});
+  if(state.tg.typingTimer) clearTimeout(state.tg.typingTimer);
+  state.tg.typingTimer = setTimeout(()=>{
+    setDoc(doc(db,"typing","ch_"+state.tg.channelId), { byUid: null, at: serverTimestamp() }).catch(()=>{});
+  }, 5000);
+}
+
+/* ---------- Attachment sheet ---------- */
+function openTgSheet(){
+  $("#pktg-sheet-overlay").classList.add("active");
+  $("#pktg-sheet").classList.add("active");
+}
+function closeTgSheet(){
+  $("#pktg-sheet-overlay").classList.remove("active");
+  $("#pktg-sheet").classList.remove("active");
+}
+
+/* ---------- Emoji picker ---------- */
+function openTgEmoji(){
+  const p = $("#pktg-emoji");
+  p.classList.toggle("active");
+  p.setAttribute("aria-hidden", String(!p.classList.contains("active")));
+  if(p.classList.contains("active")){
+    renderTgEmojiCats();
+    renderTgEmojiGrid();
+    setTimeout(()=> $("#pktg-emoji-search")?.focus(), 40);
+  }
+}
+function closeTgEmoji(){
+  const p = $("#pktg-emoji");
+  if(p){ p.classList.remove("active"); p.setAttribute("aria-hidden","true"); }
+}
+function renderTgEmojiCats(){
+  const el = $("#pktg-emoji-cats"); if(!el) return;
+  el.innerHTML = Object.keys(EMOJI_CATEGORIES).map(k=>`<button class="pktg-emoji-cat ${k===tgEmojiCategory?"active":""}" data-cat="${k}">${k}</button>`).join("");
+  el.querySelectorAll(".pktg-emoji-cat").forEach(b=> b.onclick = ()=>{ tgEmojiCategory = b.dataset.cat; renderTgEmojiCats(); renderTgEmojiGrid(); });
+}
+function renderTgEmojiGrid(){
+  const grid = $("#pktg-emoji-grid"); if(!grid) return;
+  const q = ($("#pktg-emoji-search")?.value || "").trim().toLowerCase();
+  let arr = EMOJI_CATEGORIES[tgEmojiCategory] || [];
+  if(q) arr = Object.values(EMOJI_CATEGORIES).flat().filter((v,i,a)=> a.indexOf(v)===i && v.includes(q));
+  grid.innerHTML = arr.length ? arr.map(e=>`<button class="pktg-emoji-item" type="button">${e}</button>`).join("") : `<div class="pktg-emoji-empty">No matching emoji</div>`;
+  grid.querySelectorAll(".pktg-emoji-item").forEach(b=> b.onclick = ()=>{
+    const input = $("#pktg-input");
+    if(!input) return;
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    input.value = input.value.slice(0, start) + b.textContent + input.value.slice(end);
+    input.focus();
+    const pos = start + b.textContent.length;
+    try{ input.setSelectionRange(pos, pos); }catch(e){}
+  });
 }
 
 /* ---------------------------------------------------------------------
@@ -4479,7 +5563,12 @@ document.addEventListener("touchend", e=>{
   if(now - lastTouchEnd <= 300){ e.preventDefault(); }
   lastTouchEnd = now;
 }, { passive:false });
-document.addEventListener("contextmenu", e=> e.preventDefault());
+document.addEventListener("contextmenu", e=>{
+  // Allow the custom long-press flow inside the Telegram feed, but block the
+  // native browser context menu everywhere else.
+  if(e.target.closest("#pktg-feed")){ e.preventDefault(); return; }
+  e.preventDefault();
+});
 
 /* ---------------------------------------------------------------------
    BOOTSTRAP
