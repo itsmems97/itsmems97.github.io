@@ -174,8 +174,10 @@ main{ padding-top:6px; }
 
 .empty-row{ margin:0 16px; padding:26px 16px; border-radius:var(--radius-l); border:1.5px dashed var(--border); color:var(--text-faint); font-size:13px; text-align:center; }
 
+/* ---- Sheet z-index raised ABOVE #pktg (95) so manage/members/codes sheets
+        opened from inside the Telegram channel UI actually appear on screen ---- */
 .sheet-backdrop{
-  position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.55);
+  position:fixed; inset:0; z-index:130; background:rgba(0,0,0,.55);
   backdrop-filter:blur(2px);
   display:flex; align-items:flex-end;
   animation:fadeIn .25s var(--ease-snap);
@@ -377,7 +379,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .danger-note{ margin:22px 18px 0; padding:12px 14px; border-radius:14px; background:rgba(255,92,108,.1); border:1px solid rgba(255,92,108,.3); font-size:12px; line-height:1.55; color:var(--text-dim); }
 .hint-p{ font-size:11.5px; color:var(--text-faint); margin:8px 18px 0; line-height:1.5; }
 
-.sheet-backdrop.dlg{ z-index:105; }
+.sheet-backdrop.dlg{ z-index:135; }
 .btn[disabled]{ opacity:.4; pointer-events:none; }
 .dlg-p{ font-size:13px; color:var(--text-dim); line-height:1.55; margin:0 0 14px; }
 .online{ color:#3ddc97 !important; }
@@ -388,7 +390,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .deny-banner ol{ margin:8px 0 0; padding-left:18px; color:var(--text-dim); }
 .deny-banner .row-top{ display:flex; align-items:center; gap:8px; }
 .deny-banner .row-top b{ flex:1; }
-.rules-banner{ position:fixed; left:12px; right:12px; top:calc(10px + var(--safe-top)); z-index:115; background:var(--surface); border:1px solid rgba(255,198,26,.5); border-radius:18px; padding:14px; box-shadow:var(--shadow); font-size:12.5px; line-height:1.55; }
+.rules-banner{ position:fixed; left:12px; right:12px; top:calc(10px + var(--safe-top)); z-index:125; background:var(--surface); border:1px solid rgba(255,198,26,.5); border-radius:18px; padding:14px; box-shadow:var(--shadow); font-size:12.5px; line-height:1.55; }
 .rules-banner b{ color:var(--accent); display:block; margin-bottom:4px; font-size:13px; }
 .rules-banner ol{ margin:8px 0 0; padding-left:18px; color:var(--text-dim); }
 .rules-banner .nb-x{ float:right; width:24px; height:24px; padding:0; color:var(--text-faint); }
@@ -452,23 +454,23 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 @keyframes ipSpring{ from{opacity:0; transform:scale(.8) translateY(20px)} to{opacity:1; transform:scale(1) translateY(0)} }
 
 /* =====================================================================
-   12. TELEGRAM-STYLE CHANNEL UI
+   TELEGRAM-STYLE CHANNEL UI
    ===================================================================== */
 #pktg{ position:fixed; inset:0; z-index:95; display:none; flex-direction:column; background:var(--bg); color:var(--text); font-family:var(--font); }
 #pktg.open{ display:flex; }
 .pktg-wallpaper{ position:absolute; inset:0; z-index:0; background-color:var(--bg); background-image: radial-gradient(circle at 20% 30%, rgba(255,198,26,.06), transparent 40%), radial-gradient(circle at 80% 70%, rgba(51,224,193,.06), transparent 40%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' opacity='0.05'%3E%3Cpath fill='%23FFFFFF' d='M20 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm40 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm35-15a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM15 65a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm85 10a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM50 85a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm40 25a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM20 105a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'/%3E%3C/svg%3E"); pointer-events:none; }
 .pktg-container{ position:relative; z-index:2; display:flex; flex-direction:column; height:100%; max-width:760px; margin:0 auto; width:100%; }
-.pktg-header{ display:flex; align-items:center; justify-content:space-between; padding:calc(8px + var(--safe-top)) 10px 8px; background:var(--glass); backdrop-filter:blur(20px) saturate(160%); -webkit-backdrop-filter:blur(20px) saturate(160%); border-bottom:1px solid var(--border); z-index:10; }
-.pktg-header-btn{ width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--text); flex-shrink:0; }
+.pktg-header{ display:flex; align-items:center; gap:4px; padding:calc(8px + var(--safe-top)) 8px 8px; background:var(--glass); backdrop-filter:blur(20px) saturate(160%); -webkit-backdrop-filter:blur(20px) saturate(160%); border-bottom:1px solid var(--border); z-index:10; position:relative; }
+.pktg-header-btn{ width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--text); flex-shrink:0; }
 .pktg-header-btn:active{ background:rgba(128,128,128,.15); }
-.pktg-info{ display:flex; align-items:center; gap:10px; background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:4px 14px 4px 5px; cursor:pointer; max-width:60%; min-width:0; }
+.pktg-info{ display:flex; align-items:center; gap:10px; background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:4px 12px 4px 5px; cursor:pointer; flex:1; min-width:0; max-width:100%; }
 .pktg-info:active{ transform:scale(.98); }
 .pktg-avatar{ width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#171200; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; flex-shrink:0; overflow:hidden; }
 .pktg-avatar img{ width:100%; height:100%; object-fit:cover; }
-.pktg-info-text{ display:flex; flex-direction:column; min-width:0; }
+.pktg-info-text{ display:flex; flex-direction:column; min-width:0; flex:1; }
 .pktg-info-title{ font-size:14px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1; }
 .pktg-info-sub{ font-size:11px; color:var(--text-faint); line-height:1.1; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pktg-actions{ display:flex; gap:2px; }
+.pktg-actions{ display:flex; gap:0; flex-shrink:0; align-items:center; }
 
 .pktg-feed{ flex:1; overflow-y:auto; overflow-x:hidden; padding:12px 12px 120px; display:flex; flex-direction:column; gap:8px; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; }
 .pktg-date-badge{ align-self:center; background:rgba(0,0,0,.35); color:#fff; font-size:11px; padding:4px 12px; border-radius:12px; backdrop-filter:blur(4px); margin:8px 0; font-weight:600; }
@@ -606,6 +608,12 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .pktg-search{ display:none; position:absolute; inset:0; z-index:22; background:var(--bg); padding:calc(10px + var(--safe-top)) 12px 10px; align-items:center; gap:8px; }
 .pktg-search.active{ display:flex; }
 .pktg-search input{ flex:1; border:1px solid var(--border); outline:none; background:var(--surface-2); color:var(--text); padding:10px 14px; border-radius:14px; font-size:15px; font-family:inherit; }
+
+.code-row{ display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); font-size:13px; }
+.code-row:last-child{ border-bottom:none; }
+.code-main{ flex:1; min-width:0; }
+.code-value{ display:block; font-size:14px; font-weight:700; letter-spacing:.06em; font-family:ui-monospace,Menlo,Consolas,monospace; }
+.code-meta{ display:block; margin-top:3px; font-size:11px; }
 </style>
 </head>
 <body>
@@ -1197,6 +1205,7 @@ const state = {
     return id;
   })(),
   uid: "",
+  authUid: "",   // the real Firebase uid (never "owner") — used for channel member-doc keys
   sessionId: "",
   verified: false,
   codes: [],
@@ -1334,7 +1343,7 @@ async function uploadAvatar(file){
   if(storageReady()){
     try{
       const f = new File([blob], "avatar.jpg", { type:"image/jpeg" });
-      const r = await uploadFileToServer(f, "avatar_" + state.uid, "icon", null);
+      const r = await uploadFileToServer(f, "avatar_" + (state.authUid || state.uid), "icon", null);
       return r.url + "?v=" + Date.now();
     }catch(e){ console.warn("VPS avatar upload failed, using inline fallback", e); }
   }
@@ -1540,6 +1549,7 @@ function googleDisplayName(user){
   return n;
 }
 async function applyIdentity(user){
+  state.authUid = user.uid;
   state.uid = user.uid;
   state.photoURL = user.photoURL || "";
   if(user.isAnonymous){
@@ -1947,7 +1957,7 @@ function boot(){
   watchConnectivity();
   startHeartbeat();
   if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: you can only download", "ic-lock"); }
-  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); toast("Owner control enabled", "ic-check"); }
+  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelMembers(); toast("Owner control enabled", "ic-check"); }
 }
 function listenSession(){
   if(!firebaseReady) return;
@@ -2008,6 +2018,25 @@ function listenUsers(){
 }
 function listenCodes(){
   onSnapshot(collection(db,"verifyCodes"), snap=>{ state.codes = snap.docs.map(d=>d.id).sort(); }, err=> console.warn("codes listener", err));
+}
+
+/** Owner-only one-time migration: moves any legacy member doc that was saved under the
+    permanent "owner" id to the real Firebase uid, so the Firestore rules — which always
+    key off request.auth.uid — can find it and the owner can post. Runs once per boot. */
+async function migrateChannelMembers(){
+  if(!state.isOwner || !state.authUid) return;
+  try{
+    const chSnap = await getDocs(query(collection(db,"channels"), where("ownerUid","==","owner")));
+    for(const ch of chSnap.docs){
+      const oldRef = doc(db,"channels",ch.id,"members","owner");
+      const newRef = doc(db,"channels",ch.id,"members",state.authUid);
+      const oldDoc = await getDoc(oldRef).catch(()=>null);
+      const newDoc = await getDoc(newRef).catch(()=>null);
+      if(oldDoc && oldDoc.exists() && (!newDoc || !newDoc.exists())){
+        try{ await setDoc(newRef, oldDoc.data()); await deleteDoc(oldRef); }catch(e){}
+      }
+    }
+  }catch(e){ console.warn("channel member migration", e); }
 }
 
 function initTheme(){
@@ -3628,7 +3657,7 @@ function initProfileActions(){
   });
   $("#my-uploads-list").addEventListener("click", async e=>{
     const b = e.target.closest("[data-del-app]"); if(!b) return;
-    const app = state.apps.find(a=>a.id === b.dataset.appDelApp || a.id === b.dataset.delApp);
+    const app = state.apps.find(a=>a.id === b.dataset.delApp);
     if(app) await deleteApp(app);
   });
 }
@@ -3643,6 +3672,12 @@ function randomCode(len = 12){
 }
 let channelViewUnsub = null, chMembersUnsub = null, chCodesUnsub = null;
 let channelDeepLinkDone = false;
+
+/** The key used for the current user's own channel member document. The Firestore rules always
+    key off request.auth.uid, so this must be the real Firebase uid — NOT "owner". */
+function myMemberKey(){
+  return (auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : state.uid;
+}
 
 function listenChannels(){
   if(!firebaseReady) return;
@@ -3659,9 +3694,10 @@ async function refreshMyChannels(){
   renderTelegramHome();
   if(!firebaseReady || !state.uid || state.isGuest){ state.myChannelsLoaded = true; applyChannelDeepLink(); return; }
   const entries = {};
+  const key = myMemberKey();
   await Promise.all(state.channels.map(async ch=>{
     try{
-      const s = await getDoc(doc(db,"channels",ch.id,"members",state.uid));
+      const s = await getDoc(doc(db,"channels",ch.id,"members",key));
       if(s.exists()) entries[ch.id] = s.data();
     }catch(e){}
   }));
@@ -3780,6 +3816,7 @@ async function joinChannelWithCode(channel, codeRaw){
   if(!code){ toast("Enter the code", "ic-close"); return false; }
   if(guestBlock("join a channel")) return false;
   if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return false; }
+  const memberKey = myMemberKey();
   try{
     await runTransaction(db, async tx=>{
       const codeRef = doc(db,"channelCodes",code);
@@ -3787,8 +3824,8 @@ async function joinChannelWithCode(channel, codeRaw){
       if(!codeSnap.exists() || codeSnap.data().channelId !== channel.id || codeSnap.data().used){
         const e = new Error("Wrong code"); e.code = "WRONGCODE"; throw e;
       }
-      tx.update(codeRef, { used:true, usedBy: state.uid, usedAt: serverTimestamp() });
-      tx.set(doc(db,"channels",channel.id,"members",state.uid), {
+      tx.update(codeRef, { used:true, usedBy: memberKey, usedAt: serverTimestamp() });
+      tx.set(doc(db,"channels",channel.id,"members",memberKey), {
         uid: state.uid, name: state.username, photoURL: state.photoURL || "",
         role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
       });
@@ -3810,6 +3847,7 @@ async function openCreateChannelSheet(){
   if(v === null) return;
   const nn = v.trim();
   if(nn.length < 3){ toast("Name is too short", "ic-close"); return; }
+  const memberKey = myMemberKey();
   try{
     const ref = doc(collection(db,"channels"));
     await setDoc(ref, {
@@ -3817,7 +3855,7 @@ async function openCreateChannelSheet(){
       ownerUid: state.uid, ownerName: state.username,
       memberCount: 1, createdAt: serverTimestamp(), createdAtMs: Date.now()
     });
-    await setDoc(doc(db,"channels",ref.id,"members",state.uid), {
+    await setDoc(doc(db,"channels",ref.id,"members",memberKey), {
       uid: state.uid, name: state.username, photoURL: state.photoURL || "",
       role: "owner", blocked: false, joinedAt: serverTimestamp(), viaCode: "owner"
     });
@@ -3835,7 +3873,7 @@ async function copyChannelLink(ch){
 async function leaveChannel(channelId){
   if(!(await confirmSheet("Leave this channel?", "You'll need a new code to rejoin.", "Leave"))) return;
   try{
-    await deleteDoc(doc(db,"channels",channelId,"members",state.uid));
+    await deleteDoc(doc(db,"channels",channelId,"members",myMemberKey()));
     await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
     toast("You left the channel");
     closeTelegramChannel();
@@ -3872,7 +3910,9 @@ function openUserPicker(onPick){
 }
 function openChannelManageSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId);
-  if(!ch || (ch.ownerUid !== state.uid && !state.isOwner)) return;
+  if(!ch) return;
+  const isOwnerHere = ch.ownerUid === state.uid || state.isOwner;
+  if(!isOwnerHere) return;
   const html = `
   <div class="sheet-backdrop" id="chman-backdrop">
     <div class="sheet">
@@ -3997,7 +4037,7 @@ function openChannelCodesSheet(channelId){
       <div class="sheet-handle"></div>
       <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       <h3 style="padding:22px 18px 6px;margin:0;font-size:17px">Secret codes</h3>
-      <p class="hint-p" style="margin-bottom:12px">Give a code to one person so they can join "${escapeHtml(ch.name)}". Each code works once.</p>
+      <p class="hint-p" style="margin-bottom:12px">Give a code to one person so they can join "${escapeHtml(ch.name)}". Each code works once. Codes stay listed here forever — used or unused.</p>
       <div class="settings-list" id="chcodes-list" style="margin:0 14px 10px;overflow-y:auto"></div>
       <div style="padding:12px 18px 24px"><button class="btn btn-primary btn-block" id="chcodes-add">Generate new code</button></div>
     </div>
@@ -4008,11 +4048,21 @@ function openChannelCodesSheet(channelId){
   chCodesUnsub = onSnapshot(query(collection(db,"channelCodes"), where("channelId","==",channelId)), snap=>{
     const codes = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
     const box = $("#chcodes-list"); if(!box) return;
-    box.innerHTML = codes.map(c=>`
-      <div class="mini-row">
-        <div class="mini-main"><b class="mono">${escapeHtml(c.id)}</b><small style="color:${c.used?"var(--danger)":"var(--accent-2)"}">${c.used?"used":"unused"}</small></div>
-        <button class="icon-del" data-copy-code="${escapeHtml(c.id)}" title="Copy" style="color:var(--accent-2)"><svg style="color:var(--accent-2) !important"><use href="#ic-copy"/></svg></button>
-      </div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No codes yet.</div>`;
+    box.innerHTML = codes.map(c=>{
+      const usedByUser = c.usedBy ? state.users[c.usedBy] : null;
+      const usedByName = usedByUser && usedByUser.name ? usedByUser.name : (c.usedBy ? "Unknown member" : "");
+      const statusColor = c.used ? "var(--danger)" : "var(--accent-2)";
+      const statusText = c.used ? "Used" : "Unused";
+      return `<div class="code-row">
+        <div class="code-main">
+          <span class="code-value">${escapeHtml(c.id)}</span>
+          <span class="code-meta" style="color:${statusColor}">
+            <b style="color:inherit">${statusText}</b>${usedByName ? ` • joined by <span style="color:var(--text-dim);font-weight:600">${escapeHtml(usedByName)}</span>` : ""}
+          </span>
+        </div>
+        <button class="icon-del" data-copy-code="${escapeHtml(c.id)}" title="Copy code"><svg style="color:var(--accent-2) !important"><use href="#ic-copy"/></svg></button>
+      </div>`;
+    }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No codes yet.</div>`;
   }, err=> console.warn("channel codes listener", err));
   wrap.addEventListener("click", async e=>{
     if(e.target === wrap || e.target.closest("[data-close]")){ if(chCodesUnsub){ chCodesUnsub(); chCodesUnsub = null; } wrap.remove(); return; }
@@ -4037,7 +4087,7 @@ async function deleteChannelForever(ch){
 }
 
 /* =====================================================================
-   TELEGRAM UI — full flow (list, conversation, manage, voice, uploads)
+   TELEGRAM UI
    ===================================================================== */
 const EMOJI_CATEGORIES = {
   '😀': '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😙 😚 😋 😛 😝 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🤭 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👹 👺 🤡 💩 👻 💀 ☠️ 👽 👾 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾'.split(' '),
@@ -4444,7 +4494,6 @@ async function tgDownloadMessage(m){
   }
 }
 
-/* ---------- Send text OR record voice ---------- */
 function tgSendOrRecord(){
   const input = $("#pktg-input");
   const text = input ? input.value.trim() : "";
@@ -4497,7 +4546,6 @@ function updateTgReplyBar(){
   $("#pktg-reply-preview").textContent = tgMsgLabel(state.tg.replyTo);
 }
 
-/* ---------- Voice recording ---------- */
 async function startVoiceRecording(){
   if(!state.tg.channelId){ toast("Open a channel first", "ic-close"); return; }
   if(guestBlock("send voice messages")) return;
@@ -4621,7 +4669,6 @@ async function sendVoiceBlob(blob, durationSec){
   }
 }
 
-/* ---------- File upload ---------- */
 async function tgHandleFile(e, kind){
   const file = e.target.files?.[0];
   e.target.value = "";
