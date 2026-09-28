@@ -641,25 +641,29 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
    ===================================================================== */
 .pktg-fmt-toolbar{
   position: fixed;
-  z-index: 200;
+  left: 10px;
+  right: 10px;
+  bottom: calc(78px + var(--safe-bottom));
+  z-index: 500;
   display: none;
   align-items: center;
+  justify-content: space-around;
   gap: 2px;
-  padding: 4px;
+  padding: 6px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.55);
   animation: pktgFmtIn .18s ease;
 }
 .pktg-fmt-toolbar.active{ display: flex; }
 @keyframes pktgFmtIn{ from{ opacity:0; transform: translateY(6px) scale(.96); } to{ opacity:1; transform: none; } }
 .pktg-fmt-btn{
-  display: flex; align-items: center; justify-content: center;
-  min-width: 40px; height: 40px; padding: 0 10px;
-  border-radius: 11px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 58px; height: 54px; padding: 4px 6px;
+  border-radius: 12px;
   background: transparent; color: var(--text);
-  font-size: 14px; font-weight: 700;
+  font-weight: 700; gap: 2px; flex: 1;
   transition: background .12s;
 }
 .pktg-fmt-btn:active{ background: var(--surface-2); }
@@ -1088,28 +1092,30 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 
 <!-- Inline formatting toolbar -->
 <div class="pktg-fmt-toolbar" id="pktg-fmt-toolbar">
-  <button class="pktg-fmt-btn pktg-fmt-b" data-fmt="bold" title="Bold" type="button">B</button>
-  <button class="pktg-fmt-btn pktg-fmt-i" data-fmt="italic" title="Italic" type="button">I</button>
-  <button class="pktg-fmt-btn pktg-fmt-m" data-fmt="mono" title="Mono" type="button">&lt;/&gt;</button>
-  <button class="pktg-fmt-btn pktg-fmt-s" data-fmt="spoiler" title="Spoiler" type="button">||·||</button>
-  <div class="pktg-fmt-sep"></div>
-  <button class="pktg-fmt-btn" data-fmt="link" title="Create link" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" stroke-linecap="round"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5" stroke-linecap="round"/></svg></button>
+  <button class="pktg-fmt-btn" data-fmt="bold" type="button">
+    <b style="font-size:18px;">B</b>
+    <span style="font-size:9px;font-weight:600;color:var(--text-faint);">Bold</span>
+  </button>
+  <button class="pktg-fmt-btn" data-fmt="italic" type="button">
+    <i style="font-size:18px;font-family:Georgia,serif;">I</i>
+    <span style="font-size:9px;font-weight:600;color:var(--text-faint);">Italic</span>
+  </button>
+  <button class="pktg-fmt-btn" data-fmt="mono" type="button">
+    <span style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;">&lt;/&gt;</span>
+    <span style="font-size:9px;font-weight:600;color:var(--text-faint);">Mono</span>
+  </button>
+  <button class="pktg-fmt-btn" data-fmt="spoiler" type="button">
+    <span style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;">▮▮▮</span>
+    <span style="font-size:9px;font-weight:600;color:var(--text-faint);">Spoiler</span>
+  </button>
+  <button class="pktg-fmt-btn" data-fmt="link" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+      <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" stroke-linecap="round"/>
+      <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5" stroke-linecap="round"/>
+    </svg>
+    <span style="font-size:9px;font-weight:600;color:var(--text-faint);">Link</span>
+  </button>
 </div>
-<template id="tmpl-app-card">
-  <div class="app-card tappable">
-    <div class="icon-wrap">
-      <span class="rank" hidden></span>
-      <img alt="" />
-      <span class="fmt-badge"></span>
-    </div>
-    <div class="name"></div>
-    <div class="meta"><svg width="11" height="11"><use href="#ic-download"/></svg><span></span></div>
-  </div>
-</template>
-
-<div id="search-panel" hidden></div>
-
-<script type="module">
 /* =====================================================================
    PIKA STORE — APPLICATION LOGIC
    ===================================================================== */
@@ -4233,9 +4239,8 @@ function initFmtToolbar(){
     hide();
   };
 
-  // Prevent focus loss when tapping toolbar
-  toolbar.addEventListener("mousedown", e=> e.preventDefault());
-  toolbar.addEventListener("touchstart", e=> e.preventDefault(), { passive: false });
+  // Prevent focus loss when tapping toolbar (without blocking clicks)
+toolbar.addEventListener("pointerdown", e=> e.preventDefault());
 
   toolbar.addEventListener("click", async (e)=>{
     const btn = e.target.closest("[data-fmt]");
