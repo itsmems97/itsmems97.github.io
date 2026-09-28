@@ -1037,11 +1037,12 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 </div>
       </div>
       <div class="pktg-bar" id="pktg-bar">
-        <button class="pktg-action-btn" id="pktg-emoji-btn" aria-label="Emoji"><svg><use href="#ic-emoji"/></svg></button>
-        <textarea class="pktg-input" id="pktg-input" rows="1" placeholder="Broadcast"></textarea>
-        <button class="pktg-action-btn" id="pktg-attach-btn" aria-label="Attach"><svg><use href="#ic-clip"/></svg></button>
-        <button class="pktg-action-btn pktg-send" id="pktg-send-btn" aria-label="Send"><svg id="pktg-send-icon"><use href="#ic-mic"/></svg></button>
-      </div>
+  <button class="pktg-action-btn" id="pktg-emoji-btn" aria-label="Emoji"><svg><use href="#ic-emoji"/></svg></button>
+  <textarea class="pktg-input" id="pktg-input" rows="1" placeholder="Broadcast"></textarea>
+  <button class="pktg-action-btn" id="pktg-fmt-btn-manual" aria-label="Format text" title="Format selected text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 20V4h6a4 4 0 0 1 0 8H6" stroke-linecap="round"/><path d="M6 12h7a4 4 0 0 1 0 8H6" stroke-linecap="round"/></svg></button>
+  <button class="pktg-action-btn" id="pktg-attach-btn" aria-label="Attach"><svg><use href="#ic-clip"/></svg></button>
+  <button class="pktg-action-btn pktg-send" id="pktg-send-btn" aria-label="Send"><svg id="pktg-send-icon"><use href="#ic-mic"/></svg></button>
+</div>
       <div class="pktg-rec-bar" id="pktg-rec-bar">
         <button class="pktg-rec-cancel" id="pktg-rec-cancel" aria-label="Cancel recording" type="button"><svg><use href="#ic-trash"/></svg></button>
         <div class="pktg-rec-info">
@@ -4112,44 +4113,181 @@ function initFmtToolbar(){
   if(!toolbar || !input) return;
 
   let savedSel = { start: 0, end: 0 };
+  let lastSelection = { start: 0, end: 0 };
   let hideTimer = null;
+  let pollingTimer = null;
 
   const hide = ()=>{ toolbar.classList.remove("active"); };
+  const isToolbarActive = ()=> toolbar.classList.contains("active");
 
   const showAt = (x, y)=>{
     toolbar.style.left = x + "px";
     toolbar.style.top = y + "px";
     toolbar.classList.add("active");
-    // Keep on-screen
     requestAnimationFrame(()=>{
       const r = toolbar.getBoundingClientRect();
       let nx = x, ny = y;
       if(r.right > window.innerWidth - 8) nx = window.innerWidth - r.width - 8;
       if(r.left < 8) nx = 8;
       if(r.top < 60) ny = 60;
+      if(r.bottom > window.innerHeight - 8) ny = window.innerHeight - r.height - 8;
       toolbar.style.left = nx + "px";
       toolbar.style.top = ny + "px";
     });
   };
 
-  const updateForSelection = ()=>{
-    if(document.activeElement !== input) { hide(); return; }
+  const tryShow = ()=>{
+    if(document.activeElement !== input) return;
     const start = input.selectionStart;
     const end = input.selectionEnd;
-    if(start == null || end == null || start === end){ hide(); return; }
+    if(start == null || end == null || start === end) return;
     savedSel = { start, end };
-    // Position above the caret area (approximate via range rect)
-    const range = document.createRange();
+    let rect = null;
     try{
+      const range = document.createRange();
       range.setStart(input, Math.min(start, input.value.length));
       range.setEnd(input, Math.min(end, input.value.length));
-    }catch(e){ return; }
-    const rect = range.getBoundingClientRect();
-    if(!rect || (rect.width === 0 && rect.height === 0)) return;
+      rect = range.getBoundingClientRect();
+    }catch(e){}
+    if(!rect || (rect.width === 0 && rect.height === 0)){
+      rect = input.getBoundingClientRect();
+    }
     const cx = rect.left + rect.width / 2;
     const topY = Math.max(70, rect.top - 52);
     showAt(cx - 160, topY);
   };
+
+  // 1. selectionchange on document (most reliable — fires on all browsers)
+  document.addEventListener("selectionchange", ()=>{
+    if(document.activeElement !== input) return;
+    const s = input.selectionStart, e = input.selectionEnd;
+    if(s == null || e == null || s === e) return;
+    if(hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(tryShow, 300);
+  });
+
+  // 2. select event on input
+  input.addEventListener("select", ()=>{
+    if(hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(tryShow, 250);
+  });
+
+  // 3. touchend — mobile delay for native selection to settle
+  input.addEventListener("touchend", ()=>{
+    if(hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(tryShow, 450);
+  });
+
+  // 4. mouseup for desktop
+  input.addEventListener("mouseup", ()=>{
+    if(hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(tryShow, 50);
+  });
+
+  // 5. Polling fallback — checks every 500ms
+  pollingTimer = setInterval(()=>{
+    if(document.activeElement !== input) return;
+    if(isToolbarActive()) return;
+    const s = input.selectionStart, e = input.selectionEnd;
+    if(s == null || e == null || s === e) return;
+    if(s === lastSelection.start && e === lastSelection.end) return;
+    lastSelection = { start: s, end: e };
+    tryShow();
+  }, 500);
+
+  // Hide on scroll (capture phase)
+  document.addEventListener("scroll", ()=>{ if(isToolbarActive()) hide(); }, true);
+
+  // Hide when input loses focus
+  input.addEventListener("blur", ()=>{
+    setTimeout(()=>{
+      if(!isToolbarActive()) return;
+      if(document.activeElement !== input) hide();
+    }, 200);
+  });
+
+  const applyWrap = (before, after)=>{
+    const { start, end } = savedSel;
+    const v = input.value;
+    if(start === end || start > v.length || end > v.length) return;
+    const inner = v.slice(start, end);
+    const alreadyWrapped = v.slice(Math.max(0, start - before.length), start) === before &&
+                           v.slice(end, end + after.length) === after;
+    let newStart = start, newEnd = end, newVal;
+    if(alreadyWrapped){
+      newVal = v.slice(0, start - before.length) + inner + v.slice(end + after.length);
+      newStart = start - before.length;
+      newEnd = newStart + inner.length;
+    } else {
+      newVal = v.slice(0, start) + before + inner + after + v.slice(end);
+      newStart = start + before.length;
+      newEnd = newStart + inner.length;
+    }
+    input.value = newVal;
+    input.focus();
+    try{ input.setSelectionRange(newStart, newEnd); }catch(e){}
+    savedSel = { start: newStart, end: newEnd };
+    lastSelection = { start: newStart, end: newEnd };
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    updateSendBtnIcon();
+    hide();
+  };
+
+  // Prevent focus loss when tapping toolbar
+  toolbar.addEventListener("mousedown", e=> e.preventDefault());
+  toolbar.addEventListener("touchstart", e=> e.preventDefault(), { passive: false });
+
+  toolbar.addEventListener("click", async (e)=>{
+    const btn = e.target.closest("[data-fmt]");
+    if(!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const fmt = btn.dataset.fmt;
+    if(fmt === "bold") applyWrap("**", "**");
+    else if(fmt === "italic") applyWrap("_", "_");
+    else if(fmt === "mono") applyWrap("`", "`");
+    else if(fmt === "spoiler") applyWrap("||", "||");
+    else if(fmt === "link"){
+      const { start, end } = savedSel;
+      const v = input.value;
+      if(start === end || start > v.length || end > v.length) return;
+      const inner = v.slice(start, end);
+      const url = await askText({ title:"Create link", placeholder:"https://example.com", max:500, okLabel:"Add link" });
+      if(!url) return;
+      let u = url.trim();
+      if(!/^https?:\/\//i.test(u)) u = "https://" + u;
+      const wrapped = `[${inner}](${u})`;
+      const newVal = v.slice(0, start) + wrapped + v.slice(end);
+      const newEnd = start + wrapped.length;
+      input.value = newVal;
+      input.focus();
+      try{ input.setSelectionRange(newEnd, newEnd); }catch(e){}
+      savedSel = { start: newEnd, end: newEnd };
+      lastSelection = { start: newEnd, end: newEnd };
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      updateSendBtnIcon();
+      hide();
+    }
+  });
+
+  // Manual fallback button (📝 in composer)
+  const manualBtn = document.getElementById("pktg-fmt-btn-manual");
+  if(manualBtn){
+    manualBtn.addEventListener("click", ()=>{
+      const s = input.selectionStart, e = input.selectionEnd;
+      if(s == null || e == null || s === e){
+        toast("Select text first", "ic-close");
+        input.focus();
+        return;
+      }
+      savedSel = { start: s, end: e };
+      const rect = input.getBoundingClientRect();
+      const topY = Math.max(70, rect.top - 52);
+      const cx = rect.left + rect.width / 2;
+      showAt(cx - 160, topY);
+    });
+  }
+}
 
   // Trigger on selection changes while typing / selecting
   input.addEventListener("select", updateForSelection);
@@ -4192,35 +4330,25 @@ function initFmtToolbar(){
   toolbar.addEventListener("touchstart", e=> e.preventDefault(), { passive: false });
 
   toolbar.addEventListener("click", async (e)=>{
-    const btn = e.target.closest("[data-fmt]");
-    if(!btn) return;
-    const fmt = btn.dataset.fmt;
-    if(fmt === "bold") applyWrap("**", "**");
-    else if(fmt === "italic") applyWrap("_", "_");
-    else if(fmt === "mono") applyWrap("`", "`");
-    else if(fmt === "spoiler") applyWrap("||", "||");
-    else if(fmt === "link"){
-      const { start, end } = savedSel;
-      const v = input.value;
-      if(start === end) return;
-      const inner = v.slice(start, end);
-      // Prompt for URL using the app's own styled dialog
-      const url = await askText({ title:"Create link", placeholder:"https://example.com", max:500, okLabel:"Add link" });
-      if(!url) return;
-      let u = url.trim();
-      if(!/^https?:\/\//i.test(u)) u = "https://" + u;
-      const wrapped = `[${inner}](${u})`;
-      const newVal = v.slice(0, start) + wrapped + v.slice(end);
-      const newEnd = start + wrapped.length;
-      input.value = newVal;
-      input.focus();
-      try{ input.setSelectionRange(newEnd, newEnd); }catch(e){}
-      savedSel = { start: newEnd, end: newEnd };
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      updateSendBtnIcon();
-      hide();
-    }
-  });
+      // Manual fallback button (📝 in composer)
+  const manualBtn = document.getElementById("pktg-fmt-btn-manual");
+  if(manualBtn){
+    manualBtn.addEventListener("click", ()=>{
+      // Refresh selection from current input state
+      const s = input.selectionStart, e = input.selectionEnd;
+      if(s == null || e == null || s === e){
+        toast("Pehle kuch text select karo", "ic-close");
+        input.focus();
+        return;
+      }
+      savedSel = { start: s, end: e };
+      // Show toolbar near the input
+      const rect = input.getBoundingClientRect();
+      const topY = Math.max(70, rect.top - 52);
+      const cx = rect.left + rect.width / 2;
+      showAt(cx - 160, topY);
+    });
+  }
 }
 function updateSendBtnIcon(){
   const input = $("#pktg-input");
