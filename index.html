@@ -174,8 +174,6 @@ main{ padding-top:6px; }
 
 .empty-row{ margin:0 16px; padding:26px 16px; border-radius:var(--radius-l); border:1.5px dashed var(--border); color:var(--text-faint); font-size:13px; text-align:center; }
 
-/* ---- Sheet z-index raised ABOVE #pktg (95) so manage/members/codes sheets
-        opened from inside the Telegram channel UI actually appear on screen ---- */
 .sheet-backdrop{
   position:fixed; inset:0; z-index:130; background:rgba(0,0,0,.55);
   backdrop-filter:blur(2px);
@@ -609,11 +607,16 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .pktg-search.active{ display:flex; }
 .pktg-search input{ flex:1; border:1px solid var(--border); outline:none; background:var(--surface-2); color:var(--text); padding:10px 14px; border-radius:14px; font-size:15px; font-family:inherit; }
 
+/* Read-only mode for channel members (non-owners): hide composer entirely */
+#pktg-conv.pktg-readonly .pktg-composer{ display:none; }
+#pktg-conv.pktg-readonly .pktg-feed{ padding-bottom:24px; }
+
 .code-row{ display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); font-size:13px; }
 .code-row:last-child{ border-bottom:none; }
 .code-main{ flex:1; min-width:0; }
-.code-value{ display:block; font-size:14px; font-weight:700; letter-spacing:.06em; font-family:ui-monospace,Menlo,Consolas,monospace; }
+.code-value{ display:block; font-size:14px; font-weight:700; letter-spacing:.06em; font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--text); }
 .code-meta{ display:block; margin-top:3px; font-size:11px; }
+.code-meta b{ font-weight:800; }
 </style>
 </head>
 <body>
@@ -1049,11 +1052,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
     <div class="pktg-viewer-body"><img id="pktg-viewer-img" alt="" src=""></div>
   </div>
 
-  <div class="pktg-ctx" id="pktg-ctx">
-    <button class="pktg-ctx-item" data-ctx="reply"><svg><use href="#ic-chat"/></svg> Reply</button>
-    <button class="pktg-ctx-item" data-ctx="copy"><svg><use href="#ic-copy"/></svg> Copy</button>
-    <button class="pktg-ctx-item pktg-danger" data-ctx="delete"><svg><use href="#ic-trash"/></svg> Delete</button>
-  </div>
+  <div class="pktg-ctx" id="pktg-ctx"></div>
 </div>
 
 <template id="tmpl-app-card">
@@ -1100,7 +1099,7 @@ const CONFIG = {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   initializeFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, increment,
-  onSnapshot, query, orderBy, limit, serverTimestamp, where, runTransaction,
+  onSnapshot, query, orderBy, limit, serverTimestamp, where, runTransaction, arrayUnion,
   enableNetwork, disableNetwork, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, reauthenticateWithPopup, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -1205,7 +1204,7 @@ const state = {
     return id;
   })(),
   uid: "",
-  authUid: "",   // the real Firebase uid (never "owner") — used for channel member-doc keys
+  authUid: "",
   sessionId: "",
   verified: false,
   codes: [],
@@ -1286,8 +1285,8 @@ function rulesBanner(msg){
     ${escapeHtml(msg || "")}
     <ol>
       <li>Open Firebase Console → Firestore Database → Rules.</li>
-      <li>Add the <b>channelMessages</b> and <b>typing</b> rules (see guide).</li>
-      <li>Click Publish, then try again.</li>
+      <li>Publish the current rules from your guide.</li>
+      <li>Retry after 30 seconds.</li>
     </ol>`;
   document.body.appendChild(b);
   b.querySelector(".nb-x").addEventListener("click", ()=> b.remove());
@@ -2021,7 +2020,7 @@ function listenCodes(){
 }
 
 /** Owner-only one-time migration: moves any legacy member doc that was saved under the
-    permanent "owner" id to the real Firebase uid, so the Firestore rules — which always
+    permanent "owner" id to the real Firebase uid, so Firestore rules — which always
     key off request.auth.uid — can find it and the owner can post. Runs once per boot. */
 async function migrateChannelMembers(){
   if(!state.isOwner || !state.authUid) return;
@@ -3670,13 +3669,21 @@ function randomCode(len = 12){
   const arr = crypto.getRandomValues(new Uint32Array(len));
   return Array.from(arr, n => CODE_CHARS[n % CODE_CHARS.length]).join("");
 }
-let channelViewUnsub = null, chMembersUnsub = null, chCodesUnsub = null;
+let channelViewUnsub = null, chMembersUnsub = null, chCodesUnsub = null, chDocUnsub = null;
 let channelDeepLinkDone = false;
 
-/** The key used for the current user's own channel member document. The Firestore rules always
+/** The key used for the current user's own channel member document. Firestore rules always
     key off request.auth.uid, so this must be the real Firebase uid — NOT "owner". */
 function myMemberKey(){
   return (auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : state.uid;
+}
+
+/** True when the given channel is owned by the signed-in user (either the store owner
+    with full admin access, or a normal user whose real uid matches channel.ownerUid). */
+function isChannelOwner(ch){
+  if(!ch) return false;
+  if(state.isOwner) return true;
+  return ch.ownerUid === state.uid || ch.ownerUid === state.authUid;
 }
 
 function listenChannels(){
@@ -3687,6 +3694,11 @@ function listenChannels(){
     state.channelsLoaded = true;
     refreshMyChannels();
     renderTelegramHome();
+    // if owner is looking at a channel that just changed (e.g. new code), the codes sheet picks it up.
+    if(state.tg.panelOpen && state.tg.channelId){
+      const fresh = state.channels.find(c=>c.id === state.tg.channelId);
+      if(fresh) state.tg.channel = fresh;
+    }
   }, err=>{ console.warn("channels listener", err); toast(`Channels sync error: ${err.code||""}`, "ic-close"); });
 }
 async function refreshMyChannels(){
@@ -3750,7 +3762,7 @@ function openChannelEntry(channelId){
   if(guestBlock("open channels")) return;
   const ch = state.channels.find(c=>c.id===channelId);
   if(!ch) return;
-  if(state.isOwner){ openTelegramChannel(channelId); return; }
+  if(isChannelOwner(ch)){ openTelegramChannel(channelId); return; }
   const mine = state.myChannels[channelId];
   if(mine){
     if(mine.blocked){
@@ -3853,7 +3865,8 @@ async function openCreateChannelSheet(){
     await setDoc(ref, {
       name: nn, nameLower: lowerName(nn), photoURL: "",
       ownerUid: state.uid, ownerName: state.username,
-      memberCount: 1, createdAt: serverTimestamp(), createdAtMs: Date.now()
+      memberCount: 1, codeIds: [],
+      createdAt: serverTimestamp(), createdAtMs: Date.now()
     });
     await setDoc(doc(db,"channels",ref.id,"members",memberKey), {
       uid: state.uid, name: state.username, photoURL: state.photoURL || "",
@@ -3869,15 +3882,6 @@ async function copyChannelLink(ch){
   const url = `${location.origin}${location.pathname}?channel=${ch.id}`;
   const ok = await copyText(url);
   toast(ok ? "Channel link copied" : "Could not copy");
-}
-async function leaveChannel(channelId){
-  if(!(await confirmSheet("Leave this channel?", "You'll need a new code to rejoin.", "Leave"))) return;
-  try{
-    await deleteDoc(doc(db,"channels",channelId,"members",myMemberKey()));
-    await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
-    toast("You left the channel");
-    closeTelegramChannel();
-  }catch(e){ toast("Failed", "ic-close"); }
 }
 function openUserPicker(onPick){
   const html = `
@@ -3908,11 +3912,12 @@ function openUserPicker(onPick){
     if(r){ const uid = r.dataset.pick, u = state.users[uid]; wrap.remove(); if(u) onPick({ id:uid, name:u.name, photoURL:u.photoURL }); }
   });
 }
+
+/** Owner-only Manage sheet: rename, photo, members, add, codes, delete. */
 function openChannelManageSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId);
   if(!ch) return;
-  const isOwnerHere = ch.ownerUid === state.uid || state.isOwner;
-  if(!isOwnerHere) return;
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can manage this channel", "ic-close"); return; }
   const html = `
   <div class="sheet-backdrop" id="chman-backdrop">
     <div class="sheet">
@@ -3974,6 +3979,7 @@ function openChannelManageSheet(channelId){
 function openChannelMembersSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId);
   if(!ch) return;
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can manage members", "ic-close"); return; }
   const html = `
   <div class="sheet-backdrop" id="chmem-backdrop">
     <div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
@@ -4017,60 +4023,143 @@ function openChannelMembersSheet(channelId){
 async function generateUniqueChannelCode(channelId, channelName){
   for(let i=0;i<6;i++){
     const code = randomCode(12);
+    let created = false;
     try{
+      // 1. Create the code doc first (source of truth for joining).
       await setDoc(doc(db,"channelCodes",code), {
-        channelId, channelName, createdBy: state.uid,
+        channelId, channelName, createdBy: state.authUid || state.uid,
         createdAt: serverTimestamp(), createdAtMs: Date.now(),
         used:false, usedBy:null, usedAt:null
       });
+      created = true;
+      // 2. Append the code's ID to the channel's codeIds array so we can list them later
+      //    even though the rules don't allow LIST on the channelCodes collection.
+      await updateDoc(doc(db,"channels",channelId), { codeIds: arrayUnion(code) });
       return code;
-    }catch(e){ continue; }
+    }catch(e){
+      console.warn("Code generation attempt failed", e);
+      if(created){
+        // Orphaned code doc — best effort cleanup is not possible with current rules,
+        // so just skip and try another code.
+      }
+      continue;
+    }
   }
   throw new Error("Could not generate a unique code");
 }
+/** Owner-only Secret Codes sheet. Reads channel.codeIds, then getDoc()s each code
+    document individually (rules allow single-doc get, so this works where LIST doesn't). */
 function openChannelCodesSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId);
   if(!ch) return;
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can view secret codes", "ic-close"); return; }
   const html = `
   <div class="sheet-backdrop" id="chcodes-backdrop">
     <div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
       <div class="sheet-handle"></div>
       <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       <h3 style="padding:22px 18px 6px;margin:0;font-size:17px">Secret codes</h3>
-      <p class="hint-p" style="margin-bottom:12px">Give a code to one person so they can join "${escapeHtml(ch.name)}". Each code works once. Codes stay listed here forever — used or unused.</p>
-      <div class="settings-list" id="chcodes-list" style="margin:0 14px 10px;overflow-y:auto"></div>
+      <p class="hint-p" style="margin-bottom:12px">Every code you generate stays listed here forever. Give one code to one person — it works only once.</p>
+      <div class="settings-list" id="chcodes-list" style="margin:0 14px 10px;overflow-y:auto"><div class="mini-row" style="color:var(--text-faint)">Loading…</div></div>
       <div style="padding:12px 18px 24px"><button class="btn btn-primary btn-block" id="chcodes-add">Generate new code</button></div>
     </div>
   </div>`;
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#chcodes-backdrop");
+
+  // Cancel any previous listener.
   if(chCodesUnsub){ chCodesUnsub(); chCodesUnsub = null; }
-  chCodesUnsub = onSnapshot(query(collection(db,"channelCodes"), where("channelId","==",channelId)), snap=>{
-    const codes = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
+  if(chDocUnsub){ chDocUnsub(); chDocUnsub = null; }
+
+  let codeIds = [];
+  const codeData = {};   // id -> {used, usedBy, ...} | null while loading | "missing"
+
+  function render(){
     const box = $("#chcodes-list"); if(!box) return;
-    box.innerHTML = codes.map(c=>{
-      const usedByUser = c.usedBy ? state.users[c.usedBy] : null;
-      const usedByName = usedByUser && usedByUser.name ? usedByUser.name : (c.usedBy ? "Unknown member" : "");
-      const statusColor = c.used ? "var(--danger)" : "var(--accent-2)";
-      const statusText = c.used ? "Used" : "Unused";
+    if(!codeIds.length){
+      box.innerHTML = `<div class="mini-row" style="color:var(--text-faint)">No codes yet. Tap "Generate new code" to make one.</div>`;
+      return;
+    }
+    box.innerHTML = codeIds.map(id=>{
+      const c = codeData[id];
+      const used = c && c !== "loading" && c !== "missing" && c.used;
+      const statusColor = used ? "var(--danger)" : "var(--accent-2)";
+      const statusText = used ? "Used" : "Unused";
+      let joinedBy = "";
+      if(used && c && c.usedBy){
+        const u = state.users[c.usedBy];
+        joinedBy = (u && u.name) ? u.name : "a member";
+      }
+      const metaLine = used && joinedBy
+        ? `<b style="color:${statusColor}">Used</b> • joined by <span style="color:var(--text-dim);font-weight:600">${escapeHtml(joinedBy)}</span>`
+        : `<b style="color:${statusColor}">${statusText}</b>`;
       return `<div class="code-row">
         <div class="code-main">
-          <span class="code-value">${escapeHtml(c.id)}</span>
-          <span class="code-meta" style="color:${statusColor}">
-            <b style="color:inherit">${statusText}</b>${usedByName ? ` • joined by <span style="color:var(--text-dim);font-weight:600">${escapeHtml(usedByName)}</span>` : ""}
-          </span>
+          <span class="code-value">${escapeHtml(id)}</span>
+          <span class="code-meta">${metaLine}</span>
         </div>
-        <button class="icon-del" data-copy-code="${escapeHtml(c.id)}" title="Copy code"><svg style="color:var(--accent-2) !important"><use href="#ic-copy"/></svg></button>
+        <button class="icon-del" data-copy-code="${escapeHtml(id)}" title="Copy code" style="color:var(--accent-2)"><svg style="color:var(--accent-2) !important"><use href="#ic-copy"/></svg></button>
       </div>`;
-    }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No codes yet.</div>`;
-  }, err=> console.warn("channel codes listener", err));
+    }).join("");
+  }
+
+  async function loadAll(ids){
+    codeIds = ids.slice().reverse(); // newest first (codeIds is append-order)
+    codeIds.forEach(id=>{ if(!(id in codeData)) codeData[id] = "loading"; });
+    render();
+    await Promise.all(codeIds.map(async id=>{
+      if(codeData[id] !== "loading") return;
+      try{
+        const s = await getDoc(doc(db,"channelCodes",id));
+        codeData[id] = s.exists() ? s.data() : "missing";
+      }catch(e){
+        codeData[id] = "missing";
+      }
+      render();
+    }));
+  }
+
+  // Snapshot the channel doc so we re-render whenever codeIds changes (e.g. owner
+  // generates a new code while this sheet is open) and whenever a code doc is
+  // updated (Firestore will not push individual channelCodes changes here, so the
+  // channel-doc listener covers "new code added" and periodic re-fetches cover "code used").
+  chDocUnsub = onSnapshot(doc(db,"channels",channelId), s=>{
+    const fresh = s.exists() ? s.data() : null;
+    const ids = (fresh && Array.isArray(fresh.codeIds)) ? fresh.codeIds : [];
+    loadAll(ids);
+  }, err=>{
+    console.warn("channel doc listener", err);
+    toast("Could not load codes: " + (err.code||err.message), "ic-close");
+  });
+
+  // Safety-net: re-fetch code docs every 4 seconds so a used/unused flip is picked up
+  // quickly even without a per-code listener.
+  const pollTimer = setInterval(async ()=>{
+    if(!document.body.contains(wrap)) return;
+    await Promise.all(codeIds.map(async id=>{
+      try{
+        const s = await getDoc(doc(db,"channelCodes",id));
+        codeData[id] = s.exists() ? s.data() : "missing";
+      }catch(e){}
+    }));
+    render();
+  }, 4000);
+
   wrap.addEventListener("click", async e=>{
-    if(e.target === wrap || e.target.closest("[data-close]")){ if(chCodesUnsub){ chCodesUnsub(); chCodesUnsub = null; } wrap.remove(); return; }
+    if(e.target === wrap || e.target.closest("[data-close]")){
+      if(chDocUnsub){ chDocUnsub(); chDocUnsub = null; }
+      clearInterval(pollTimer);
+      wrap.remove();
+      return;
+    }
     const cp = e.target.closest("[data-copy-code]");
-    if(cp){ const ok = await copyText(cp.dataset.copyCode); toast(ok ? "Code copied" : "Could not copy"); return; }
+    if(cp){ const ok = await copyText(cp.dataset.copyCode); toast(ok ? "Code copied" : "Could not copy", ok ? "ic-check" : "ic-close"); return; }
     if(e.target.closest("#chcodes-add")){
-      try{ const code = await generateUniqueChannelCode(channelId, ch.name); toast("New code: " + code); }
-      catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+      try{
+        const code = await generateUniqueChannelCode(channelId, ch.name);
+        toast("New code: " + code, "ic-check");
+        // The channel-doc listener above will pick up the new codeIds array automatically.
+      }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
     }
   });
 }
@@ -4084,6 +4173,98 @@ async function deleteChannelForever(ch){
     closeTelegramChannel();
     toast("Channel deleted");
   }catch(e){ toast("Delete failed: " + (e.code||e.message), "ic-close"); }
+}
+
+/* =====================================================================
+   CHANNEL INFO + EXIT FLOW (for members)
+   ===================================================================== */
+function openChannelInfoSheet(channelId){
+  const ch = state.channels.find(c=>c.id===channelId);
+  if(!ch) return;
+  const isOwnerHere = isChannelOwner(ch);
+  const memberKey = myMemberKey();
+  const isMemberHere = !!state.myChannels[channelId] && !state.isOwner && !isOwnerHere;
+
+  const html = `
+  <div class="sheet-backdrop" id="chinfo-backdrop">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <div style="display:flex;align-items:center;gap:14px;padding:24px 18px 14px;">
+        ${avatarHtml(ch.name, ch.photoURL, "xl")}
+        <div style="min-width:0;flex:1">
+          <h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center">${escapeHtml(ch.name)}${tick(true)}</h2>
+          <div style="font-size:12px;color:var(--text-faint)">by ${escapeHtml(ch.ownerName||"—")} • ${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}</div>
+        </div>
+      </div>
+      <div class="settings-list" style="margin:0 18px 20px">
+        <div class="row"><div class="row-left"><svg><use href="#ic-channel"/></svg> Channel link</div><button class="mini-btn" id="chinfo-copy" type="button">Copy</button></div>
+        <div class="row"><div class="row-left"><svg><use href="#ic-users"/></svg> Your role</div><span style="font-size:12px;color:var(--text-faint)">${isOwnerHere ? "Owner" : (isMemberHere ? "Member" : "Visitor")}</span></div>
+      </div>
+      <div style="padding:0 18px 24px">
+        ${isOwnerHere
+          ? `<button class="btn btn-primary btn-block" id="chinfo-manage" type="button"><svg><use href="#ic-user"/></svg> Manage channel</button>`
+          : (isMemberHere
+            ? `<button class="btn btn-ghost btn-block" id="chinfo-exit" type="button" style="color:var(--danger);border-color:rgba(255,92,108,.4)"><svg><use href="#ic-close"/></svg> Exit channel</button>`
+            : `<button class="btn btn-ghost btn-block" id="chinfo-close" type="button">Close</button>`)}
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#chinfo-backdrop");
+  wrap.addEventListener("click", async e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
+    if(e.target.closest("#chinfo-copy")){ copyChannelLink(ch); return; }
+    if(e.target.closest("#chinfo-manage")){ wrap.remove(); openChannelManageSheet(channelId); return; }
+    if(e.target.closest("#chinfo-close")){ wrap.remove(); return; }
+    if(e.target.closest("#chinfo-exit")){ wrap.remove(); openExitChannelConfirm(channelId); return; }
+  });
+}
+
+/** Confirmation dialog requiring the user to type "Exit" (case-insensitive) to leave. */
+function openExitChannelConfirm(channelId){
+  const ch = state.channels.find(c=>c.id===channelId);
+  if(!ch) return;
+  const html = `
+  <div class="sheet-backdrop dlg" id="chexit-backdrop">
+    <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+      <div style="width:56px;height:56px;border-radius:18px;background:rgba(255,92,108,.12);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+        <svg width="26" height="26" style="color:var(--danger)"><use href="#ic-close"/></svg>
+      </div>
+      <h3 style="text-align:center;font-size:18px;margin:0 0 8px;color:var(--danger)">Exit channel</h3>
+      <p class="dlg-p" style="text-align:center">You are about to leave <b>${escapeHtml(ch.name)}</b>. You'll need a new code from the owner to join again.</p>
+      <p class="dlg-p" style="text-align:center;font-size:12px;color:var(--text-faint)">Type <b>Exit</b> below to confirm.</p>
+      <div class="field" style="margin-bottom:16px;">
+        <input type="text" id="chexit-input" placeholder="Type Exit" autocomplete="off" autocapitalize="off" />
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" style="flex:1" id="chexit-cancel" type="button">Cancel</button>
+        <button class="btn btn-danger" style="flex:1" id="chexit-ok" type="button" disabled>Exit</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#chexit-backdrop");
+  const input = $("#chexit-input");
+  const ok = $("#chexit-ok");
+  const update = ()=>{ ok.disabled = input.value.trim().toLowerCase() !== "exit"; };
+  input.addEventListener("input", update);
+  input.focus();
+  $("#chexit-cancel").addEventListener("click", ()=> wrap.remove());
+  ok.addEventListener("click", async ()=>{
+    if(input.value.trim().toLowerCase() !== "exit") return;
+    const memberKey = myMemberKey();
+    try{
+      ok.disabled = true;
+      await deleteDoc(doc(db,"channels",channelId,"members",memberKey)).catch(()=>{});
+      await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
+      toast("You left the channel");
+      wrap.remove();
+      closeTelegramChannel();
+      refreshMyChannels();
+    }catch(e){ ok.disabled = false; toast("Failed: " + (e.code||e.message), "ic-close"); }
+  });
+  wrap.addEventListener("click", e=>{ if(e.target === wrap) wrap.remove(); });
 }
 
 /* =====================================================================
@@ -4112,38 +4293,20 @@ function initTelegramUI(){
   });
   P("pktg-back").addEventListener("click", ()=>{ closeTelegramChannel(); });
   P("pktg-info").addEventListener("click", ()=>{
-    if(!state.tg.channel) return;
-    const ch = state.tg.channel;
-    const isOwnerHere = ch.ownerUid === state.uid || state.isOwner;
-    if(isOwnerHere) openChannelManageSheet(ch.id);
-    else copyChannelLink(ch);
+    if(!state.tg.channelId) return;
+    openChannelInfoSheet(state.tg.channelId);
   });
   P("pktg-manage-btn").addEventListener("click", ()=>{
-    if(!state.tg.channel) return;
-    const ch = state.tg.channel;
-    const isOwnerHere = ch.ownerUid === state.uid || state.isOwner;
-    if(isOwnerHere) openChannelManageSheet(ch.id);
+    if(!state.tg.channelId) return;
+    const ch = state.channels.find(c=>c.id === state.tg.channelId);
+    if(isChannelOwner(ch)) openChannelManageSheet(state.tg.channelId);
   });
   P("pktg-search-btn").addEventListener("click", ()=>{ P("pktg-search").classList.add("active"); P("pktg-search-input").focus(); });
   P("pktg-search-close").addEventListener("click", ()=>{ P("pktg-search").classList.remove("active"); P("pktg-search-input").value = ""; state.tg.searchQuery = ""; renderTelegramFeed(); });
   P("pktg-search-input").addEventListener("input", e=>{ state.tg.searchQuery = e.target.value; renderTelegramFeed(); });
   P("pktg-menu-btn").addEventListener("click", ()=>{
-    if(!state.tg.channel) return;
-    const ch = state.tg.channel;
-    const isOwnerHere = ch.ownerUid === state.uid || state.isOwner;
-    if(isOwnerHere) openChannelManageSheet(ch.id);
-    else {
-      const bd = document.createElement("div");
-      bd.className = "sheet-backdrop dlg";
-      bd.innerHTML = `<div class="sheet" style="padding:20px 20px calc(20px + var(--safe-bottom));">
-        <button class="btn btn-ghost btn-block" id="tg-leave" type="button" style="color:var(--danger)">Leave channel</button>
-        <button class="btn btn-ghost btn-block" id="tg-cancel" type="button" style="margin-top:10px">Cancel</button>
-      </div>`;
-      document.body.appendChild(bd);
-      bd.querySelector("#tg-cancel").onclick = ()=> bd.remove();
-      bd.querySelector("#tg-leave").onclick = ()=>{ bd.remove(); leaveChannel(ch.id); };
-      bd.addEventListener("click", ev=>{ if(ev.target === bd) bd.remove(); });
-    }
+    if(!state.tg.channelId) return;
+    openChannelInfoSheet(state.tg.channelId);
   });
   const input = P("pktg-input");
   input.addEventListener("input", ()=>{
@@ -4156,7 +4319,11 @@ function initTelegramUI(){
     if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); tgSendOrRecord(); }
   });
   P("pktg-send-btn").addEventListener("click", tgSendOrRecord);
-  P("pktg-attach-btn").addEventListener("click", ()=>{ closeTgEmoji(); openTgSheet(); });
+  P("pktg-attach-btn").addEventListener("click", ()=>{
+    const ch = state.channels.find(c=>c.id === state.tg.channelId);
+    if(!isChannelOwner(ch)){ toast("Only the channel owner can upload here", "ic-close"); return; }
+    closeTgEmoji(); openTgSheet();
+  });
   P("pktg-reply-cancel").addEventListener("click", ()=>{ state.tg.replyTo = null; updateTgReplyBar(); });
   P("pktg-sheet-overlay").addEventListener("click", closeTgSheet);
   P("pktg-attach-gallery").addEventListener("click", ()=>{ P("pktg-input-gallery").click(); closeTgSheet(); });
@@ -4197,8 +4364,8 @@ function initTelegramUI(){
       const ok = await copyText(t);
       toast(ok ? "Copied" : "Copy failed", ok ? "ic-check" : "ic-close");
     } else if(act === "delete"){
-      const mine = m.senderUid === state.uid;
-      if(!state.isOwner && !mine){ toast("You can only delete your own messages", "ic-close"); return; }
+      const ch = state.channels.find(c=>c.id === m.channelId);
+      if(!isChannelOwner(ch)){ toast("Only the channel owner can delete messages", "ic-close"); return; }
       if(!(await confirmSheet("Delete message?", "Removed for everyone.", "Delete"))) return;
       try{
         await updateDoc(doc(db,"channelMessages", m.id), { deleted: true, deletedAt: serverTimestamp() });
@@ -4243,18 +4410,19 @@ function closeTelegramChannel(){
   $("#pktg-conv").style.display = "none";
   $("#pktg-home").classList.remove("hidden");
   $("#pktg-manage-btn").style.display = "none";
+  $("#pktg-conv").classList.remove("pktg-readonly");
   renderTelegramHome();
 }
 function renderTelegramHome(){
   const list = $("#pktg-home-list"); if(!list) return;
-  const joined = state.channels.filter(ch=> state.isOwner || (state.myChannels[ch.id] && !state.myChannels[ch.id].blocked));
+  const joined = state.channels.filter(ch=> isChannelOwner(ch) || (state.myChannels[ch.id] && !state.myChannels[ch.id].blocked));
   if(!joined.length){
     list.innerHTML = `<div class="pktg-empty" style="padding-top:60px"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-channel"/></svg></div><b>No channels yet</b><span>Join one from the Channels tab, or create your own if you have a blue tick.</span></div>`;
     return;
   }
   list.innerHTML = `<div class="pktg-home-section">Your channels</div>` + joined.map(ch=>{
     const mine = state.myChannels[ch.id];
-    const role = state.isOwner ? "owner" : (mine ? mine.role : "member");
+    const role = isChannelOwner(ch) ? "owner" : (mine ? mine.role : "member");
     return `<button class="pktg-chat-row" type="button" data-tg-open="${ch.id}">
       <div class="pktg-chat-av">${ch.photoURL ? `<img src="${escapeHtml(ch.photoURL)}" alt="">` : escapeHtml((ch.name||"?").trim().slice(0,1).toUpperCase())}</div>
       <div class="pktg-chat-main">
@@ -4283,8 +4451,9 @@ async function openTelegramChannel(channelId){
   const av = $("#pktg-avatar");
   av.innerHTML = ch.photoURL ? `<img src="${escapeHtml(ch.photoURL)}" alt="">` : escapeHtml((ch.name||"?").trim().slice(0,1).toUpperCase());
   $("#pktg-input").placeholder = `Message ${ch.name}…`;
-  const isOwnerHere = ch.ownerUid === state.uid || state.isOwner;
+  const isOwnerHere = isChannelOwner(ch);
   $("#pktg-manage-btn").style.display = isOwnerHere ? "flex" : "none";
+  $("#pktg-conv").classList.toggle("pktg-readonly", !isOwnerHere);
   updateSendBtnIcon();
   if(state.tg.unsub){ state.tg.unsub(); state.tg.unsub = null; }
   const q = query(collection(db,"channelMessages"), where("channelId","==",channelId));
@@ -4305,7 +4474,7 @@ async function openTelegramChannel(channelId){
   if(state.tg.unsubTyping){ state.tg.unsubTyping(); state.tg.unsubTyping = null; }
   state.tg.unsubTyping = onSnapshot(doc(db,"typing","ch_"+channelId), s=>{
     const d = s.exists() ? s.data() : null;
-    const active = d && d.byUid && d.byUid !== state.uid && d.at && d.at.toMillis && (Date.now()-d.at.toMillis) < 6000;
+    const active = d && d.byUid && d.byUid !== state.uid && d.at && d.at.toMillis && (Date.now()-d.at.toMillis()) < 6000;
     const sub = $("#pktg-subs");
     if(active){
       const u = state.users[d.byUid];
@@ -4325,7 +4494,7 @@ function renderTelegramFeed(){
     return `${m.text||""} ${m.caption||""} ${m.filename||""}`.toLowerCase().includes(q);
   });
   if(!items.length){
-    feed.innerHTML = `<div class="pktg-empty"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-channel"/></svg></div><b>No messages yet</b><span>Broadcast the first message to this channel.</span></div>`;
+    feed.innerHTML = `<div class="pktg-empty"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-channel"/></svg></div><b>No messages yet</b><span>${isChannelOwner(state.tg.channel) ? "Broadcast the first message to this channel." : "The owner hasn't posted anything yet."}</span></div>`;
     return;
   }
   feed.innerHTML = `<div class="pktg-date-badge">Messages</div>`;
@@ -4432,6 +4601,8 @@ function bindTgSwipe(){
       card.style.transform = "";
       card.classList.remove("pktg-reply-swiping");
       if(swiping && dx > 55){
+        const ch = state.channels.find(c=>c.id === state.tg.channelId);
+        if(!isChannelOwner(ch)) return;
         const m = state.tg.messages.find(x=>x.id === card.dataset.id);
         if(m && !m.deleted){
           state.tg.replyTo = m;
@@ -4460,6 +4631,17 @@ function bindTgLongPress(){
 function showTgCtx(x, y, msg){
   state.tg.contextMsg = msg;
   const ctx = $("#pktg-ctx");
+  const ch = state.channels.find(c=>c.id === state.tg.channelId);
+  const owner = isChannelOwner(ch);
+  const items = [];
+  if(owner){
+    items.push(`<button class="pktg-ctx-item" data-ctx="reply"><svg><use href="#ic-chat"/></svg> Reply</button>`);
+    items.push(`<button class="pktg-ctx-item" data-ctx="copy"><svg><use href="#ic-copy"/></svg> Copy</button>`);
+    items.push(`<button class="pktg-ctx-item pktg-danger" data-ctx="delete"><svg><use href="#ic-trash"/></svg> Delete</button>`);
+  } else {
+    items.push(`<button class="pktg-ctx-item" data-ctx="copy"><svg><use href="#ic-copy"/></svg> Copy</button>`);
+  }
+  ctx.innerHTML = items.join("");
   ctx.classList.add("active");
   const left = Math.min(Math.max(8, x), window.innerWidth - 190);
   const top = Math.min(Math.max(60, y), window.innerHeight - 200);
@@ -4495,6 +4677,8 @@ async function tgDownloadMessage(m){
 }
 
 function tgSendOrRecord(){
+  const ch = state.channels.find(c=>c.id === state.tg.channelId);
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can post here", "ic-close"); return; }
   const input = $("#pktg-input");
   const text = input ? input.value.trim() : "";
   if(text){ tgSendText(); return; }
@@ -4502,6 +4686,8 @@ function tgSendOrRecord(){
   else startVoiceRecording();
 }
 async function tgSendText(){
+  const ch = state.channels.find(c=>c.id === state.tg.channelId);
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can post here", "ic-close"); return; }
   const input = $("#pktg-input");
   const text = input.value.trim();
   if(!text) return;
@@ -4547,6 +4733,8 @@ function updateTgReplyBar(){
 }
 
 async function startVoiceRecording(){
+  const ch = state.channels.find(c=>c.id === state.tg.channelId);
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can record here", "ic-close"); return; }
   if(!state.tg.channelId){ toast("Open a channel first", "ic-close"); return; }
   if(guestBlock("send voice messages")) return;
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast("Microphone not available on this device", "ic-close"); return; }
@@ -4670,6 +4858,8 @@ async function sendVoiceBlob(blob, durationSec){
 }
 
 async function tgHandleFile(e, kind){
+  const ch = state.channels.find(c=>c.id === state.tg.channelId);
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can upload here", "ic-close"); e.target.value=""; return; }
   const file = e.target.files?.[0];
   e.target.value = "";
   if(!file) return;
