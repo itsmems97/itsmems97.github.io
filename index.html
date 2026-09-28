@@ -4288,68 +4288,6 @@ function initFmtToolbar(){
     });
   }
 }
-
-  // Trigger on selection changes while typing / selecting
-  input.addEventListener("select", updateForSelection);
-  input.addEventListener("mouseup", ()=> setTimeout(updateForSelection, 10));
-  input.addEventListener("touchend", ()=> setTimeout(updateForSelection, 60));
-  input.addEventListener("keyup", ()=> setTimeout(updateForSelection, 10));
-  input.addEventListener("blur", ()=>{ setTimeout(hide, 200); });
-  input.addEventListener("input", ()=>{ /* keep saved selection fresh */ });
-
-  // Apply a markdown wrapper around the saved selection
-  const applyWrap = (before, after)=>{
-    const { start, end } = savedSel;
-    const v = input.value;
-    if(start === end) return;
-    const inner = v.slice(start, end);
-    // Skip if already wrapped
-    const alreadyWrapped = v.slice(Math.max(0, start - before.length), start) === before &&
-                           v.slice(end, end + after.length) === after;
-    let newStart = start, newEnd = end;
-    let newVal;
-    if(alreadyWrapped){
-      newVal = v.slice(0, start - before.length) + inner + v.slice(end + after.length);
-      newStart = start - before.length;
-      newEnd = newStart + inner.length;
-    } else {
-      newVal = v.slice(0, start) + before + inner + after + v.slice(end);
-      newStart = start + before.length;
-      newEnd = newStart + inner.length;
-    }
-    input.value = newVal;
-    input.focus();
-    try{ input.setSelectionRange(newStart, newEnd); }catch(e){}
-    savedSel = { start: newStart, end: newEnd };
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    updateSendBtnIcon();
-    hide();
-  };
-
-  toolbar.addEventListener("mousedown", e=> e.preventDefault()); // keep focus on input
-  toolbar.addEventListener("touchstart", e=> e.preventDefault(), { passive: false });
-
-  toolbar.addEventListener("click", async (e)=>{
-      // Manual fallback button (📝 in composer)
-  const manualBtn = document.getElementById("pktg-fmt-btn-manual");
-  if(manualBtn){
-    manualBtn.addEventListener("click", ()=>{
-      // Refresh selection from current input state
-      const s = input.selectionStart, e = input.selectionEnd;
-      if(s == null || e == null || s === e){
-        toast("Pehle kuch text select karo", "ic-close");
-        input.focus();
-        return;
-      }
-      savedSel = { start: s, end: e };
-      // Show toolbar near the input
-      const rect = input.getBoundingClientRect();
-      const topY = Math.max(70, rect.top - 52);
-      const cx = rect.left + rect.width / 2;
-      showAt(cx - 160, topY);
-    });
-  }
-}
 function updateSendBtnIcon(){
   const input = $("#pktg-input");
   const icon = $("#pktg-send-icon"); if(!icon) return;
