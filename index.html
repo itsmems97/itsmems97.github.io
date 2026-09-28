@@ -392,10 +392,21 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .pktg-date-badge{ align-self:center; background:rgba(0,0,0,.35); color:#fff; font-size:11px; padding:4px 12px; border-radius:12px; backdrop-filter:blur(4px); margin:8px 0; font-weight:600; }
 .pktg-msg{ align-self:flex-start; max-width:min(92%, 560px); background: var(--bubble-other-bg); color: var(--bubble-other-text); border-radius:20px; border-top-left-radius:6px; padding:9px 12px 7px; border: 1px solid var(--lg-border); box-shadow: 0 6px 20px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); position:relative; word-wrap:break-word; animation:pktgFadeIn .22s ease; transform-origin:left center; transition:transform .22s ease, box-shadow .22s ease; }
 @keyframes pktgFadeIn{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
-.pktg-msg.pktg-me{ align-self:flex-end; background: var(--bubble-me-bg); color: var(--bubble-me-text); border-top-left-radius:20px; border-top-right-radius:6px; border: 1px solid rgba(255,255,255,.35); box-shadow: 0 8px 24px rgba(255,168,0,.28), inset 0 1px 0 rgba(255,255,255,.4); }
-.pktg-msg.pktg-me .pktg-who{ color:#171200; opacity:.75; }
-.pktg-msg.pktg-me .pktg-reply-ref{ background:rgba(0,0,0,.12); }
-.pktg-msg.pktg-me .pktg-meta{ color:rgba(23,18,0,.65); }
+.pktg-msg.pktg-me{
+  align-self: flex-end;
+  background: var(--lg-bg);
+  color: var(--lg-text);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 6px;
+  border: 1px solid var(--lg-border);
+  box-shadow: var(--lg-shadow);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+.pktg-msg.pktg-me .pktg-who{ color: var(--accent); opacity: 1; }
+.pktg-msg.pktg-me .pktg-reply-ref{ background: rgba(51,224,193,.08); }
+.pktg-msg.pktg-me .pktg-reply-copy span{ color: var(--text-faint); }
+.pktg-msg.pktg-me .pktg-meta{ color: var(--text-faint); }
 .pktg-msg.pktg-reply-swiping{ box-shadow:0 4px 20px rgba(255,198,26,.28); }
 .pktg-who{ font-size:11px; font-weight:800; color:var(--accent); margin-bottom:3px; display:flex; align-items:center; gap:4px; }
 .pktg-msg.pktg-me .pktg-who{ color:#171200; }
@@ -409,37 +420,43 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .pktg-media img, .pktg-media video{ width:100%; max-height:430px; object-fit:cover; display:block; border-radius:14px; }
 .pktg-audio{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:16px; background:var(--lg-bg); border:1px solid var(--lg-border); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); margin:2px 0 4px; min-width:220px; max-width:100%; }
 html[data-theme="light"] .pktg-audio{ background: rgba(255,255,255,.7); }
-.pktg-msg.pktg-me .pktg-audio{ background: rgba(255,255,255,.28); border-color: rgba(255,255,255,.4); }
+.pktg-msg.pktg-me .pktg-audio{ background: var(--lg-bg); border-color: var(--lg-border); }
 .pktg-audio-play{ width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background: linear-gradient(135deg, var(--accent), #FFA800); color:#171200; flex:none; box-shadow:0 4px 10px rgba(255,168,0,.35); }
 .pktg-audio-play svg{ width:16px; height:16px; }
 .pktg-audio-track{ flex:1; min-width:0; height:5px; border-radius:3px; background: rgba(255,255,255,.28); position:relative; cursor:pointer; touch-action:none; }
 html[data-theme="light"] .pktg-audio-track{ background: rgba(0,0,0,.14); }
 .pktg-audio-fill{ position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:3px; background: linear-gradient(90deg, var(--accent), #FFA800); }
-.pktg-msg.pktg-me .pktg-audio-track{ background: rgba(0,0,0,.18); }
-.pktg-msg.pktg-me .pktg-audio-fill{ background: rgba(23,18,0,.75); }
+.pktg-msg.pktg-me .pktg-audio-track{ background: rgba(255,255,255,.28); }
+.pktg-msg.pktg-me .pktg-audio-fill{ background: linear-gradient(90deg, var(--accent), #FFA800); }
+.pktg-msg.pktg-me .pktg-audio-time{ color: var(--lg-text-dim); }
 .pktg-audio-time{ font-size:11px; font-variant-numeric:tabular-nums; color: var(--lg-text-dim); flex:none; min-width:70px; text-align:right; }
 .pktg-msg.pktg-me .pktg-audio-time{ color:rgba(23,18,0,.75); }
 .pktg-file-card{ display:flex; align-items:center; gap:12px; background: var(--lg-bg); border:1px solid var(--lg-border); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); box-shadow: var(--lg-shadow); padding:10px; border-radius:18px; margin-bottom:6px; color: var(--lg-text); width:100%; text-align:left; cursor:pointer; font-family:inherit; position:relative; flex-wrap:nowrap; overflow:hidden; border-width:1px; }
 html[data-theme="light"] .pktg-file-card{ background: rgba(255,255,255,.65); }
-.pktg-msg.pktg-me .pktg-file-card{ background: rgba(255,255,255,.28); border-color: rgba(255,255,255,.4); }
+.pktg-msg.pktg-me .pktg-file-card{ background: var(--lg-bg); border-color: var(--lg-border); }
 .pktg-file-card::before{ content:""; position:absolute; inset:0; background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0) 45%); pointer-events:none; }
 html[data-theme="light"] .pktg-file-card::before{ background: linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,0) 50%); }
-.pktg-msg.pktg-me .pktg-file-card::before{ background: linear-gradient(180deg, rgba(255,255,255,.3), rgba(255,255,255,0) 50%); }
+.pktg-msg.pktg-me .pktg-file-card::before{ background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0) 45%); }
 .pktg-file-card:active{ transform:scale(.985); }
 .pktg-file-icon{ width:52px; height:52px; border-radius:14px; background: rgba(0,0,0,.18); color: var(--lg-text); display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; border:1px solid var(--lg-border); position:relative; z-index:1; }
 html[data-theme="light"] .pktg-file-icon{ background: rgba(255,255,255,.75); }
-.pktg-msg.pktg-me .pktg-file-icon{ background: rgba(0,0,0,.12); border-color: rgba(255,255,255,.35); }
+.pktg-msg.pktg-me .pktg-file-icon{ background: rgba(0,0,0,.18); border-color: var(--lg-border); }
 .pktg-file-icon svg{ width:24px; height:24px; }
 .pktg-file-icon img{ width:100%; height:100%; object-fit:cover; }
 .pktg-file-info{ flex:1; min-width:0; overflow:hidden; position:relative; z-index:1; }
 .pktg-file-name{ font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; color:var(--lg-text); }
-.pktg-msg.pktg-me .pktg-file-name{ color:#171200; }
+.pktg-msg.pktg-me .pktg-file-name{ color: var(--lg-text); }
 .pktg-file-size{ font-size:11.5px; color:var(--lg-text-dim); margin-top:2px; display:block; }
-.pktg-msg.pktg-me .pktg-file-size{ color:rgba(23,18,0,.65); }
+.pktg-msg.pktg-me .pktg-file-size{ color: var(--lg-text-dim); }
 .pktg-dl-btn{ width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background: linear-gradient(135deg, var(--accent), #FFA800); color:#171200; flex:none; box-shadow: 0 6px 14px rgba(255,198,26,.35), inset 0 1px 0 rgba(255,255,255,.4); position:relative; z-index:1; }
 .pktg-dl-btn svg{ width:18px; height:18px; }
 .pktg-dl-btn:active{ transform:scale(.9); }
 .pktg-caption{ font-size:14px; line-height:1.45; margin:6px 0 4px; white-space:pre-wrap; word-break:break-word; }
+.pktg-caption a{ color: var(--accent-2); text-decoration: none; border-bottom: 1px solid rgba(51,224,193,.35); }
+.pktg-caption a:hover{ text-decoration: underline; }
+.pktg-mono{ font-family: ui-monospace, Menlo, Consolas, monospace; background: rgba(128,128,128,.18); padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+.pktg-spoiler{ background: rgba(128,128,128,.55); color: transparent; border-radius: 5px; padding: 1px 4px; cursor: pointer; user-select: none; transition: all .25s; }
+.pktg-spoiler.revealed{ background: rgba(128,128,128,.15); color: inherit; user-select: auto; }
 .pktg-meta{ display:flex; align-items:center; justify-content:flex-end; gap:4px; font-size:10px; color:var(--text-faint); margin-top:2px; padding-top:2px; }
 .pktg-msg.pktg-me .pktg-meta{ color:rgba(23,18,0,.65); }
 .pktg-composer{ position:absolute; bottom:max(8px, var(--safe-bottom)); left:8px; right:8px; z-index:10; display:flex; flex-direction:column; gap:6px; }
@@ -531,8 +548,9 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 .pktg-msg.pktg-preview .pktg-who,
 .pktg-msg.pktg-preview .pktg-meta{ filter: none; opacity: .5; }
 .pktg-preview-name{ font-size:13px; font-weight:700; letter-spacing:.05em; color:var(--text); opacity:.6; }
-.pktg-preview-media{ width:100%; border-radius:14px; overflow:hidden; margin:-1px -1px 6px; background:#000; position:relative; }
-.pktg-preview-media img{ width:100%; max-height:430px; object-fit:cover; display:block; border-radius:14px; filter: blur(14px) saturate(1.4); transform: scale(1.06); }
+.pktg-preview-media{ width:260px; max-width:92%; height:220px; border-radius:14px; overflow:hidden; margin:-1px -1px 6px; background:#000; position:relative; }
+.pktg-preview-media img{ width:100%; height:100%; object-fit:cover; display:block; border-radius:14px; filter: blur(14px) saturate(1.4); transform: scale(1.06); }
+.pktg-msg.pktg-preview{ min-width:260px; max-width:92%; }
 .pktg-preview-audio{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:16px; background:var(--lg-bg); border:1px solid var(--lg-border); margin:2px 0 4px; min-width:220px; }
 .pktg-preview-audio .pktg-audio-play{ background: var(--surface-2); color: var(--text-dim); box-shadow: none; }
 .pktg-preview-audio .pktg-audio-track{ background: rgba(128,128,128,.3); }
@@ -557,12 +575,33 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
   background: linear-gradient(135deg, var(--accent), #FFA800);
   color:#171200;
   border-radius: 26px;
-  padding: 6px 8px 6px 16px;
+  padding: 10px 8px 10px 18px;
   box-shadow: 0 12px 30px rgba(255,168,0,.4);
-  min-height: 54px;
+  min-height: 60px;
   width: 100%;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  border: none;
+  animation: pktgUnlockPulse 2s ease-in-out infinite;
 }
 .pktg-unlock-bar.active{ display:flex; }
+.pktg-unlock-bar:active{ transform: scale(0.98) !important; }
+@keyframes pktgUnlockPulse{
+  0%, 100% { box-shadow: 0 12px 30px rgba(255,168,0,.4); }
+  50% { box-shadow: 0 14px 38px rgba(255,168,0,.75); }
+}
+.pktg-unlock-bar .pktg-ub-btn{
+  animation: pktgLockShake 3.5s ease-in-out infinite;
+}
+@keyframes pktgLockShake{
+  0%, 65%, 100% { transform: rotate(0deg); }
+  70% { transform: rotate(-14deg); }
+  75% { transform: rotate(14deg); }
+  80% { transform: rotate(-10deg); }
+  85% { transform: rotate(10deg); }
+  90% { transform: rotate(0deg); }
+}
 .pktg-unlock-bar .pktg-ub-text{ flex:1; min-width:0; }
 .pktg-unlock-bar .pktg-ub-text b{ font-size:14px; font-weight:800; display:block; line-height:1.15; }
 .pktg-unlock-bar .pktg-ub-text small{ display:block; font-size:11px; opacity:.75; margin-top:2px; }
@@ -879,20 +918,20 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
         </button>
       </div>
       <h3 class="section-title" id="account-details-title" hidden>Account details</h3>
-      <div class="settings-list" id="account-details" hidden style="margin-bottom:16px"></div>
-      <input type="file" id="profile-photo-input" accept="image/*" hidden />
-      <input type="file" id="channel-photo-input" accept="image/*" hidden />
-      <input type="file" id="channel-content-input" accept="*/*" hidden />
-      <input type="file" id="channel-icon-input" accept="image/*" hidden />
-      <div class="settings-list">
-        <div class="row tap" id="row-rename"><div class="row-left"><svg><use href="#ic-user"/></svg> Change store name</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
-        <div class="row tap" id="row-phone"><div class="row-left"><svg><use href="#ic-chat"/></svg> WhatsApp number</div><span style="font-size:12px;color:var(--text-faint)" id="profile-phone">Not set</span></div>
-        <div class="row tap" id="row-change-photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Change profile photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
-        <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
-        <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
-        <div class="row tap" id="row-verify"><div class="row-left"><svg><use href="#ic-verified"/></svg> Enter blue-tick code</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
-        <div class="row tap" id="row-logout"><div class="row-left"><svg><use href="#ic-close"/></svg> Log out</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
-      </div>
+<div class="settings-list" id="account-details" hidden style="margin-bottom:16px"></div>
+<div class="settings-list">
+  <div class="row tap" id="row-rename"><div class="row-left"><svg><use href="#ic-user"/></svg> Change store name</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+  <div class="row tap" id="row-phone"><div class="row-left"><svg><use href="#ic-chat"/></svg> WhatsApp number</div><span style="font-size:12px;color:var(--text-faint)" id="profile-phone">Not set</span></div>
+  <div class="row tap" id="row-change-photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Change profile photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+  <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
+  <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
+  <div class="row tap" id="row-verify"><div class="row-left"><svg><use href="#ic-verified"/></svg> Enter blue-tick code</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+  <div class="row tap" id="row-logout"><div class="row-left"><svg><use href="#ic-close"/></svg> Log out</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+</div>
+<input type="file" id="profile-photo-input" accept="image/*" hidden />
+<input type="file" id="channel-photo-input" accept="image/*" hidden />
+<input type="file" id="channel-content-input" accept="*/*" hidden />
+<input type="file" id="channel-icon-input" accept="image/*" hidden />
       <div id="danger-zone">
         <div class="danger-note"><b>Please note:</b> if you do not open the app for <b>2 months (60 days)</b>, your account, all your uploads, chat messages and profile photo are <b>deleted automatically</b> (from the Oracle server too).</div>
         <div class="settings-list" style="margin-top:12px">
@@ -956,9 +995,9 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
         <button class="pktg-header-btn" id="pktg-reply-cancel"><svg width="16" height="16"><use href="#ic-close"/></svg></button>
       </div>
       <div class="pktg-emoji" id="pktg-emoji" aria-hidden="true">
-        <div class="pktg-emoji-search-wrap"><input class="pktg-emoji-search" id="pktg-emoji-search" placeholder="Search emoji…" autocomplete="off"></div>
-        <div class="pktg-emoji-cats" id="pktg-emoji-cats"></div>
-        <div class="pktg-emoji-grid" id="pktg-emoji-grid"></div>
+  <div class="pktg-emoji-cats" id="pktg-emoji-cats"></div>
+  <div class="pktg-emoji-grid" id="pktg-emoji-grid"></div>
+</div>
       </div>
       <div class="pktg-bar" id="pktg-bar">
         <button class="pktg-action-btn" id="pktg-emoji-btn" aria-label="Emoji"><svg><use href="#ic-emoji"/></svg></button>
@@ -975,13 +1014,13 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
         <button class="pktg-rec-send" id="pktg-rec-send" aria-label="Send voice message" type="button"><svg><use href="#ic-send"/></svg></button>
       </div>
       <!-- Unlock bar shown only in preview mode -->
-      <div class="pktg-unlock-bar" id="pktg-unlock-bar">
-        <div class="pktg-ub-text">
-          <b>Content is locked</b>
-          <small>Enter the secret code to view & download</small>
-        </div>
-        <button class="pktg-ub-btn" id="pktg-unlock-btn" type="button" aria-label="Unlock"><svg><use href="#ic-lock"/></svg></button>
-      </div>
+<button class="pktg-unlock-bar" id="pktg-unlock-bar" type="button" aria-label="Unlock content">
+  <div class="pktg-ub-text">
+    <b>Content is locked — Tap to unlock</b>
+    <small>Enter the secret code to view & download</small>
+  </div>
+  <span class="pktg-ub-btn"><svg><use href="#ic-lock"/></svg></span>
+</button>
     </div>
   </div>
 
@@ -3972,7 +4011,6 @@ function initTelegramUI(){
   P("pktg-input-file").addEventListener("change", e=> tgHandleFile(e, "file"));
   P("pktg-input-camera").addEventListener("change", e=> tgHandleFile(e, "image"));
   P("pktg-emoji-btn").addEventListener("click", (e)=>{ e.stopPropagation(); openTgEmoji(); });
-  P("pktg-emoji-search").addEventListener("input", renderTgEmojiGrid);
   document.addEventListener("click", e=>{
     const em = P("pktg-emoji");
     if(em && em.classList.contains("active") && !e.target.closest("#pktg-emoji") && !e.target.closest("#pktg-emoji-btn")) closeTgEmoji();
@@ -4007,10 +4045,10 @@ function initTelegramUI(){
   P("pktg-rec-cancel").addEventListener("click", ()=> stopVoiceRecording(true));
   P("pktg-rec-send").addEventListener("click", ()=> stopVoiceRecording(false));
   // Unlock bar (preview mode)
-  P("pktg-unlock-btn").addEventListener("click", ()=>{
-    const ch = state.channels.find(c=>c.id === state.tg.channelId);
-    if(ch) askChannelPassword(ch);
-  });
+P("pktg-unlock-bar").addEventListener("click", ()=>{
+  const ch = state.channels.find(c=>c.id === state.tg.channelId);
+  if(ch) askChannelPassword(ch);
+});
 }
 function updateSendBtnIcon(){
   const input = $("#pktg-input");
@@ -4161,6 +4199,26 @@ function renderTelegramFeed(){
   bindTgSwipe();
   bindTgLongPress();
 }
+/* Format message text: escape HTML, then apply Telegram-style markdown
+   (spoiler ||text||, mono `text`, bold **text**, italic _text_ or *text*),
+   then auto-linkify URLs so they become tappable. */
+function formatMessageText(text){
+  if(!text) return "";
+  let s = escapeHtml(text);
+  // Spoiler ||text||
+  s = s.replace(/\|\|(.+?)\|\|/gs, '<span class="pktg-spoiler">$1</span>');
+  // Mono `text`
+  s = s.replace(/`([^`<>\n]+)`/g, '<code class="pktg-mono">$1</code>');
+  // Bold **text**
+  s = s.replace(/\*\*([^*<>\n]+)\*\*/g, '<strong>$1</strong>');
+  // Italic _text_ (avoid underscores inside words)
+  s = s.replace(/(?<![_\w])_([^_<>\n]+)_(?!_)/g, '<em>$1</em>');
+  // Italic *text* (single asterisk, but not part of **)
+  s = s.replace(/(?<![*\w])\*([^*<>\n]+)\*(?!\*)/g, '<em>$1</em>');
+  // Auto-linkify URLs (http/https only)
+  s = s.replace(/(https?:\/\/[^\s<>"']+)/gi, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s;
+}
 function tgMsgLabel(m){
   if(!m) return "Message";
   if(m.type === "image") return m.caption || m.filename || "Photo";
@@ -4263,8 +4321,8 @@ function buildTelegramMsg(m){
     </button>`;
   }
   const body = m.caption || m.text;
-  const descBody = preview ? "" : ((m.type === "file") ? (m.caption && m.caption !== m.filename ? m.caption : "") : body);
-  if(descBody) html += `<div class="pktg-caption">${escapeHtml(descBody)}</div>`;
+const descBody = preview ? "" : ((m.type === "file") ? (m.caption && m.caption !== m.filename ? m.caption : "") : body);
+if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</div>`;
   const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
   html += `<div class="pktg-meta"><span>${m.views || 0} views</span><span>•</span><span>${time}</span></div>`;
   card.innerHTML = html;
@@ -4284,6 +4342,10 @@ function buildTelegramMsg(m){
   if(dl) dl.addEventListener("click", e=>{ e.stopPropagation(); tgDownloadMessage(m); });
   const audioEl = card.querySelector(".pktg-audio");
   if(audioEl) initAudioPlayer(audioEl);
+  // Spoiler tap-to-reveal
+  card.querySelectorAll(".pktg-spoiler").forEach(sp=>{
+    sp.addEventListener("click", e=>{ e.stopPropagation(); sp.classList.toggle("revealed"); });
+  });
   card.addEventListener("contextmenu", e=>{ e.preventDefault(); showTgCtx(e.clientX, e.clientY, m); });
   return card;
 }
@@ -4788,7 +4850,6 @@ function openTgEmoji(){
   if(isOpen){ closeTgEmoji(); return; }
   p.classList.add("active"); p.setAttribute("aria-hidden","false");
   renderTgEmojiCats(); renderTgEmojiGrid();
-  setTimeout(()=> $("#pktg-emoji-search")?.focus(), 40);
 }
 function closeTgEmoji(){
   const p = $("#pktg-emoji");
@@ -4801,10 +4862,8 @@ function renderTgEmojiCats(){
 }
 function renderTgEmojiGrid(){
   const grid = $("#pktg-emoji-grid"); if(!grid) return;
-  const q = ($("#pktg-emoji-search")?.value || "").trim().toLowerCase();
-  let arr = EMOJI_CATEGORIES[tgEmojiCategory] || [];
-  if(q) arr = Object.values(EMOJI_CATEGORIES).flat().filter((v,i,a)=> a.indexOf(v)===i && v.includes(q));
-  grid.innerHTML = arr.length ? arr.map(e=>`<button class="pktg-emoji-item" type="button">${e}</button>`).join("") : `<div class="pktg-emoji-empty">No matching emoji</div>`;
+  const arr = EMOJI_CATEGORIES[tgEmojiCategory] || [];
+  grid.innerHTML = arr.length ? arr.map(e=>`<button class="pktg-emoji-item" type="button">${e}</button>`).join("") : `<div class="pktg-emoji-empty">No emoji</div>`;
   grid.querySelectorAll(".pktg-emoji-item").forEach(b=> b.onclick = ()=>{
     const input = $("#pktg-input"); if(!input) return;
     const start = input.selectionStart ?? input.value.length;
