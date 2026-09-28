@@ -38,6 +38,13 @@ html[data-theme="dark"]{
   --text-faint:#5C6577;
   --glass:rgba(23,28,38,0.72);
   --shadow: 0 18px 40px rgba(0,0,0,0.45);
+  /* Liquid-glass card tokens */
+  --lg-bg: rgba(255,255,255,0.08);
+  --lg-bg-2: rgba(255,255,255,0.05);
+  --lg-border: rgba(255,255,255,0.16);
+  --lg-shadow: 0 8px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
+  --lg-text: #F4F5F7;
+  --lg-text-dim: #9AA2B1;
 }
 html[data-theme="light"]{
   --bg:#F5F6F8;
@@ -50,6 +57,12 @@ html[data-theme="light"]{
   --text-faint:#8A93A3;
   --glass:rgba(255,255,255,0.78);
   --shadow: 0 16px 34px rgba(20,25,40,0.12);
+  --lg-bg: rgba(255,255,255,0.55);
+  --lg-bg-2: rgba(255,255,255,0.35);
+  --lg-border: rgba(255,255,255,0.85);
+  --lg-shadow: 0 8px 24px rgba(20,25,40,.12), inset 0 1px 0 rgba(255,255,255,.9);
+  --lg-text: #12161F;
+  --lg-text-dim: #5B6472;
 }
 *,*::before,*::after{ box-sizing:border-box; }
 html,body{ height:100%; width:100%; overflow-x:hidden; }
@@ -496,25 +509,69 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 
 .pktg-media{ width:100%; border-radius:12px; overflow:hidden; margin:-1px -1px 6px; background:#000; cursor:pointer; }
 .pktg-media img, .pktg-media video{ width:100%; max-height:430px; object-fit:cover; display:block; border-radius:12px; }
-.pktg-voice-row{ display:flex; align-items:center; gap:8px; }
-.pktg-voice-icon{ width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:rgba(51,224,193,.14); color:var(--accent-2); flex:none; }
-.pktg-voice-row audio{ width:190px; max-width:calc(100vw - 120px); }
 
-.pktg-file-card{ display:flex; align-items:center; gap:10px; background:rgba(128,128,128,.08); padding:8px; border-radius:10px; margin-bottom:6px; border:0; color:inherit; width:100%; text-align:left; cursor:pointer; font-family:inherit; position:relative; flex-wrap:wrap; }
+/* Voice message: only the native player — no custom decorative play button */
+.pktg-voice-row{ display:flex; align-items:center; gap:8px; width:100%; }
+.pktg-voice-row audio{ width:100%; max-width:100%; }
+
+/* Liquid iOS file card — adapts to light/dark, blurry, premium */
+.pktg-file-card{
+  display:flex; align-items:center; gap:12px;
+  background: var(--lg-bg);
+  border:1px solid var(--lg-border);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  box-shadow: var(--lg-shadow);
+  padding:10px; border-radius:16px; margin-bottom:6px;
+  border-width:1px;
+  color: var(--lg-text); width:100%; text-align:left; cursor:pointer;
+  font-family:inherit; position:relative; flex-wrap:nowrap;
+  overflow:hidden;
+}
+.pktg-file-card::before{
+  content:"";
+  position:absolute; inset:0;
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0) 45%);
+  pointer-events:none;
+}
+html[data-theme="light"] .pktg-file-card::before{
+  background: linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,0) 50%);
+}
 .pktg-file-card:active{ transform:scale(.985); }
-.pktg-file-icon{ width:40px; height:40px; border-radius:11px; background:var(--accent-2); color:#0B0E14; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.pktg-file-icon svg{ width:20px; height:20px; }
-.pktg-file-info{ flex:1; min-width:0; overflow:hidden; }
-.pktg-file-name{ font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
-.pktg-file-size{ font-size:11px; color:var(--text-faint); }
-.pktg-dl-btn{ width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:rgba(51,224,193,.1); color:var(--accent-2); flex:none; }
-.pktg-dl-progress{ flex-basis:100%; order:10; height:3px; background:rgba(128,128,128,.2); overflow:hidden; margin-top:5px; border-radius:4px; display:none; }
-.pktg-dl-progress.active{ display:block; }
-.pktg-dl-fill{ height:100%; width:0; background:var(--accent-2); transition:width .1s; }
+.pktg-file-icon{
+  width:52px; height:52px; border-radius:12px;
+  background: rgba(0,0,0,.18);
+  color: var(--lg-text);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; overflow:hidden;
+  border:1px solid var(--lg-border);
+  position:relative; z-index:1;
+}
+html[data-theme="light"] .pktg-file-icon{ background: rgba(255,255,255,.7); }
+.pktg-file-icon svg{ width:24px; height:24px; }
+.pktg-file-icon img{ width:100%; height:100%; object-fit:cover; }
+.pktg-file-info{ flex:1; min-width:0; overflow:hidden; position:relative; z-index:1; }
+.pktg-file-name{ font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; color:var(--lg-text); }
+.pktg-file-size{ font-size:11.5px; color:var(--lg-text-dim); margin-top:2px; display:block; }
+.pktg-dl-btn{
+  width:40px; height:40px; border-radius:50%;
+  display:grid; place-items:center;
+  background: linear-gradient(135deg, var(--accent), #FFA800);
+  color:#171200; flex:none;
+  box-shadow: 0 6px 14px rgba(255,198,26,.35), inset 0 1px 0 rgba(255,255,255,.4);
+  position:relative; z-index:1;
+}
+.pktg-dl-btn svg{ width:18px; height:18px; }
+.pktg-dl-btn:active{ transform:scale(.9); }
+.pktg-dl-btn .pktg-dl-pct{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:800; color:#171200;
+}
 
 .pktg-caption{ font-size:14px; line-height:1.35; margin-bottom:4px; }
 .pktg-caption a{ color:var(--accent-2); text-decoration:none; }
 .pktg-meta{ display:flex; align-items:center; justify-content:flex-end; gap:4px; font-size:10px; color:var(--text-faint); margin-top:2px; padding-top:2px; }
+.pktg-msg.pktg-me .pktg-meta{ color:rgba(23,18,0,.65); }
 .pktg-deleted-body{ display:flex; align-items:center; gap:7px; color:var(--text-faint); font-style:italic; padding:6px 2px; }
 
 .pktg-composer{ position:absolute; bottom:max(8px, var(--safe-bottom)); left:8px; right:8px; z-index:10; display:flex; flex-direction:column; gap:6px; }
@@ -586,28 +643,10 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .pktg-empty{ align-self:center; margin:auto 0; color:var(--text-faint); display:flex; flex-direction:column; align-items:center; gap:6px; font-size:13px; text-align:center; padding:0 20px; }
 .pktg-empty-icon{ width:52px; height:52px; border-radius:50%; display:grid; place-items:center; background:rgba(255,198,26,.14); color:var(--accent); font-size:26px; }
 
-.pktg-home{ position:absolute; inset:0; z-index:20; background:var(--bg); display:flex; flex-direction:column; transform:translateX(0); transition:transform .32s var(--ease-spring), opacity .22s; }
-.pktg-home.hidden{ transform:translateX(-100%); opacity:0; pointer-events:none; }
-.pktg-home-top{ padding:calc(12px + var(--safe-top)) 16px 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); background:var(--glass); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
-.pktg-home-title{ font-size:22px; font-weight:800; letter-spacing:-.4px; }
-.pktg-home-list{ flex:1; overflow-y:auto; padding:8px 12px 100px; }
-.pktg-home-section{ padding:14px 6px 8px; font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--text-faint); font-weight:700; }
-.pktg-chat-row{ position:relative; margin:3px 0 8px; padding:11px 12px; min-height:72px; border:1px solid var(--border); border-radius:20px; background:var(--surface); display:flex; align-items:center; gap:12px; cursor:pointer; transition:background .18s, transform .18s; text-align:left; width:100%; font-family:inherit; }
-.pktg-chat-row:active{ background:var(--surface-2); transform:scale(.985); }
-.pktg-chat-av{ width:54px; height:54px; border-radius:18px; display:grid; place-items:center; flex:none; color:#0B0E14; font-weight:800; font-size:22px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); overflow:hidden; }
-.pktg-chat-av img{ width:100%; height:100%; object-fit:cover; }
-.pktg-chat-main{ min-width:0; flex:1; }
-.pktg-chat-line{ display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
-.pktg-chat-name{ font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pktg-chat-time{ font-size:11px; color:var(--text-faint); flex-shrink:0; }
-.pktg-chat-preview{ margin-top:4px; font-size:12.5px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pktg-chat-badge{ min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--accent); color:#171200; font-size:11px; font-weight:800; display:grid; place-items:center; margin-left:8px; }
-
 .pktg-search{ display:none; position:absolute; inset:0; z-index:22; background:var(--bg); padding:calc(10px + var(--safe-top)) 12px 10px; align-items:center; gap:8px; }
 .pktg-search.active{ display:flex; }
 .pktg-search input{ flex:1; border:1px solid var(--border); outline:none; background:var(--surface-2); color:var(--text); padding:10px 14px; border-radius:14px; font-size:15px; font-family:inherit; }
 
-/* Read-only mode for channel members (non-owners): hide composer entirely */
 #pktg-conv.pktg-readonly .pktg-composer{ display:none; }
 #pktg-conv.pktg-readonly .pktg-feed{ padding-bottom:24px; }
 
@@ -883,7 +922,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
     <section id="channels-page" class="page" hidden>
       <div class="section">
         <div class="section-head"><h2>Channels</h2></div>
-        <div style="margin-bottom:12px"><button class="btn btn-ghost btn-block" id="channel-create-btn"><svg><use href="#ic-channel"/></svg> Create a channel</button></div>
+        <div style="margin-bottom:12px"><button class="btn btn-ghost btn-block" id="channel-create-btn"><svg><use href="#ic-plus"/></svg> Create a channel</button></div>
       </div>
       <div class="settings-list" id="channels-list"></div>
       <div style="height:30px"></div>
@@ -916,6 +955,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
       <input type="file" id="profile-photo-input" accept="image/*" hidden />
       <input type="file" id="channel-photo-input" accept="image/*" hidden />
       <input type="file" id="channel-content-input" accept="*/*" hidden />
+      <input type="file" id="channel-icon-input" accept="image/*" hidden />
       <div class="settings-list">
         <div class="row tap" id="row-rename"><div class="row-left"><svg><use href="#ic-user"/></svg> Change store name</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         <div class="row tap" id="row-phone"><div class="row-left"><svg><use href="#ic-chat"/></svg> WhatsApp number</div><span style="font-size:12px;color:var(--text-faint)" id="profile-phone">Not set</span></div>
@@ -957,19 +997,6 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 
 <div id="pktg">
   <div class="pktg-wallpaper"></div>
-
-  <div class="pktg-home" id="pktg-home">
-    <div class="pktg-home-top">
-      <button class="pktg-header-btn" id="pktg-home-close" aria-label="Close">
-        <svg width="22" height="22"><use href="#ic-back"/></svg>
-      </button>
-      <div class="pktg-home-title">Channels</div>
-      <button class="pktg-header-btn" id="pktg-home-new" aria-label="New channel">
-        <svg width="22" height="22"><use href="#ic-plus"/></svg>
-      </button>
-    </div>
-    <div class="pktg-home-list" id="pktg-home-list"></div>
-  </div>
 
   <div class="pktg-container" id="pktg-conv" style="display:none">
     <header class="pktg-header">
@@ -1242,7 +1269,10 @@ const state = {
     mediaRecorder: null,
     audioChunks: [],
     recordingStartTime: 0,
-    recordingTimer: null
+    recordingTimer: null,
+    pendingScrollToBottom: false,
+    pendingAttachment: null, // { file, kind }
+    pendingIconFile: null
   }
 };
 
@@ -2012,7 +2042,6 @@ function listenUsers(){
     renderProfile();
     renderUsersPage();
     renderChatLog();
-    renderTelegramHome();
   }, err=>{ console.warn("users listener", err); });
 }
 function listenCodes(){
@@ -2020,7 +2049,7 @@ function listenCodes(){
 }
 
 /** Owner-only one-time migration: moves any legacy member doc that was saved under the
-    permanent "owner" id to the real Firebase uid, so Firestore rules — which always
+    permanent "owner" id to the real Firebase uid, so the Firestore rules — which always
     key off request.auth.uid — can find it and the owner can post. Runs once per boot. */
 async function migrateChannelMembers(){
   if(!state.isOwner || !state.authUid) return;
@@ -3669,17 +3698,13 @@ function randomCode(len = 12){
   const arr = crypto.getRandomValues(new Uint32Array(len));
   return Array.from(arr, n => CODE_CHARS[n % CODE_CHARS.length]).join("");
 }
-let channelViewUnsub = null, chMembersUnsub = null, chCodesUnsub = null, chDocUnsub = null;
+let chMembersUnsub = null, chCodesUnsub = null, chDocUnsub = null;
 let channelDeepLinkDone = false;
 
-/** The key used for the current user's own channel member document. Firestore rules always
-    key off request.auth.uid, so this must be the real Firebase uid — NOT "owner". */
 function myMemberKey(){
   return (auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : state.uid;
 }
 
-/** True when the given channel is owned by the signed-in user (either the store owner
-    with full admin access, or a normal user whose real uid matches channel.ownerUid). */
 function isChannelOwner(ch){
   if(!ch) return false;
   if(state.isOwner) return true;
@@ -3693,8 +3718,6 @@ function listenChannels(){
     state.channels = snap.docs.map(d=>({ id:d.id, ...d.data() }));
     state.channelsLoaded = true;
     refreshMyChannels();
-    renderTelegramHome();
-    // if owner is looking at a channel that just changed (e.g. new code), the codes sheet picks it up.
     if(state.tg.panelOpen && state.tg.channelId){
       const fresh = state.channels.find(c=>c.id === state.tg.channelId);
       if(fresh) state.tg.channel = fresh;
@@ -3703,7 +3726,6 @@ function listenChannels(){
 }
 async function refreshMyChannels(){
   renderChannelsPage();
-  renderTelegramHome();
   if(!firebaseReady || !state.uid || state.isGuest){ state.myChannelsLoaded = true; applyChannelDeepLink(); return; }
   const entries = {};
   const key = myMemberKey();
@@ -3716,7 +3738,6 @@ async function refreshMyChannels(){
   state.myChannels = entries;
   state.myChannelsLoaded = true;
   renderChannelsPage();
-  renderTelegramHome();
   applyChannelDeepLink();
 }
 function renderChannelsPage(){
@@ -3734,7 +3755,7 @@ function renderChannelsPage(){
       ${badge}
       <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
     </div>`;
-  }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No channels yet. ${(state.verified||state.isOwner) ? "Create the first one!" : "Ask a blue-tick member to create one."}</div>`;
+  }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No channels yet. ${(state.verified||state.isOwner) ? "Tap 'Create a channel' above to make one." : "Ask a blue-tick member to create one."}</div>`;
 }
 function initChannelsPage(){
   $("#channel-create-btn").addEventListener("click", openCreateChannelSheet);
@@ -3877,7 +3898,6 @@ async function openCreateChannelSheet(){
     openTelegramChannel(ref.id);
   }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
 }
-function openChannelView(channelId){ openTelegramChannel(channelId); }
 async function copyChannelLink(ch){
   const url = `${location.origin}${location.pathname}?channel=${ch.id}`;
   const ok = await copyText(url);
@@ -3913,7 +3933,7 @@ function openUserPicker(onPick){
   });
 }
 
-/** Owner-only Manage sheet: rename, photo, members, add, codes, delete. */
+/** Owner-only Manage sheet. */
 function openChannelManageSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId);
   if(!ch) return;
@@ -4023,32 +4043,18 @@ function openChannelMembersSheet(channelId){
 async function generateUniqueChannelCode(channelId, channelName){
   for(let i=0;i<6;i++){
     const code = randomCode(12);
-    let created = false;
     try{
-      // 1. Create the code doc first (source of truth for joining).
       await setDoc(doc(db,"channelCodes",code), {
         channelId, channelName, createdBy: state.authUid || state.uid,
         createdAt: serverTimestamp(), createdAtMs: Date.now(),
         used:false, usedBy:null, usedAt:null
       });
-      created = true;
-      // 2. Append the code's ID to the channel's codeIds array so we can list them later
-      //    even though the rules don't allow LIST on the channelCodes collection.
-      await updateDoc(doc(db,"channels",channelId), { codeIds: arrayUnion(code) });
+      try{ await updateDoc(doc(db,"channels",channelId), { codeIds: arrayUnion(code) }); }catch(e){}
       return code;
-    }catch(e){
-      console.warn("Code generation attempt failed", e);
-      if(created){
-        // Orphaned code doc — best effort cleanup is not possible with current rules,
-        // so just skip and try another code.
-      }
-      continue;
-    }
+    }catch(e){ continue; }
   }
   throw new Error("Could not generate a unique code");
 }
-/** Owner-only Secret Codes sheet. Reads channel.codeIds, then getDoc()s each code
-    document individually (rules allow single-doc get, so this works where LIST doesn't). */
 function openChannelCodesSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId);
   if(!ch) return;
@@ -4067,12 +4073,11 @@ function openChannelCodesSheet(channelId){
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#chcodes-backdrop");
 
-  // Cancel any previous listener.
   if(chCodesUnsub){ chCodesUnsub(); chCodesUnsub = null; }
   if(chDocUnsub){ chDocUnsub(); chDocUnsub = null; }
 
   let codeIds = [];
-  const codeData = {};   // id -> {used, usedBy, ...} | null while loading | "missing"
+  const codeData = {};
 
   function render(){
     const box = $("#chcodes-list"); if(!box) return;
@@ -4104,7 +4109,7 @@ function openChannelCodesSheet(channelId){
   }
 
   async function loadAll(ids){
-    codeIds = ids.slice().reverse(); // newest first (codeIds is append-order)
+    codeIds = ids.slice().reverse();
     codeIds.forEach(id=>{ if(!(id in codeData)) codeData[id] = "loading"; });
     render();
     await Promise.all(codeIds.map(async id=>{
@@ -4119,10 +4124,6 @@ function openChannelCodesSheet(channelId){
     }));
   }
 
-  // Snapshot the channel doc so we re-render whenever codeIds changes (e.g. owner
-  // generates a new code while this sheet is open) and whenever a code doc is
-  // updated (Firestore will not push individual channelCodes changes here, so the
-  // channel-doc listener covers "new code added" and periodic re-fetches cover "code used").
   chDocUnsub = onSnapshot(doc(db,"channels",channelId), s=>{
     const fresh = s.exists() ? s.data() : null;
     const ids = (fresh && Array.isArray(fresh.codeIds)) ? fresh.codeIds : [];
@@ -4132,8 +4133,6 @@ function openChannelCodesSheet(channelId){
     toast("Could not load codes: " + (err.code||err.message), "ic-close");
   });
 
-  // Safety-net: re-fetch code docs every 4 seconds so a used/unused flip is picked up
-  // quickly even without a per-code listener.
   const pollTimer = setInterval(async ()=>{
     if(!document.body.contains(wrap)) return;
     await Promise.all(codeIds.map(async id=>{
@@ -4158,7 +4157,6 @@ function openChannelCodesSheet(channelId){
       try{
         const code = await generateUniqueChannelCode(channelId, ch.name);
         toast("New code: " + code, "ic-check");
-        // The channel-doc listener above will pick up the new codeIds array automatically.
       }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
     }
   });
@@ -4182,7 +4180,6 @@ function openChannelInfoSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId);
   if(!ch) return;
   const isOwnerHere = isChannelOwner(ch);
-  const memberKey = myMemberKey();
   const isMemberHere = !!state.myChannels[channelId] && !state.isOwner && !isOwnerHere;
 
   const html = `
@@ -4285,12 +4282,6 @@ let tgEmojiCategory = '😀';
 
 function initTelegramUI(){
   const P = id => document.getElementById(id);
-  P("pktg-home-close").addEventListener("click", closeTelegramUI);
-  P("pktg-home-new").addEventListener("click", ()=>{ openCreateChannelSheet(); });
-  P("pktg-home-list").addEventListener("click", e=>{
-    const r = e.target.closest("[data-tg-open]");
-    if(r) openChannelEntry(r.dataset.tgOpen);
-  });
   P("pktg-back").addEventListener("click", ()=>{ closeTelegramChannel(); });
   P("pktg-info").addEventListener("click", ()=>{
     if(!state.tg.channelId) return;
@@ -4384,19 +4375,6 @@ function updateSendBtnIcon(){
   icon.innerHTML = hasText ? `<use href="#ic-send"/>` : `<use href="#ic-mic"/>`;
 }
 
-function openTelegramUI(){
-  const root = $("#pktg");
-  root.classList.add("open");
-  $("#pktg-home").classList.remove("hidden");
-  $("#pktg-conv").style.display = "none";
-  renderTelegramHome();
-  state.tg.panelOpen = true;
-}
-function closeTelegramUI(){
-  $("#pktg").classList.remove("open");
-  state.tg.panelOpen = false;
-  if(state.tg.recording) stopVoiceRecording(true);
-}
 function closeTelegramChannel(){
   if(state.tg.unsub){ state.tg.unsub(); state.tg.unsub = null; }
   if(state.tg.unsubTyping){ state.tg.unsubTyping(); state.tg.unsubTyping = null; }
@@ -4407,44 +4385,22 @@ function closeTelegramChannel(){
   state.tg.replyTo = null;
   state.tg.contextMsg = null;
   state.tg.searchQuery = "";
+  state.tg.pendingScrollToBottom = false;
   $("#pktg-conv").style.display = "none";
-  $("#pktg-home").classList.remove("hidden");
-  $("#pktg-manage-btn").style.display = "none";
-  $("#pktg-conv").classList.remove("pktg-readonly");
-  renderTelegramHome();
-}
-function renderTelegramHome(){
-  const list = $("#pktg-home-list"); if(!list) return;
-  const joined = state.channels.filter(ch=> isChannelOwner(ch) || (state.myChannels[ch.id] && !state.myChannels[ch.id].blocked));
-  if(!joined.length){
-    list.innerHTML = `<div class="pktg-empty" style="padding-top:60px"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-channel"/></svg></div><b>No channels yet</b><span>Join one from the Channels tab, or create your own if you have a blue tick.</span></div>`;
-    return;
-  }
-  list.innerHTML = `<div class="pktg-home-section">Your channels</div>` + joined.map(ch=>{
-    const mine = state.myChannels[ch.id];
-    const role = isChannelOwner(ch) ? "owner" : (mine ? mine.role : "member");
-    return `<button class="pktg-chat-row" type="button" data-tg-open="${ch.id}">
-      <div class="pktg-chat-av">${ch.photoURL ? `<img src="${escapeHtml(ch.photoURL)}" alt="">` : escapeHtml((ch.name||"?").trim().slice(0,1).toUpperCase())}</div>
-      <div class="pktg-chat-main">
-        <div class="pktg-chat-line">
-          <span class="pktg-chat-name">${escapeHtml(ch.name)}</span>
-          <span class="pktg-chat-time">${role === "owner" ? "owner" : ""}</span>
-        </div>
-        <div class="pktg-chat-preview">${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"} • tap to open</div>
-      </div>
-    </button>`;
-  }).join("");
+  $("#pktg").classList.remove("open");
+  state.tg.panelOpen = false;
 }
 
 async function openTelegramChannel(channelId){
   const ch = state.channels.find(c=>c.id===channelId);
   if(!ch){ toast("Channel not found", "ic-close"); return; }
-  openTelegramUI();
   state.tg.channelId = channelId;
   state.tg.channel = ch;
   state.tg.messages = [];
   state.tg.replyTo = null;
-  $("#pktg-home").classList.add("hidden");
+  state.tg.pendingScrollToBottom = true;
+  $("#pktg").classList.add("open");
+  state.tg.panelOpen = true;
   $("#pktg-conv").style.display = "flex";
   $("#pktg-title").textContent = ch.name;
   $("#pktg-subs").textContent = `${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}`;
@@ -4487,7 +4443,6 @@ async function openTelegramChannel(channelId){
 
 function renderTelegramFeed(){
   const feed = $("#pktg-feed"); if(!feed) return;
-  const wasNearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 140;
   const q = (state.tg.searchQuery || "").trim().toLowerCase();
   const items = state.tg.messages.filter(m=>{
     if(!q) return true;
@@ -4499,7 +4454,10 @@ function renderTelegramFeed(){
   }
   feed.innerHTML = `<div class="pktg-date-badge">Messages</div>`;
   items.forEach(m=> feed.appendChild(buildTelegramMsg(m)));
-  if(wasNearBottom || q) feed.scrollTop = feed.scrollHeight;
+  if(state.tg.pendingScrollToBottom && !q){
+    state.tg.pendingScrollToBottom = false;
+    requestAnimationFrame(()=>{ feed.scrollTop = feed.scrollHeight; });
+  }
   bindTgSwipe();
   bindTgLongPress();
 }
@@ -4539,20 +4497,22 @@ function buildTelegramMsg(m){
   } else if(m.type === "video"){
     html += `<div class="pktg-media"><video src="${escapeHtml(m.mediaUrl || "")}" controls playsinline preload="metadata"></video></div>`;
   } else if(m.type === "audio"){
-    html += `<div class="pktg-voice-row"><div class="pktg-voice-icon"><svg width="18" height="18"><use href="#ic-play"/></svg></div><audio src="${escapeHtml(m.mediaUrl || "")}" controls></audio></div>`;
+    // Only the native player — no custom decorative play button.
+    html += `<div class="pktg-voice-row"><audio src="${escapeHtml(m.mediaUrl || "")}" controls></audio></div>`;
   } else if(m.type === "file"){
+    const iconUrl = safeImg(m.iconUrl || "");
     html += `<button type="button" class="pktg-file-card" data-tg-file="${m.id}">
-      <span class="pktg-file-icon"><svg><use href="#ic-cube"/></svg></span>
+      <span class="pktg-file-icon">${iconUrl ? `<img src="${escapeHtml(iconUrl)}" alt=""/>` : `<svg><use href="#ic-cube"/></svg>`}</span>
       <span class="pktg-file-info">
         <span class="pktg-file-name">${escapeHtml(m.filename || "Document")}</span>
         <span class="pktg-file-size">${escapeHtml(fmtBytes(m.size || 0))}</span>
       </span>
       <span class="pktg-dl-btn" data-tg-dl="${m.id}" title="Download"><svg><use href="#ic-download"/></svg></span>
-      <span class="pktg-dl-progress" id="tg-dl-${m.id}"><span class="pktg-dl-fill" id="tg-df-${m.id}"></span></span>
     </button>`;
   }
   const body = m.caption || m.text;
-  if(body && !m.deleted) html += `<div class="pktg-caption">${escapeHtml(body)}</div>`;
+  if(body && !m.deleted && m.type !== "file" && m.type !== "audio" && m.type !== "image" && m.type !== "video") html += `<div class="pktg-caption">${escapeHtml(body)}</div>`;
+  if(body && !m.deleted && (m.type === "file") && m.caption && m.caption !== m.filename) html += `<div class="pktg-caption">${escapeHtml(body)}</div>`;
   const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
   html += `<div class="pktg-meta"><span>${m.views || 0} views</span><span>•</span><span>${time}</span></div>`;
   card.innerHTML = html;
@@ -4654,26 +4614,33 @@ function openTgViewer(url){
   $("#pktg-viewer-img").src = url;
   $("#pktg-viewer").classList.add("active");
 }
+
+/** Channel downloads use the same floating, draggable bubble as the Home section.
+    Drag it to the bottom dismiss target to cancel. */
 async function tgDownloadMessage(m){
   if(!m || m.deleted){ toast("Attached Item Deleted", "ic-close"); return; }
   if(!m.mediaUrl){ toast("File data unavailable", "ic-close"); return; }
-  const prog = document.getElementById("tg-dl-" + m.id);
-  const fill = document.getElementById("tg-df-" + m.id);
-  if(prog) prog.classList.add("active");
+  if(dlActive.has(m.id)){ toast("Already downloading"); return; }
+  dlActive.add(m.id);
+  const controller = new AbortController();
+  const fakeApp = { name: m.filename || "file" };
+  const bubble = createDlBubble(fakeApp, ()=> controller.abort());
+  toast("Download started");
   try{
-    await downloadInsideStore(m.mediaUrl, m.filename || "download", pct=>{ if(fill && pct !== null) fill.style.width = pct + "%"; });
-    toast("Download started");
+    await downloadInsideStore(m.mediaUrl, m.filename || "download", pct=> bubble.set(pct), controller.signal);
+    bubble.set(100);
+    toast(`"${m.filename || "File"}" downloaded`);
   }catch(e){
-    if(!e || e.name !== "AbortError"){
+    if(e && e.name === "AbortError"){
+      toast("Download cancelled");
+    } else {
       const a = document.createElement("a"); a.href = m.mediaUrl; a.target = "_blank"; a.rel = "noopener";
       document.body.appendChild(a); a.click(); a.remove();
       toast("Download opened in your browser");
-    } else {
-      toast("Download cancelled");
     }
-  }finally{
-    setTimeout(()=> prog?.classList.remove("active"), 500);
   }
+  bubble.remove();
+  dlActive.delete(m.id);
 }
 
 function tgSendOrRecord(){
@@ -4857,6 +4824,8 @@ async function sendVoiceBlob(blob, durationSec){
   }
 }
 
+/** File attachment flow: first show a preview sheet so the user can optionally add
+    a custom icon (thumbnail image) before the file is uploaded. */
 async function tgHandleFile(e, kind){
   const ch = state.channels.find(c=>c.id === state.tg.channelId);
   if(!isChannelOwner(ch)){ toast("Only the channel owner can upload here", "ic-close"); e.target.value=""; return; }
@@ -4866,6 +4835,59 @@ async function tgHandleFile(e, kind){
   if(!state.tg.channelId){ toast("Open a channel first", "ic-close"); return; }
   if(guestBlock("broadcast in channels")) return;
   if(!storageReady()){ toast("Connect your VPS upload API first", "ic-close"); return; }
+  openTgFilePreview(file, kind);
+}
+
+function openTgFilePreview(file, kind){
+  state.tg.pendingAttachment = { file, kind };
+  state.tg.pendingIconFile = null;
+  const isImage = file.type && file.type.startsWith("image/");
+  const previewUrl = isImage ? URL.createObjectURL(file) : "";
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="preview-backdrop">
+      <div class="sheet" style="padding:22px 20px calc(22px + var(--safe-bottom));">
+        <h3 style="text-align:center;font-size:17px;margin:0 0 14px;">Send file</h3>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:14px;background:var(--surface-2);margin-bottom:14px;">
+          <div id="pv-icon" style="width:56px;height:56px;border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border);flex-shrink:0;">
+            ${previewUrl ? `<img src="${previewUrl}" style="width:100%;height:100%;object-fit:cover;"/>` : `<svg width="26" height="26" style="color:var(--accent-2)"><use href="#ic-cube"/></svg>`}
+          </div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(file.name)}</div>
+            <div style="font-size:11.5px;color:var(--text-faint);margin-top:2px;">${escapeHtml(fmtBytes(file.size))}</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-block" id="pv-add-icon" type="button" style="margin-bottom:10px;"><svg><use href="#ic-image"/></svg> Add custom icon (optional)</button>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="pv-cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" id="pv-send" type="button">Send</button>
+        </div>
+      </div>
+    </div>`);
+  const wrap = $("#preview-backdrop");
+  $("#pv-cancel").addEventListener("click", ()=>{ wrap.remove(); state.tg.pendingAttachment = null; state.tg.pendingIconFile = null; });
+  $("#pv-add-icon").addEventListener("click", ()=>{
+    const input = $("#channel-icon-input");
+    input.onchange = (ev)=>{
+      const f = ev.target.files[0]; ev.target.value = "";
+      if(!f) return;
+      state.tg.pendingIconFile = f;
+      const iconEl = $("#pv-icon");
+      const url = URL.createObjectURL(f);
+      iconEl.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;"/>`;
+      toast("Custom icon added");
+    };
+    input.click();
+  });
+  $("#pv-send").addEventListener("click", ()=>{ wrap.remove(); performTgUpload(); });
+}
+
+async function performTgUpload(){
+  const att = state.tg.pendingAttachment;
+  if(!att){ return; }
+  const { file, kind } = att;
+  const iconFile = state.tg.pendingIconFile;
+  state.tg.pendingAttachment = null;
+  state.tg.pendingIconFile = null;
   const msgId = "chmsg_" + state.tg.channelId + "_" + generateAppId();
   showTgUpload(file.name);
   let cancelled = false;
@@ -4874,6 +4896,13 @@ async function tgHandleFile(e, kind){
     const res = await uploadFileToServer(file, msgId, "file", p=> setTgUpload(p));
     if(cancelled) throw new Error("Cancelled");
     setTgUpload(100);
+    let iconUrl = "";
+    if(iconFile){
+      try{
+        const iconRes = await uploadFileToServer(iconFile, msgId + "_icon", "icon", null);
+        iconUrl = iconRes.url;
+      }catch(e){ console.warn("Icon upload failed", e); }
+    }
     const type = kind === "image" ? "image" : kind === "video" ? "video" : (file.type && file.type.startsWith("audio/") ? "audio" : "file");
     await addDoc(collection(db,"channelMessages"), {
       channelId: state.tg.channelId,
@@ -4884,6 +4913,7 @@ async function tgHandleFile(e, kind){
       mimeType: file.type || "",
       size: file.size,
       mediaUrl: res.url,
+      iconUrl: iconUrl || null,
       senderUid: state.uid,
       senderName: state.username,
       senderPhoto: state.photoURL || "",
@@ -4910,6 +4940,7 @@ async function tgHandleFile(e, kind){
     hideTgUpload();
   }
 }
+
 function showTgUpload(name){
   const box = $("#pktg-upload");
   box.classList.add("active");
