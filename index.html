@@ -493,7 +493,6 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .pktg-feed{ flex:1; overflow-y:auto; overflow-x:hidden; padding:12px 12px 120px; display:flex; flex-direction:column; gap:8px; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; }
 .pktg-date-badge{ align-self:center; background:rgba(0,0,0,.35); color:#fff; font-size:11px; padding:4px 12px; border-radius:12px; backdrop-filter:blur(4px); margin:8px 0; font-weight:600; }
 
-/* Message bubble — iOS liquid-glass style, adapts to theme */
 .pktg-msg{
   align-self:flex-start; max-width:min(92%, 560px);
   background: var(--bubble-other-bg);
@@ -534,7 +533,6 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .pktg-media{ width:100%; border-radius:14px; overflow:hidden; margin:-1px -1px 6px; background:#000; cursor:pointer; }
 .pktg-media img, .pktg-media video{ width:100%; max-height:430px; object-fit:cover; display:block; border-radius:14px; }
 
-/* Custom Audio player */
 .pktg-audio{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:16px; background:var(--lg-bg); border:1px solid var(--lg-border); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); margin:2px 0 4px; min-width:220px; max-width:100%; }
 html[data-theme="light"] .pktg-audio{ background: rgba(255,255,255,.7); }
 .pktg-msg.pktg-me .pktg-audio{ background: rgba(255,255,255,.28); border-color: rgba(255,255,255,.4); }
@@ -548,7 +546,6 @@ html[data-theme="light"] .pktg-audio-track{ background: rgba(0,0,0,.14); }
 .pktg-audio-time{ font-size:11px; font-variant-numeric:tabular-nums; color: var(--lg-text-dim); flex:none; min-width:70px; text-align:right; }
 .pktg-msg.pktg-me .pktg-audio-time{ color:rgba(23,18,0,.75); }
 
-/* Liquid iOS file card */
 .pktg-file-card{
   display:flex; align-items:center; gap:12px;
   background: var(--lg-bg);
@@ -599,7 +596,7 @@ html[data-theme="light"] .pktg-file-icon{ background: rgba(255,255,255,.75); }
 .pktg-dl-btn svg{ width:18px; height:18px; }
 .pktg-dl-btn:active{ transform:scale(.9); }
 
-.pktg-caption{ font-size:14px; line-height:1.35; margin-bottom:4px; }
+.pktg-caption{ font-size:14px; line-height:1.45; margin:6px 0 4px; white-space:pre-wrap; word-break:break-word; }
 .pktg-caption a{ color:var(--accent-2); text-decoration:none; }
 .pktg-meta{ display:flex; align-items:center; justify-content:flex-end; gap:4px; font-size:10px; color:var(--text-faint); margin-top:2px; padding-top:2px; }
 .pktg-msg.pktg-me .pktg-meta{ color:rgba(23,18,0,.65); }
@@ -622,7 +619,6 @@ html[data-theme="light"] .pktg-file-icon{ background: rgba(255,255,255,.75); }
 .pktg-send:active{ transform:scale(.9); }
 .pktg-send svg{ width:18px; height:18px; }
 
-/* New recording UI */
 .pktg-rec-bar{
   display:none;
   align-items:center; gap:10px;
@@ -646,20 +642,39 @@ html[data-theme="light"] .pktg-file-icon{ background: rgba(255,255,255,.75); }
   display:block; width:3px; border-radius:2px; background:linear-gradient(180deg, var(--accent), var(--danger));
   height:20%; transition:height .08s linear; min-height:3px;
 }
-.pktg-upload-composer{ display:none; }
 #pktg-conv.pktg-recording .pktg-bar,
 #pktg-conv.pktg-recording .pktg-upload{ display:none; }
 #pktg-conv.pktg-recording .pktg-rec-bar{ display:flex; }
 
-.pktg-emoji{ position:absolute; left:0; right:0; bottom:calc(58px + var(--safe-bottom)); z-index:20; display:none; flex-direction:column; max-height:min(52dvh,440px); background:var(--bg-elevated); border:1px solid var(--border); border-radius:22px; box-shadow:var(--shadow); overflow:hidden; isolation:isolate; }
-.pktg-emoji.active{ display:flex; background: var(--bg-elevated); }
-@keyframes pktgEmojiIn{ from{opacity:0; transform:translateY(12px) scale(.98)} to{opacity:1; transform:none} }
-.pktg-emoji-search-wrap{ padding:9px 10px 6px; }
+/* Emoji picker — hard opaque, isolated, no backdrop-filter bleed */
+.pktg-emoji{
+  position:absolute;
+  left:0; right:0;
+  bottom:calc(58px + var(--safe-bottom));
+  z-index:40;
+  display:none;
+  flex-direction:column;
+  max-height:min(52dvh,440px);
+  background:#12161F;
+  background-color:var(--bg-elevated);
+  border:1px solid var(--border);
+  border-radius:22px;
+  box-shadow:0 14px 44px rgba(0,0,0,.5);
+  overflow:hidden;
+  isolation:isolate;
+  contain:layout paint;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFFFF; }
+.pktg-emoji.active{ display:flex; background-color:var(--bg-elevated); }
+.pktg-emoji-search-wrap{ padding:9px 10px 6px; background:transparent; }
 .pktg-emoji-search{ width:100%; border:1px solid var(--border); outline:none; border-radius:14px; background:var(--surface-2); color:var(--text); padding:10px 12px; font-size:13px; font-family:inherit; }
-.pktg-emoji-cats{ display:flex; gap:4px; padding:4px 8px 7px; overflow-x:auto; border-bottom:1px solid var(--border); }
+.pktg-emoji-cats{ display:flex; gap:4px; padding:4px 8px 7px; overflow-x:auto; border-bottom:1px solid var(--border); background:transparent; }
 .pktg-emoji-cat{ min-width:39px; height:35px; border:0; border-radius:11px; background:transparent; color:var(--text); font-size:19px; }
 .pktg-emoji-cat.active{ background:rgba(255,198,26,.15); }
-.pktg-emoji-grid{ overflow:auto; padding:8px; display:grid; grid-template-columns:repeat(8,1fr); gap:3px; }
+.pktg-emoji-grid{ overflow:auto; padding:8px; display:grid; grid-template-columns:repeat(8,1fr); gap:3px; background:transparent; }
 .pktg-emoji-item{ border:0; background:transparent; border-radius:10px; min-height:40px; font-size:25px; display:grid; place-items:center; }
 .pktg-emoji-item:active{ background:rgba(255,198,26,.2); transform:scale(.88); }
 .pktg-emoji-empty{ grid-column:1/-1; text-align:center; color:var(--text-faint); padding:25px; }
@@ -768,7 +783,7 @@ html[data-theme="light"] .pktg-file-icon{ background: rgba(255,255,255,.75); }
 <symbol id="ic-forward" viewBox="0 0 24 24"><path d="M15 17l5-5-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 18v-2a4 4 0 0 1 4-4h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
 <symbol id="ic-send" viewBox="0 0 24 24"><path d="M22 2 11 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m22 2-7 20-4-9-9-4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
 <symbol id="ic-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></symbol>
-<symbol id="ic-check-eye" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+<symbol id="ic-lock-open" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 7.5-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 </svg>
 
 <div id="splash"><img class="logo" alt="Pika" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" /><div class="spinner"></div><p>Please wait…</p></div>
@@ -1339,6 +1354,8 @@ const state = {
     vizRAF: null,
     pendingAttachment: null,
     pendingIconFile: null,
+    pendingDescription: "",
+    pendingCancel: false,
     firstLoadDone: false
   }
 };
@@ -1369,6 +1386,29 @@ function fmtDuration(sec){
   sec = Math.max(0, Math.floor(sec));
   const m = Math.floor(sec/60), s = sec%60;
   return `${m}:${String(s).padStart(2,"0")}`;
+}
+/** Extract a millisecond timestamp from an app doc, whether it has createdAtMs or only a Firestore Timestamp. */
+function appCreatedMs(app){
+  if(!app) return 0;
+  if(app.createdAtMs) return app.createdAtMs;
+  if(app.createdAt && typeof app.createdAt.toMillis === "function") return app.createdAt.toMillis();
+  return 0;
+}
+/** Human-friendly relative time like "just now", "2 hours ago", "3 days ago". */
+function fmtAgo(ms){
+  if(!ms) return "";
+  const diff = Date.now() - ms;
+  if(diff < 60*1000) return "just now";
+  const m = Math.floor(diff/60000);
+  if(m < 60) return m + " min ago";
+  const h = Math.floor(m/60);
+  if(h < 24) return h + " hour" + (h===1?"":"s") + " ago";
+  const d = Math.floor(h/24);
+  if(d === 1) return "yesterday";
+  if(d < 7) return d + " days ago";
+  const w = Math.floor(d/7);
+  if(w < 5) return w + " week" + (w===1?"":"s") + " ago";
+  return new Date(ms).toLocaleDateString();
 }
 async function sha256(text){
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -2113,6 +2153,7 @@ function listenUsers(){
     renderProfile();
     renderUsersPage();
     renderChatLog();
+    renderTelegramFeed();
   }, err=>{ console.warn("users listener", err); });
 }
 function listenCodes(){
@@ -2349,7 +2390,10 @@ function renderAppRow(selector, apps, showRank){
     node.querySelector("img").src = app.thumbUrl || placeholderIcon(app.name);
     node.querySelector(".fmt-badge").textContent = app.format || "APK";
     node.querySelector(".name").textContent = app.name;
-    node.querySelector(".meta span").textContent = fmtCount(app.downloadCount||0) + " downloads";
+    const dlText = fmtCount(app.downloadCount||0) + " downloads";
+    const created = appCreatedMs(app);
+    const ago = created ? fmtAgo(created) : "";
+    node.querySelector(".meta span").textContent = ago ? `${dlText} • ${ago}` : dlText;
     wrap.addEventListener("click", ()=>openAppDetail(app.id));
     row.appendChild(node);
   });
@@ -2516,6 +2560,8 @@ function openAppDetail(appId){
   const up = userView(app.uploaderUid, app.uploaderName, app.isOwner);
   const shots = (app.screenshots||[]);
   const desc = app.description || "No description provided.";
+  const createdMs = appCreatedMs(app);
+  const agoLine = createdMs ? `<div style="font-size:11.5px;color:var(--text-faint);text-align:center;margin:2px 18px 8px">Uploaded ${escapeHtml(fmtAgo(createdMs))}</div>` : "";
   const html = `
   <div class="sheet-backdrop" id="detail-backdrop">
     <div class="sheet">
@@ -2531,6 +2577,7 @@ function openAppDetail(appId){
           <div class="dev" style="display:flex;align-items:center">${avatarHtml(up.name, up.photo)}${escapeHtml(up.name)}${tick(up.verified)}</div>
         </div>
       </div>
+      ${agoLine}
       <div class="detail-actions" style="display:flex;gap:8px;padding:0 18px 6px">
         <button class="btn btn-primary" style="flex:2" id="detail-download-btn">
           <svg><use href="${app.hasPassword && !state.isOwner ? "#ic-lock" : "#ic-download"}"/></svg>
@@ -2554,7 +2601,7 @@ function openAppDetail(appId){
         </details>
         <details class="accordion-item">
           <summary>File info <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary>
-          <div class="body">Format: ${app.format||"APK"}${app.sizeLabel? " • "+app.sizeLabel:""}\nUploaded by: ${escapeHtml(up.name)}\nCategory: ${escapeHtml(app.category||"Uncategorized")}</div>
+          <div class="body">Format: ${app.format||"APK"}${app.sizeLabel? " • "+app.sizeLabel:""}\nUploaded by: ${escapeHtml(up.name)}\nCategory: ${escapeHtml(app.category||"Uncategorized")}${createdMs? "\nUploaded: " + new Date(createdMs).toLocaleString() : ""}</div>
         </details>
       </div>
       <div style="height:20px"></div>
@@ -3228,9 +3275,11 @@ function renderProfile(){
   $("#my-uploads-title").textContent = state.isOwner ? "All uploads (Owner)" : "My uploads";
   $("#my-uploads-list").innerHTML = list.length ? list.map(a=>{
     const u = userView(a.uploaderUid, a.uploaderName, a.isOwner);
+    const created = appCreatedMs(a);
+    const ago = created ? " • " + fmtAgo(created) : "";
     return `<div class="mini-row">
       <img class="thumb" alt="" src="${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}" />
-      <div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • ${fmtCount(a.downloadCount||0)} downloads${state.isOwner ? " • " + escapeHtml(u.name) : ""}</small></div>
+      <div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • ${fmtCount(a.downloadCount||0)} downloads${ago}${state.isOwner ? " • " + escapeHtml(u.name) : ""}</small></div>
       <button class="icon-del" data-del-app="${a.id}" title="Delete"><svg><use href="#ic-trash"/></svg></button>
     </div>`;
   }).join("") : `<div class="mini-row" style="color:var(--text-faint)">No uploads yet.</div>`;
@@ -3373,7 +3422,7 @@ function openUserSheet(uid){
         ${apps.length ? apps.map(a=>`
           <div class="mini-row tap" data-open-app="${a.id}">
             <img class="thumb" alt="" src="${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}" />
-            <div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • ${fmtCount(a.downloadCount||0)} downloads</small></div>
+            <div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • ${fmtCount(a.downloadCount||0)} downloads${appCreatedMs(a) ? " • " + fmtAgo(appCreatedMs(a)) : ""}</small></div>
           </div>`).join("") : `<div class="mini-row" style="color:var(--text-faint)">No uploads yet.</div>`}
       </div>
     </div>
@@ -3873,11 +3922,14 @@ function openChannelEntry(channelId){
   }
 }
 function askChannelPassword(channel){
+  const avHtml = channel.photoURL
+    ? `<img src="${escapeHtml(channel.photoURL)}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
+    : escapeHtml((channel.name||"?").trim().slice(0,1).toUpperCase());
   const html = `
   <div class="sheet-backdrop dlg" id="chpw-backdrop">
     <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
-      <div style="width:52px;height:52px;border-radius:16px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
-        <svg width="24" height="24" style="color:var(--accent-2)"><use href="#ic-key"/></svg>
+      <div style="width:64px;height:64px;border-radius:50%;margin:0 auto 14px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#171200;display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:800;font-size:24px;box-shadow:0 8px 20px rgba(0,0,0,.35);">
+        ${avHtml}
       </div>
       <h3 style="text-align:center;font-size:17px;margin:0 0 4px;">${escapeHtml(channel.name)}</h3>
       <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;">Enter the 12-character code from the channel owner to join.</p>
@@ -4343,7 +4395,6 @@ const EMOJI_CATEGORIES = {
 };
 let tgEmojiCategory = '😀';
 
-// Track which messages this user has already viewed so views aren't incremented every reopen.
 const VIEWED_MSGS_KEY = "pika_viewed_msgs";
 function getViewedMsgs(){
   try{ return new Set(JSON.parse(localStorage.getItem(VIEWED_MSGS_KEY) || "[]")); }
@@ -4399,7 +4450,7 @@ function initTelegramUI(){
   P("pktg-input-video").addEventListener("change", e=> tgHandleFile(e, "video"));
   P("pktg-input-file").addEventListener("change", e=> tgHandleFile(e, "file"));
   P("pktg-input-camera").addEventListener("change", e=> tgHandleFile(e, "image"));
-  P("pktg-emoji-btn").addEventListener("click", ()=> openTgEmoji());
+  P("pktg-emoji-btn").addEventListener("click", (e)=>{ e.stopPropagation(); openTgEmoji(); });
   P("pktg-emoji-search").addEventListener("input", renderTgEmojiGrid);
   document.addEventListener("click", e=>{
     const em = P("pktg-emoji");
@@ -4438,7 +4489,6 @@ function initTelegramUI(){
     }
   });
   P("pktg-upload-cancel").addEventListener("click", ()=>{ if(state.tg.uploadAbort){ try{ state.tg.uploadAbort(); }catch(e){} } hideTgUpload(); });
-  // New recording controls
   P("pktg-rec-cancel").addEventListener("click", ()=> stopVoiceRecording(true));
   P("pktg-rec-send").addEventListener("click", ()=> stopVoiceRecording(false));
 }
@@ -4496,7 +4546,6 @@ async function openTelegramChannel(channelId){
     all.sort((a,b)=> (a.createdAtMs||0) - (b.createdAtMs||0));
     state.tg.messages = all;
     renderTelegramFeed();
-    // Real-time view counting: increment views on unseen messages
     countViews(all);
   }, err=>{
     console.warn("channel messages listener", err);
@@ -4521,9 +4570,6 @@ async function openTelegramChannel(channelId){
   }, ()=>{});
 }
 
-/** Real-time view counter. For each message this user has not yet viewed (tracked
-    locally per device), increment the Firestore `views` field. Only one write per
-    message per user, ever — so views stay accurate without spam. */
 let viewsInFlight = false;
 async function countViews(messages){
   if(!state.uid || state.isGuest) return;
@@ -4534,10 +4580,9 @@ async function countViews(messages){
     const toIncrement = [];
     for(const m of messages){
       if(!m || m.deleted) continue;
-      if(m.senderUid === state.uid) continue; // don't count my own messages
-      const key = m.id;
-      if(seen.has(key)) continue;
-      seen.add(key);
+      if(m.senderUid === state.uid) continue;
+      if(seen.has(m.id)) continue;
+      seen.add(m.id);
       toIncrement.push(m.id);
     }
     saveViewedMsgs(seen);
@@ -4553,7 +4598,7 @@ function renderTelegramFeed(){
   const feed = $("#pktg-feed"); if(!feed) return;
   const q = (state.tg.searchQuery || "").trim().toLowerCase();
   const items = state.tg.messages.filter(m=>{
-    if(m.deleted) return false; // never show deleted messages
+    if(m.deleted) return false;
     if(!q) return true;
     return `${m.text||""} ${m.caption||""} ${m.filename||""}`.toLowerCase().includes(q);
   });
@@ -4564,8 +4609,6 @@ function renderTelegramFeed(){
   }
   feed.innerHTML = `<div class="pktg-date-badge">Messages</div>`;
   items.forEach(m=> feed.appendChild(buildTelegramMsg(m)));
-  // Always scroll to the very bottom on first load / channel open so users see
-  // the newest messages instead of landing in the middle of the history.
   if(!state.tg.firstLoadDone || !q){
     state.tg.firstLoadDone = true;
     requestAnimationFrame(()=>{ feed.scrollTop = feed.scrollHeight; });
@@ -4622,8 +4665,8 @@ function buildTelegramMsg(m){
     </button>`;
   }
   const body = m.caption || m.text;
-  if(body && m.type !== "file" && m.type !== "audio" && m.type !== "image" && m.type !== "video") html += `<div class="pktg-caption">${escapeHtml(body)}</div>`;
-  if(body && m.type === "file" && m.caption && m.caption !== m.filename) html += `<div class="pktg-caption">${escapeHtml(body)}</div>`;
+  const descBody = (m.type === "file") ? (m.caption && m.caption !== m.filename ? m.caption : "") : body;
+  if(descBody) html += `<div class="pktg-caption">${escapeHtml(descBody)}</div>`;
   const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
   html += `<div class="pktg-meta"><span>${m.views || 0} views</span><span>•</span><span>${time}</span></div>`;
   card.innerHTML = html;
@@ -4649,7 +4692,6 @@ function buildTelegramMsg(m){
   return card;
 }
 
-/** Custom audio player markup — no download button, no native controls. */
 function buildAudioPlayerHTML(m){
   const dur = m.durationSec ? fmtDuration(m.durationSec) : "0:00";
   return `<div class="pktg-audio" data-audio-src="${escapeHtml(m.mediaUrl || "")}" data-duration="${m.durationSec||0}">
@@ -4659,7 +4701,6 @@ function buildAudioPlayerHTML(m){
   </div>`;
 }
 
-/** Wire up a single custom audio player. */
 function initAudioPlayer(container){
   const src = container.dataset.audioSrc;
   if(!src) return;
@@ -4688,7 +4729,6 @@ function initAudioPlayer(container){
   }
   btn.addEventListener("click", ()=>{
     if(audio.paused){
-      // Pause all other audio players on the page
       document.querySelectorAll(".pktg-audio").forEach(c=>{
         const a = c.__audio;
         if(a && a !== audio && !a.paused) a.pause();
@@ -4706,7 +4746,6 @@ function initAudioPlayer(container){
   audio.addEventListener("pause", ()=>{ btn.innerHTML = `<svg><use href="#ic-play"/></svg>`; });
   audio.addEventListener("ended", ()=>{ btn.innerHTML = `<svg><use href="#ic-play"/></svg>`; fill.style.width = "0%"; updateTime(0); });
   audio.addEventListener("timeupdate", updateFill);
-  // Seek bar
   let seeking = false;
   const seekAt = clientX => {
     const rect = track.getBoundingClientRect();
@@ -4833,7 +4872,7 @@ function tgSendOrRecord(){
   const input = $("#pktg-input");
   const text = input ? input.value.trim() : "";
   if(text){ tgSendText(); return; }
-  if(state.tg.recording) return; // already recording
+  if(state.tg.recording) return;
   startVoiceRecording();
 }
 async function tgSendText(){
@@ -4883,8 +4922,7 @@ function updateTgReplyBar(){
   $("#pktg-reply-preview").textContent = tgMsgLabel(state.tg.replyTo);
 }
 
-/* ============ Modern voice recording with real-time visualizer ============ */
-function buildVizBars(n = 28){
+function buildVizBars(n = 32){
   const viz = $("#pktg-rec-viz");
   if(!viz) return;
   viz.innerHTML = "";
@@ -4939,17 +4977,15 @@ async function startVoiceRecording(){
     $("#pktg-conv").classList.add("pktg-recording");
     $("#pktg-rec-bar").classList.add("active");
     buildVizBars(32);
-    // Timer
     const timerEl = $("#pktg-rec-timer-live");
     const updateTimer = ()=>{
       const sec = Math.floor((Date.now() - state.tg.recordingStartTime)/1000);
       timerEl.textContent = fmtDuration(sec);
-      if(sec >= 300){ stopVoiceRecording(false); } // 5-minute cap
+      if(sec >= 300){ stopVoiceRecording(false); }
     };
     timerEl.textContent = "00:00";
     updateTimer();
     state.tg.recordingTimer = setInterval(updateTimer, 250);
-    // Real-time visualizer
     try{
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const source = ctx.createMediaStreamSource(stream);
@@ -5054,11 +5090,12 @@ async function tgHandleFile(e, kind){
 function openTgFilePreview(file, kind){
   state.tg.pendingAttachment = { file, kind };
   state.tg.pendingIconFile = null;
+  state.tg.pendingDescription = "";
   const isImage = file.type && file.type.startsWith("image/");
   const previewUrl = isImage ? URL.createObjectURL(file) : "";
   document.body.insertAdjacentHTML("beforeend", `
     <div class="sheet-backdrop dlg" id="preview-backdrop">
-      <div class="sheet" style="padding:22px 20px calc(22px + var(--safe-bottom));">
+      <div class="sheet" style="padding:22px 20px calc(22px + var(--safe-bottom));max-height:90vh;overflow-y:auto;">
         <h3 style="text-align:center;font-size:17px;margin:0 0 14px;">Send file</h3>
         <div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:14px;background:var(--surface-2);margin-bottom:14px;">
           <div id="pv-icon" style="width:56px;height:56px;border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border);flex-shrink:0;">
@@ -5069,6 +5106,10 @@ function openTgFilePreview(file, kind){
             <div style="font-size:11.5px;color:var(--text-faint);margin-top:2px;">${escapeHtml(fmtBytes(file.size))}</div>
           </div>
         </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px;">Description (optional)</label>
+          <textarea id="pv-desc" rows="3" placeholder="What's inside this file? Any install notes?" style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:13.5px;font-family:inherit;resize:vertical;min-height:70px;max-height:180px;outline:none;-webkit-user-select:text;user-select:text;"></textarea>
+        </div>
         <button class="btn btn-ghost btn-block" id="pv-add-icon" type="button" style="margin-bottom:10px;"><svg><use href="#ic-image"/></svg> Add custom icon (optional)</button>
         <div style="display:flex;gap:10px;">
           <button class="btn btn-ghost" style="flex:1" id="pv-cancel" type="button">Cancel</button>
@@ -5077,7 +5118,12 @@ function openTgFilePreview(file, kind){
       </div>
     </div>`);
   const wrap = $("#preview-backdrop");
-  $("#pv-cancel").addEventListener("click", ()=>{ wrap.remove(); state.tg.pendingAttachment = null; state.tg.pendingIconFile = null; });
+  $("#pv-cancel").addEventListener("click", ()=>{
+    wrap.remove();
+    state.tg.pendingAttachment = null;
+    state.tg.pendingIconFile = null;
+    state.tg.pendingDescription = "";
+  });
   $("#pv-add-icon").addEventListener("click", ()=>{
     const input = $("#channel-icon-input");
     input.onchange = (ev)=>{
@@ -5091,7 +5137,11 @@ function openTgFilePreview(file, kind){
     };
     input.click();
   });
-  $("#pv-send").addEventListener("click", ()=>{ wrap.remove(); performTgUpload(); });
+  $("#pv-send").addEventListener("click", ()=>{
+    state.tg.pendingDescription = ($("#pv-desc").value || "").trim();
+    wrap.remove();
+    performTgUpload();
+  });
 }
 
 async function performTgUpload(){
@@ -5099,8 +5149,10 @@ async function performTgUpload(){
   if(!att){ return; }
   const { file, kind } = att;
   const iconFile = state.tg.pendingIconFile;
+  const description = (state.tg.pendingDescription || "").trim();
   state.tg.pendingAttachment = null;
   state.tg.pendingIconFile = null;
+  state.tg.pendingDescription = "";
   const msgId = "chmsg_" + state.tg.channelId + "_" + generateAppId();
   showTgUpload(file.name);
   let cancelled = false;
@@ -5121,7 +5173,7 @@ async function performTgUpload(){
       channelId: state.tg.channelId,
       type,
       text: "",
-      caption: file.name,
+      caption: description || file.name,
       filename: file.name,
       mimeType: file.type || "",
       size: file.size,
@@ -5190,13 +5242,13 @@ function closeTgSheet(){
 
 function openTgEmoji(){
   const p = $("#pktg-emoji");
-  p.classList.toggle("active");
-  p.setAttribute("aria-hidden", String(!p.classList.contains("active")));
-  if(p.classList.contains("active")){
-    renderTgEmojiCats();
-    renderTgEmojiGrid();
-    setTimeout(()=> $("#pktg-emoji-search")?.focus(), 40);
-  }
+  const isOpen = p.classList.contains("active");
+  if(isOpen){ closeTgEmoji(); return; }
+  p.classList.add("active");
+  p.setAttribute("aria-hidden","false");
+  renderTgEmojiCats();
+  renderTgEmojiGrid();
+  setTimeout(()=> $("#pktg-emoji-search")?.focus(), 40);
 }
 function closeTgEmoji(){
   const p = $("#pktg-emoji");
