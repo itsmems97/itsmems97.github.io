@@ -532,7 +532,10 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 .pktg-search{ display:none; position:absolute; inset:0; z-index:22; background:var(--bg); padding:calc(10px + var(--safe-top)) 12px 10px; align-items:center; gap:8px; }
 .pktg-search.active{ display:flex; }
 .pktg-search input{ flex:1; border:1px solid var(--border); outline:none; background:var(--surface-2); color:var(--text); padding:10px 14px; border-radius:14px; font-size:15px; font-family:inherit; }
-#pktg-conv.pktg-readonly .pktg-composer{ display:none; }
+#pktg-conv.pktg-readonly .pktg-composer,
+#pktg-conv.pktg-readonly .pktg-bar,
+#pktg-conv.pktg-readonly .pktg-rec-bar,
+#pktg-conv.pktg-readonly .pktg-unlock-bar{ display:none !important; }
 #pktg-conv.pktg-readonly .pktg-feed{ padding-bottom:24px; }
 .code-row{ display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); font-size:13px; }
 .code-row:last-child{ border-bottom:none; }
