@@ -636,6 +636,43 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
   margin-left:6px;
 }
 #pktg-conv.pktg-preview-mode .pktg-preview-badge{ display:inline-flex; }
+/* =====================================================================
+   Inline formatting toolbar (appears on text selection in composer)
+   ===================================================================== */
+.pktg-fmt-toolbar{
+  position: fixed;
+  z-index: 200;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  animation: pktgFmtIn .18s ease;
+}
+.pktg-fmt-toolbar.active{ display: flex; }
+@keyframes pktgFmtIn{ from{ opacity:0; transform: translateY(6px) scale(.96); } to{ opacity:1; transform: none; } }
+.pktg-fmt-btn{
+  display: flex; align-items: center; justify-content: center;
+  min-width: 40px; height: 40px; padding: 0 10px;
+  border-radius: 11px;
+  background: transparent; color: var(--text);
+  font-size: 14px; font-weight: 700;
+  transition: background .12s;
+}
+.pktg-fmt-btn:active{ background: var(--surface-2); }
+.pktg-fmt-btn svg{ width: 18px; height: 18px; }
+.pktg-fmt-btn.pktg-fmt-b{ font-weight: 900; font-family: Georgia, serif; }
+.pktg-fmt-btn.pktg-fmt-i{ font-style: italic; font-family: Georgia, serif; }
+.pktg-fmt-btn.pktg-fmt-m{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; }
+.pktg-fmt-btn.pktg-fmt-s{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; letter-spacing: 1px; }
+.pktg-fmt-sep{ width: 1px; height: 22px; background: var(--border); margin: 0 3px; }
+.pktg-fmt-btn.pktg-fmt-danger{ color: var(--danger); }
+/* Mono tap-to-copy cursor */
+.pktg-mono{ cursor: pointer; }
+.pktg-mono:active{ background: rgba(128,128,128,.35); }
 </style>
 </head>
 <body>
@@ -1048,6 +1085,15 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
   <div class="pktg-ctx" id="pktg-ctx"></div>
 </div>
 
+<!-- Inline formatting toolbar -->
+<div class="pktg-fmt-toolbar" id="pktg-fmt-toolbar">
+  <button class="pktg-fmt-btn pktg-fmt-b" data-fmt="bold" title="Bold" type="button">B</button>
+  <button class="pktg-fmt-btn pktg-fmt-i" data-fmt="italic" title="Italic" type="button">I</button>
+  <button class="pktg-fmt-btn pktg-fmt-m" data-fmt="mono" title="Mono" type="button">&lt;/&gt;</button>
+  <button class="pktg-fmt-btn pktg-fmt-s" data-fmt="spoiler" title="Spoiler" type="button">||·||</button>
+  <div class="pktg-fmt-sep"></div>
+  <button class="pktg-fmt-btn" data-fmt="link" title="Create link" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" stroke-linecap="round"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5" stroke-linecap="round"/></svg></button>
+</div>
 <template id="tmpl-app-card">
   <div class="app-card tappable">
     <div class="icon-wrap">
@@ -4049,6 +4095,132 @@ P("pktg-unlock-bar").addEventListener("click", ()=>{
   const ch = state.channels.find(c=>c.id === state.tg.channelId);
   if(ch) askChannelPassword(ch);
 });
+  // Inline formatting toolbar — shows on text selection in composer
+  initFmtToolbar();
+}
+/* =====================================================================
+   Inline formatting toolbar for the channel composer.
+   - Shows when the user selects text inside #pktg-input
+   - Applies markdown-ish formatting around the selection
+   - Create Link: prompts for URL, wraps selection as [text](url)
+   - Mono: wrapped as `text`
+   - Spoiler: wrapped as ||text||
+   ===================================================================== */
+function initFmtToolbar(){
+  const toolbar = document.getElementById("pktg-fmt-toolbar");
+  const input = document.getElementById("pktg-input");
+  if(!toolbar || !input) return;
+
+  let savedSel = { start: 0, end: 0 };
+  let hideTimer = null;
+
+  const hide = ()=>{ toolbar.classList.remove("active"); };
+
+  const showAt = (x, y)=>{
+    toolbar.style.left = x + "px";
+    toolbar.style.top = y + "px";
+    toolbar.classList.add("active");
+    // Keep on-screen
+    requestAnimationFrame(()=>{
+      const r = toolbar.getBoundingClientRect();
+      let nx = x, ny = y;
+      if(r.right > window.innerWidth - 8) nx = window.innerWidth - r.width - 8;
+      if(r.left < 8) nx = 8;
+      if(r.top < 60) ny = 60;
+      toolbar.style.left = nx + "px";
+      toolbar.style.top = ny + "px";
+    });
+  };
+
+  const updateForSelection = ()=>{
+    if(document.activeElement !== input) { hide(); return; }
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    if(start == null || end == null || start === end){ hide(); return; }
+    savedSel = { start, end };
+    // Position above the caret area (approximate via range rect)
+    const range = document.createRange();
+    try{
+      range.setStart(input, Math.min(start, input.value.length));
+      range.setEnd(input, Math.min(end, input.value.length));
+    }catch(e){ return; }
+    const rect = range.getBoundingClientRect();
+    if(!rect || (rect.width === 0 && rect.height === 0)) return;
+    const cx = rect.left + rect.width / 2;
+    const topY = Math.max(70, rect.top - 52);
+    showAt(cx - 160, topY);
+  };
+
+  // Trigger on selection changes while typing / selecting
+  input.addEventListener("select", updateForSelection);
+  input.addEventListener("mouseup", ()=> setTimeout(updateForSelection, 10));
+  input.addEventListener("touchend", ()=> setTimeout(updateForSelection, 60));
+  input.addEventListener("keyup", ()=> setTimeout(updateForSelection, 10));
+  input.addEventListener("blur", ()=>{ setTimeout(hide, 200); });
+  input.addEventListener("input", ()=>{ /* keep saved selection fresh */ });
+
+  // Apply a markdown wrapper around the saved selection
+  const applyWrap = (before, after)=>{
+    const { start, end } = savedSel;
+    const v = input.value;
+    if(start === end) return;
+    const inner = v.slice(start, end);
+    // Skip if already wrapped
+    const alreadyWrapped = v.slice(Math.max(0, start - before.length), start) === before &&
+                           v.slice(end, end + after.length) === after;
+    let newStart = start, newEnd = end;
+    let newVal;
+    if(alreadyWrapped){
+      newVal = v.slice(0, start - before.length) + inner + v.slice(end + after.length);
+      newStart = start - before.length;
+      newEnd = newStart + inner.length;
+    } else {
+      newVal = v.slice(0, start) + before + inner + after + v.slice(end);
+      newStart = start + before.length;
+      newEnd = newStart + inner.length;
+    }
+    input.value = newVal;
+    input.focus();
+    try{ input.setSelectionRange(newStart, newEnd); }catch(e){}
+    savedSel = { start: newStart, end: newEnd };
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    updateSendBtnIcon();
+    hide();
+  };
+
+  toolbar.addEventListener("mousedown", e=> e.preventDefault()); // keep focus on input
+  toolbar.addEventListener("touchstart", e=> e.preventDefault(), { passive: false });
+
+  toolbar.addEventListener("click", async (e)=>{
+    const btn = e.target.closest("[data-fmt]");
+    if(!btn) return;
+    const fmt = btn.dataset.fmt;
+    if(fmt === "bold") applyWrap("**", "**");
+    else if(fmt === "italic") applyWrap("_", "_");
+    else if(fmt === "mono") applyWrap("`", "`");
+    else if(fmt === "spoiler") applyWrap("||", "||");
+    else if(fmt === "link"){
+      const { start, end } = savedSel;
+      const v = input.value;
+      if(start === end) return;
+      const inner = v.slice(start, end);
+      // Prompt for URL using the app's own styled dialog
+      const url = await askText({ title:"Create link", placeholder:"https://example.com", max:500, okLabel:"Add link" });
+      if(!url) return;
+      let u = url.trim();
+      if(!/^https?:\/\//i.test(u)) u = "https://" + u;
+      const wrapped = `[${inner}](${u})`;
+      const newVal = v.slice(0, start) + wrapped + v.slice(end);
+      const newEnd = start + wrapped.length;
+      input.value = newVal;
+      input.focus();
+      try{ input.setSelectionRange(newEnd, newEnd); }catch(e){}
+      savedSel = { start: newEnd, end: newEnd };
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      updateSendBtnIcon();
+      hide();
+    }
+  });
 }
 function updateSendBtnIcon(){
   const input = $("#pktg-input");
@@ -4205,18 +4377,21 @@ function renderTelegramFeed(){
 function formatMessageText(text){
   if(!text) return "";
   let s = escapeHtml(text);
+  // Markdown-style link [text](url) — must run BEFORE auto-linkify so the URL isn't double-wrapped.
+  // Note: escapeHtml ran first, so & is &amp; etc. URLs with & will already be encoded.
+  s = s.replace(/\[([^\]<>\n]+)\]\((https?:\/\/[^\s<>"')]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   // Spoiler ||text||
-  s = s.replace(/\|\|(.+?)\|\|/gs, '<span class="pktg-spoiler">$1</span>');
+  s = s.replace(/\|\|([\s\S]+?)\|\|/g, '<span class="pktg-spoiler">$1</span>');
   // Mono `text`
-  s = s.replace(/`([^`<>\n]+)`/g, '<code class="pktg-mono">$1</code>');
+  s = s.replace(/`([^`<>\n]+)`/g, '<code class="pktg-mono" title="Tap to copy">$1</code>');
   // Bold **text**
   s = s.replace(/\*\*([^*<>\n]+)\*\*/g, '<strong>$1</strong>');
   // Italic _text_ (avoid underscores inside words)
   s = s.replace(/(?<![_\w])_([^_<>\n]+)_(?!_)/g, '<em>$1</em>');
   // Italic *text* (single asterisk, but not part of **)
   s = s.replace(/(?<![*\w])\*([^*<>\n]+)\*(?!\*)/g, '<em>$1</em>');
-  // Auto-linkify URLs (http/https only)
-  s = s.replace(/(https?:\/\/[^\s<>"']+)/gi, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  // Auto-linkify remaining bare URLs (http/https only)
+  s = s.replace(/(^|[^">=])(https?:\/\/[^\s<>"']+)/gi, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
   return s;
 }
 function tgMsgLabel(m){
@@ -4321,7 +4496,19 @@ function buildTelegramMsg(m){
     </button>`;
   }
   const body = m.caption || m.text;
-const descBody = preview ? "" : ((m.type === "file") ? (m.caption && m.caption !== m.filename ? m.caption : "") : body);
+let descBody = "";
+if(!preview){
+  if(m.type === "file"){
+    // For files: only show caption when it's different from the filename
+    descBody = (m.caption && m.caption !== m.filename) ? m.caption : "";
+  } else if(m.type === "audio"){
+    // For voice: show the description that was typed in the preview sheet.
+    // The old default "Voice message (Xs)" placeholder is now gone.
+    descBody = m.caption || "";
+  } else {
+    descBody = body || "";
+  }
+}
 if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</div>`;
   const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
   html += `<div class="pktg-meta"><span>${m.views || 0} views</span><span>•</span><span>${time}</span></div>`;
@@ -4345,6 +4532,14 @@ if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</
   // Spoiler tap-to-reveal
   card.querySelectorAll(".pktg-spoiler").forEach(sp=>{
     sp.addEventListener("click", e=>{ e.stopPropagation(); sp.classList.toggle("revealed"); });
+  });
+  // Mono tap-to-copy
+  card.querySelectorAll(".pktg-mono").forEach(code=>{
+    code.addEventListener("click", async e=>{
+      e.stopPropagation();
+      const ok = await copyText(code.textContent || "");
+      toast(ok ? "Copied" : "Copy failed", ok ? "ic-check" : "ic-close");
+    });
   });
   card.addEventListener("contextmenu", e=>{ e.preventDefault(); showTgCtx(e.clientX, e.clientY, m); });
   return card;
@@ -4587,9 +4782,9 @@ async function startVoiceRecording(){
       const blob = new Blob(state.tg.audioChunks, { type: state.tg.audioChunks[0]?.type || "audio/webm" });
       state.tg.audioChunks = []; state.tg.mediaRecorder = null;
       if(state.tg.pendingCancel){ state.tg.pendingCancel = false; toast("Recording cancelled"); return; }
-      if(blob.size < 800){ toast("Recording too short", "ic-close"); return; }
-      const durationSec = Math.max(1, Math.round((Date.now() - state.tg.recordingStartTime)/1000));
-      await sendVoiceBlob(blob, durationSec);
+if(blob.size < 800){ toast("Recording too short", "ic-close"); return; }
+const durationSec = Math.max(1, Math.round((Date.now() - state.tg.recordingStartTime)/1000));
+openVoicePreview(blob, durationSec);
     };
     rec.start();
     state.tg.pendingCancel = false;
@@ -4645,12 +4840,55 @@ function stopVoiceRecording(cancel){
     $("#pktg-rec-bar").classList.remove("active");
   }
 }
-async function sendVoiceBlob(blob, durationSec){
+/* Voice preview sheet — before sending, show the audio for review and
+   let the owner type a description that will appear under the audio
+   player in the same message bubble. */
+function openVoicePreview(blob, durationSec){
+  const url = URL.createObjectURL(blob);
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="voice-preview-backdrop">
+      <div class="sheet" style="padding:22px 20px calc(22px + var(--safe-bottom));max-height:90vh;overflow-y:auto;">
+        <h3 style="text-align:center;font-size:17px;margin:0 0 14px;">Send voice message</h3>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:16px;background:var(--surface-2);margin-bottom:14px;">
+          <div style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#FFA800);color:#171200;flex:none;">
+            <svg width="18" height="18"><use href="#ic-mic"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13.5px;font-weight:700;">Voice message</div>
+            <div style="font-size:11.5px;color:var(--text-faint);margin-top:2px;">${fmtDuration(durationSec)} • ${fmtBytes(blob.size)}</div>
+          </div>
+        </div>
+        <audio id="voice-preview-audio" controls src="${url}" style="width:100%;margin-bottom:14px;"></audio>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px;">Description (optional)</label>
+          <textarea id="voice-preview-desc" rows="3" placeholder="Add a description, links, or notes for this voice message… Supports **bold**, _italic_, &#96;mono&#96;, ||spoiler||, and links." style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:13.5px;font-family:inherit;resize:vertical;min-height:70px;max-height:180px;outline:none;-webkit-user-select:text;user-select:text;"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="voice-preview-cancel" type="button">Discard</button>
+          <button class="btn btn-primary" style="flex:1" id="voice-preview-send" type="button">Send</button>
+        </div>
+      </div>
+    </div>`);
+  const wrap = $("#voice-preview-backdrop");
+  const close = ()=>{ try{ URL.revokeObjectURL(url); }catch(_){} wrap.remove(); };
+  $("#voice-preview-cancel").addEventListener("click", ()=>{
+    close();
+    toast("Voice message discarded");
+  });
+  $("#voice-preview-send").addEventListener("click", ()=>{
+    const desc = ($("#voice-preview-desc").value || "").trim();
+    close();
+    sendVoiceBlob(blob, durationSec, desc);
+  });
+  wrap.addEventListener("click", e=>{ if(e.target === wrap) close(); });
+}
+async function sendVoiceBlob(blob, durationSec, description){
   if(!state.tg.channelId) return;
   if(!storageReady()){ toast("Connect your VPS upload API first", "ic-close"); return; }
   const msgId = "chmsg_" + state.tg.channelId + "_" + generateAppId();
   const file = new File([blob], `voice_${Date.now()}.webm`, { type: blob.type || "audio/webm" });
   showTgUpload("Sending voice message…");
+  const caption = (description || "").trim();
   try{
     const res = await uploadFileToServer(file, msgId, "file", p=> setTgUpload(p));
     setTgUpload(100);
@@ -4659,7 +4897,7 @@ async function sendVoiceBlob(blob, durationSec){
       channelId: state.tg.channelId,
       type: "audio",
       text: "",
-      caption: `Voice message (${fmtDuration(durationSec)})`,
+      caption,
       filename: file.name,
       mimeType: file.type,
       size: file.size,
