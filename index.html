@@ -3686,6 +3686,7 @@ async function joinChannelWithCode(channel, codeRaw){
       tx.update(doc(db,"channels",channel.id), { memberCount: increment(1) });
     });
     toast("Joined " + channel.name);
+    if(window.__pikaOneSignal){ try{ await window.__pikaOneSignal.User.addTag("channel_"+channel.id, "joined"); }catch(e){} }
     await refreshMyChannels();
     return true;
   }catch(e){
