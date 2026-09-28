@@ -4435,6 +4435,10 @@ async function countViews(messages){
 function renderTelegramFeed(){
   const feed = $("#pktg-feed"); if(!feed) return;
   const q = (state.tg.searchQuery || "").trim().toLowerCase();
+
+  // Was the user already at the bottom BEFORE we re-render?
+  const wasAtBottom = (feed.scrollHeight - feed.scrollTop - feed.clientHeight) < 120;
+
   const items = state.tg.messages.filter(m=>{
     if(m.deleted) return false;
     if(!q) return true;
@@ -4452,12 +4456,21 @@ function renderTelegramFeed(){
     feed.insertAdjacentHTML("beforeend", `<div class="pktg-date-badge">Messages</div>`);
   }
   items.forEach(m=> feed.appendChild(buildTelegramMsg(m)));
-  if(!state.tg.firstLoadDone || !q){
+
+  // Scroll to bottom ONLY:
+  //   1. On the very first load of this channel
+  //   2. If the user was already at the bottom (so new message appears)
+  //   3. If searching (highlight search results from bottom)
+  const shouldScroll = !state.tg.firstLoadDone || wasAtBottom || !!q;
+  if(shouldScroll){
     state.tg.firstLoadDone = true;
     requestAnimationFrame(()=>{ feed.scrollTop = feed.scrollHeight; });
     setTimeout(()=>{ feed.scrollTop = feed.scrollHeight; }, 60);
     setTimeout(()=>{ feed.scrollTop = feed.scrollHeight; }, 220);
+  } else {
+    state.tg.firstLoadDone = true;
   }
+
   bindTgSwipe();
   bindTgLongPress();
 }
