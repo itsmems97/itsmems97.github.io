@@ -1293,32 +1293,54 @@ function withTimeout(promise, ms, label){
   });
 }
 async function downloadInsideStore(url, filename, onProgress, signal){
+  let blob = null;
   let total = 0;
+
+  // Try HEAD first for content-length
   try{
     const head = await fetch(url, { method: "HEAD", signal });
     total = Number(head.headers.get("content-length")) || 0;
   }catch(e){}
-  if(total){
-    try{
-      const res = await fetch(url, { signal });
-      if(!res.ok) throw new Error(`Download failed (HTTP ${res.status})`);
-      const reader = res.body.getReader();
-      let received = 0;
-      while(true){
-        const { done, value } = await reader.read();
-        if(done) break;
-        received += value.length;
-        onProgress && onProgress(Math.min(99, Math.round((received/total)*100)));
-      }
-    }catch(e){
-      if(e && e.name === "AbortError") throw e;
+
+  // Fetch actual file (single download)
+  const res = await fetch(url, { signal });
+  if(!res.ok) throw new Error(`Download failed (HTTP ${res.status})`);
+
+  // If HEAD didn't give length, try GET response headers
+  if(!total) total = Number(res.headers.get("content-length")) || 0;
+
+  // Stream with progress if possible
+  if(total && res.body && res.body.getReader){
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+    while(true){
+      const { done, value } = await reader.read();
+      if(done) break;
+      chunks.push(value);
+      received += value.length;
+      onProgress && onProgress(Math.min(99, Math.round((received / total) * 100)));
     }
-  } else if(onProgress) onProgress(null);
+    blob = new Blob(chunks, { type: res.headers.get("content-type") || "application/octet-stream" });
+  } else {
+    onProgress && onProgress(null);
+    blob = await res.blob();
+  }
+
   if(signal && signal.aborted){ const err = new Error("cancelled"); err.name = "AbortError"; throw err; }
   onProgress && onProgress(100);
+
+  // Save via blob URL — single download, no double fetch
+  const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = filename; a.rel = "noopener";
-  document.body.appendChild(a); a.click(); a.remove();
+  a.href = blobUrl;
+  a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  return { blob, blobUrl, filename };
 }
 
 /* ---- Preview thumbnail generator (client-side, at upload time) ---- */
@@ -5192,23 +5214,110 @@ async function tgDownloadMessage(m){
   if(!isActiveMemberOfChannel(m.channelId)){ toast("Join this channel to download", "ic-lock"); return; }
   if(dlActive.has(m.id)){ toast("Already downloading"); return; }
   dlActive.add(m.id);
+
   const controller = new AbortController();
   const fakeApp = { name: m.filename || "file" };
   const bubble = createDlBubble(fakeApp, ()=> controller.abort());
   toast("Download started");
+
   try{
-    await downloadInsideStore(url, m.filename || "download", pct=> bubble.set(pct), controller.signal);
+    const result = await downloadInsideStore(
+      url,
+      m.filename || "download",
+      pct => bubble.set(pct),
+      controller.signal
+    );
     bubble.set(100);
     toast(`"${m.filename || "File"}" downloaded`);
+
+    // Show "Open" popup after short delay (so 100% is visible)
+    if(result && result.blob){
+      setTimeout(()=>{
+        try{ showDownloadCompletePopup(m.filename || "File", result.blob, result.blobUrl); }
+        catch(e){ console.warn("popup failed", e); }
+      }, 600);
+      // Free memory after 2 minutes
+      setTimeout(()=>{ try{ URL.revokeObjectURL(result.blobUrl); }catch(_){} }, 120000);
+    }
   }catch(e){
-    if(e && e.name === "AbortError"){ toast("Download cancelled"); }
-    else {
-      const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener";
-      document.body.appendChild(a); a.click(); a.remove();
-      toast("Download opened in your browser");
+    console.error(e);
+    if(e && e.name === "AbortError"){
+      toast("Download cancelled");
+    } else {
+      // Fallback: native browser download
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast("Download opened in browser");
     }
   }
-  bubble.remove(); dlActive.delete(m.id);
+  bubble.remove();
+  dlActive.delete(m.id);
+}
+
+
+// ============================================================
+// NEW: Download complete popup + Open file handler
+// ============================================================
+function showDownloadCompletePopup(filename, blob, blobUrl){
+  const ext = (filename.split(".").pop() || "").toLowerCase();
+  const isApk = ext === "apk" || ext === "apks" || ext === "xapk";
+  const sizeMb = (blob.size / 1024 / 1024).toFixed(1);
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="dl-done-backdrop" style="align-items:center;justify-content:center">
+      <div style="text-align:center;padding:28px 22px 22px;background:var(--surface);border-radius:22px;max-width:340px;margin:0 20px;box-shadow:var(--shadow);border:1px solid var(--border)">
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(51,224,193,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+          <svg width="32" height="32" style="color:var(--accent-2)"><use href="#ic-check"/></svg>
+        </div>
+        <h3 style="margin:0 0 6px;font-size:17px;font-weight:800">Download complete</h3>
+        <p style="font-size:12.5px;color:var(--text-dim);margin:0 0 4px;word-break:break-word;font-weight:600">${escapeHtml(filename)}</p>
+        <p style="font-size:11px;color:var(--text-faint);margin:0 0 18px">${escapeHtml(sizeMb)} MB • Saved to Downloads</p>
+        ${isApk ? `<p style="font-size:11px;color:var(--text-faint);margin:0 0 16px;padding:8px 10px;background:rgba(255,198,26,.1);border-radius:10px;line-height:1.45">Chrome may show a "harmful file" warning. Tap <b>Install anyway</b> if it appears.</p>` : ""}
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost" style="flex:1" id="dl-done-close" type="button">Close</button>
+          <button class="btn btn-primary" style="flex:1" id="dl-done-open" type="button">
+            <svg width="14" height="14"><use href="#ic-play"/></svg> Open
+          </button>
+        </div>
+      </div>
+    </div>
+  `);
+
+  const close = ()=>{ const el = document.getElementById("dl-done-backdrop"); if(el) el.remove(); };
+  document.getElementById("dl-done-close").addEventListener("click", close);
+  document.getElementById("dl-done-open").addEventListener("click", ()=>{
+    close();
+    openDownloadedFile(filename, blob, blobUrl);
+  });
+  setTimeout(()=>{ if(document.getElementById("dl-done-backdrop")) close(); }, 60000);
+}
+
+function openDownloadedFile(filename, blob, blobUrl){
+  const ua = navigator.userAgent || "";
+  const isAndroid = /Android/i.test(ua);
+
+  // Attempt 1: try opening blobUrl in new tab (works for images, pdfs, etc.)
+  try{
+    const w = window.open(blobUrl, "_blank");
+    if(w){ return; }
+  }catch(e){}
+
+  // Attempt 2: Android intent to open Downloads folder
+  if(isAndroid){
+    try{
+      const intentUrl = `intent://#Intent;action=android.intent.action.VIEW_DOWNLOADS;end`;
+      window.location.href = intentUrl;
+      return;
+    }catch(e){}
+  }
+
+  // Fallback
+  toast("Open your Downloads folder to find the file");
 }
 function tgSendOrRecord(){
   const ch = state.channels.find(c=>c.id === state.tg.channelId);
