@@ -1293,23 +1293,35 @@ function withTimeout(promise, ms, label){
   });
 }
 async function downloadInsideStore(url, filename, onProgress, signal){
-  let blob = null;
+  // Step 1: Try HEAD — this also tests CORS
   let total = 0;
-
-  // Try HEAD first for content-length
   try{
     const head = await fetch(url, { method: "HEAD", signal });
+    if(!head.ok) throw new Error("HEAD failed");
     total = Number(head.headers.get("content-length")) || 0;
-  }catch(e){}
+  }catch(e){
+    if(e && e.name === "AbortError") throw e;
+    // CORS or network block — throw specific error for graceful fallback
+    const err = new Error("CORS_BLOCKED");
+    err.code = "CORS_BLOCKED";
+    throw err;
+  }
 
-  // Fetch actual file (single download)
+  // Step 2: Size guard — avoid memory crash on mobile for large APKs
+  const SIZE_LIMIT = 30 * 1024 * 1024; // 30 MB
+  if(total > SIZE_LIMIT){
+    const err = new Error("FILE_TOO_LARGE");
+    err.code = "FILE_TOO_LARGE";
+    throw err;
+  }
+
+  // Step 3: Fetch with progress
   const res = await fetch(url, { signal });
   if(!res.ok) throw new Error(`Download failed (HTTP ${res.status})`);
 
-  // If HEAD didn't give length, try GET response headers
   if(!total) total = Number(res.headers.get("content-length")) || 0;
 
-  // Stream with progress if possible
+  let blob;
   if(total && res.body && res.body.getReader){
     const reader = res.body.getReader();
     const chunks = [];
@@ -1330,7 +1342,6 @@ async function downloadInsideStore(url, filename, onProgress, signal){
   if(signal && signal.aborted){ const err = new Error("cancelled"); err.name = "AbortError"; throw err; }
   onProgress && onProgress(100);
 
-  // Save via blob URL — single download, no double fetch
   const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = blobUrl;
@@ -5230,13 +5241,11 @@ async function tgDownloadMessage(m){
     bubble.set(100);
     toast(`"${m.filename || "File"}" downloaded`);
 
-    // Show "Open" popup after short delay (so 100% is visible)
     if(result && result.blob){
       setTimeout(()=>{
         try{ showDownloadCompletePopup(m.filename || "File", result.blob, result.blobUrl); }
         catch(e){ console.warn("popup failed", e); }
       }, 600);
-      // Free memory after 2 minutes
       setTimeout(()=>{ try{ URL.revokeObjectURL(result.blobUrl); }catch(_){} }, 120000);
     }
   }catch(e){
@@ -5244,19 +5253,26 @@ async function tgDownloadMessage(m){
     if(e && e.name === "AbortError"){
       toast("Download cancelled");
     } else {
-      // Fallback: native browser download
-      const a = document.createElement("a");
-      a.href = url;
-      a.target = "_blank";
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      toast("Download opened in browser");
+      // Silent fallback to native browser download (no black screen, no confusing message)
+      bubble.remove();
+      toast("Using browser download…");
+      nativeDownload(url, m.filename || "download");
     }
   }
   bubble.remove();
   dlActive.delete(m.id);
+}
+
+// Helper: clean native download without black screen
+function nativeDownload(url, filename){
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  // NOTE: no target="_blank" — this avoids the black screen transition
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 
