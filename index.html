@@ -340,7 +340,7 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .reply-bar button{ width:28px; height:28px; padding:0; color:var(--text-faint); }
 .chat-attach{ width:44px; height:44px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text); }
 .chat-attach svg{ width:18px; height:18px; }
-.dl-bubble{ position:fixed; z-index:120; width:60px; height:60px; border-radius:50%; background:var(--surface); box-shadow:0 8px 24px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; touch-action:none; user-select:none; }
+.dl-bubble{ position:fixed; z-index:99999; width:60px; height:60px; border-radius:50%; background:var(--surface); box-shadow:0 8px 24px rgba(0,0,0,.5), 0 0 0 2px var(--accent); display:flex; align-items:center; justify-content:center; touch-action:none; user-select:none; }
 .dl-bubble svg.ring{ position:absolute; inset:0; width:60px; height:60px; transform:rotate(-90deg); }
 .dl-bubble .pct{ font-size:12px; font-weight:800; position:relative; }
 .dl-bubble.busy svg.ring{ animation:pkspin 1s linear infinite; }
@@ -808,12 +808,6 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
         <div class="section-head"><h2>New Releases</h2></div>
         <div class="app-row" id="new-releases-row"><div class="empty-row">New uploads will show up here first.</div></div>
       </div>
-      <section class="section" id="discover-section" hidden>
-  <div class="section-head"><h2>🌟 Discover</h2></div>
-  <div class="app-row" id="discover-row">
-    <div class="empty-row">Loading…</div>
-  </div>
-</section>
       <div class="section" id="search-results-section" hidden>
         <div class="section-head"><h2>Search results</h2></div>
         <div class="app-row" id="search-results-row"></div>
@@ -2381,25 +2375,71 @@ function fuzzyScore(query, target){
   }
   return total / qt.length;
 }
+let discSearchState = { query: '', apps: [], pending: false, done: false };
 function closeSearchPanel(){ const p = $("#search-panel"); if(p) p.hidden = true; }
 function renderSearch(term){
   const panel = $("#search-panel");
   const q = term.trim();
-  if(!q){ panel.hidden = true; return; }
+  if(!q){
+    panel.hidden = true;
+    discSearchState = { query:'', apps:[], pending:false, done:false };
+    return;
+  }
   const apps = state.apps.map(a=>({ a, s: Math.max(fuzzyScore(q, a.name), fuzzyScore(q, a.uploaderName||"")*0.6) })).filter(x=>x.s >= 40).sort((x,y)=>y.s-x.s).slice(0,20);
   const members = Object.entries(state.users).filter(([,u])=> !u.banned || state.isOwner).map(([id,u])=>({ id, u, s: fuzzyScore(q, u.name) })).filter(x=>x.s >= 40).sort((x,y)=>y.s-x.s).slice(0,15);
+  const discoverResults = (discSearchState.query === q && discSearchState.done) ? discSearchState.apps : [];
+  const searching = discSearchState.query === q && discSearchState.pending;
   const top = document.querySelector(".topbar").getBoundingClientRect().bottom;
   panel.style.top = top + "px"; panel.hidden = false;
-  panel.innerHTML = (apps.length ? `<h4>Apps &amp; files</h4><div class="settings-list">${apps.map(({a})=>`
-      <div class="mini-row tap" data-s-app="${a.id}"><img class="thumb" alt="" src="${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}" /><div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • by ${escapeHtml(userView(a.uploaderUid, a.uploaderName, a.isOwner).name)}</small></div></div>`).join("")}</div>` : "")
-    + (members.length ? `<h4>Members</h4><div class="settings-list">${members.map(({id,u})=>`<div class="mini-row tap" data-s-user="${escapeHtml(id)}">${avatarHtml(u.name, u.photoURL, "lg")}<div class="mini-main"><b>${escapeHtml(u.name)}${tick(u.verified)}</b><small>${presenceText(u)}</small></div></div>`).join("")}</div>` : "")
-    + ((!apps.length && !members.length) ? `<div class="empty-row" style="margin:24px 18px">No results for "${escapeHtml(q)}".</div>` : "");
+  let html = '';
+  if(apps.length){
+    html += `<h4>Apps &amp; files</h4><div class="settings-list">${apps.map(({a})=>`
+      <div class="mini-row tap" data-s-app="${a.id}"><img class="thumb" alt="" src="${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}" /><div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • by ${escapeHtml(userView(a.uploaderUid, a.uploaderName, a.isOwner).name)}</small></div></div>`).join("")}</div>`;
+  }
+  if(members.length){
+    html += `<h4>Members</h4><div class="settings-list">${members.map(({id,u})=>`
+      <div class="mini-row tap" data-s-user="${escapeHtml(id)}">${avatarHtml(u.name, u.photoURL, "lg")}<div class="mini-main"><b>${escapeHtml(u.name)}${tick(u.verified)}</b><small>${presenceText(u)}</small></div></div>`).join("")}</div>`;
+  }
+  if(discoverResults.length){
+    html += `<h4>Discover</h4><div class="settings-list">${discoverResults.map(app=>`
+      <div class="mini-row tap" data-disc-app="${escapeHtml(app.id)}"><img class="thumb" alt="" src="${escapeHtml(app.icon || placeholderIcon(app.name))}" /><div class="mini-main"><b>${escapeHtml(app.name)}</b><small>${escapeHtml(app.category)} • ${escapeHtml(app.sizeLabel)}</small></div></div>`).join("")}</div>`;
+  }
+  const totalFound = apps.length + members.length + discoverResults.length;
+  if(totalFound === 0){
+    if(searching){
+      html = `<div class="empty-row" style="margin:24px 18px;display:flex;align-items:center;justify-content:center;gap:10px"><div class="spinner" style="width:18px;height:18px;border-width:2px;margin:0"></div><span>Searching…</span></div>`;
+    } else {
+      html = `<div class="empty-row" style="margin:24px 18px">No results for "${escapeHtml(q)}".</div>`;
+    }
+  } else if(searching){
+    html += `<div style="margin:14px 18px;padding:12px;text-align:center;font-size:12px;color:var(--text-dim);display:flex;align-items:center;justify-content:center;gap:8px"><div class="spinner" style="width:14px;height:14px;border-width:2px;margin:0"></div><span>Finding more…</span></div>`;
+  }
+  panel.innerHTML = html;
 }
-$("#search-input").addEventListener("input", e=> renderSearch(e.target.value));
+$("#search-input").addEventListener("input", e=>{
+  const q = e.target.value.trim();
+  if(typeof discSearchTimer !== 'undefined' && discSearchTimer) clearTimeout(discSearchTimer);
+  if(!q || q.length < 2){
+    discSearchState = { query:q, apps:[], pending:false, done:false };
+    renderSearch(q);
+    return;
+  }
+  discSearchState = { query:q, apps:[], pending:true, done:false };
+  renderSearch(q);
+  if(typeof discSearchTimer !== 'undefined'){
+    discSearchTimer = setTimeout(()=>{ if(typeof discSearchAndAppend === 'function') discSearchAndAppend(q); }, 400);
+  }
+});
 $("#search-panel").addEventListener("click", e=>{
-  const a = e.target.closest("[data-s-app]"), u = e.target.closest("[data-s-user]");
+  const a = e.target.closest("[data-s-app]");
+  const u = e.target.closest("[data-s-user]");
+  const d = e.target.closest("[data-disc-app]");
   if(a){ closeSearchPanel(); openAppDetail(a.dataset.sApp); }
   else if(u){ closeSearchPanel(); openUserSheet(u.dataset.sUser); }
+  else if(d){
+    const app = discSearchState.apps.find(x => x.id === d.dataset.discApp);
+    if(app){ closeSearchPanel(); openDiscoverApp(app); }
+  }
 });
 $$(".nav-btn").forEach(b=> b.addEventListener("click", ()=>{ closeSearchPanel(); $("#search-input").value = ""; }));
 function openCategoriesSheet(){
@@ -5273,9 +5313,6 @@ async function discoverFetch(path){
 async function discoverLoadHome(force){
   if(discover.loading) return;
   discover.loading = true;
-  const section = document.getElementById('discover-section');
-  const row = document.getElementById('discover-row');
-  if(!section || !row){ discover.loading = false; return; }
 
   const today = new Date().toISOString().slice(0,10);
   const cacheKey = 'pika_discover_' + today;
@@ -5285,9 +5322,8 @@ async function discoverLoadHome(force){
       const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
       if(cached && cached.length >= 6){
         discover.apps = cached;
-        renderDiscoverRow(row, cached);
-        section.hidden = false;
         discover.loading = false;
+        if(typeof renderHome === "function") renderHome();
         return;
       }
     }catch(e){}
@@ -5297,41 +5333,12 @@ async function discoverLoadHome(force){
     const data = await discoverFetch('/random?count=12');
     discover.apps = data.apps || [];
     try{ localStorage.setItem(cacheKey, JSON.stringify(discover.apps)); }catch(e){}
-      renderDiscoverRow(row, discover.apps);
-  section.hidden = false;
-  setTimeout(()=>{ try{ if(typeof renderHome === "function") renderHome(); }catch(e){} }, 100);
-}catch(e){
+    if(typeof renderHome === "function") renderHome();
+  }catch(e){
     console.warn('Discover load failed:', e);
-    row.innerHTML = '<div class="empty-row">Discover unavailable</div>';
-    section.hidden = false;
   }finally{
     discover.loading = false;
   }
-}
-
-function renderDiscoverRow(row, apps){
-  if(!apps || !apps.length){
-    row.innerHTML = '<div class="empty-row">Nothing to discover yet.</div>';
-    return;
-  }
-  row.innerHTML = '';
-  apps.forEach(app => {
-    const card = document.createElement('div');
-    card.className = 'app-card tappable';
-    card.innerHTML = `
-      <div class="icon-wrap">
-        <img alt="" src="${escapeHtml(app.icon || placeholderIcon(app.name))}" />
-        <span class="fmt-badge">APK</span>
-      </div>
-      <div class="name">${escapeHtml(app.name)}</div>
-      <div class="meta">
-        <svg width="11" height="11"><use href="#ic-download"/></svg>
-        <span>${escapeHtml(app.sizeLabel)}</span>
-      </div>
-    `;
-    card.addEventListener('click', ()=> openDiscoverApp(app));
-    row.appendChild(card);
-  });
 }
 
 function openDiscoverApp(app){
@@ -5412,45 +5419,21 @@ async function startDiscoverDownload(app){
 }
 
 let discSearchTimer = null;
-document.getElementById('search-input')?.addEventListener('input', e=>{
-  const q = e.target.value.trim();
-  if(discSearchTimer) clearTimeout(discSearchTimer);
-  if(!q || q.length < 2) return;
-  discSearchTimer = setTimeout(()=> discSearchAndAppend(q), 500);
-});
 
 async function discSearchAndAppend(q){
   const inputEl = document.getElementById('search-input');
   if(!inputEl || inputEl.value.trim() !== q) return;
-  const panel = document.getElementById('search-panel');
-  if(!panel || panel.hidden) return;
   try{
     const data = await discoverFetch('/search?q=' + encodeURIComponent(q));
     const apps = (data.apps || []).slice(0, 8);
-    if(!apps.length) return;
     if(inputEl.value.trim() !== q) return;
-    const old = panel.querySelector('.disc-search-results');
-    if(old) old.remove();
-    const section = document.createElement('div');
-    section.className = 'disc-search-results';
-    section.innerHTML = `<h4>Discover</h4><div class="settings-list">${apps.map(app=>`
-      <div class="mini-row tap" data-disc-app="${escapeHtml(app.id)}">
-        <img class="thumb" alt="" src="${escapeHtml(app.icon || placeholderIcon(app.name))}" />
-        <div class="mini-main">
-          <b>${escapeHtml(app.name)}</b>
-          <small>${escapeHtml(app.category)} • ${escapeHtml(app.sizeLabel)}</small>
-        </div>
-      </div>`).join('')}</div>`;
-    section.addEventListener('click', e=>{
-      const r = e.target.closest('[data-disc-app]');
-      if(!r) return;
-      closeSearchPanel();
-      const app = apps.find(a=> a.id === r.dataset.discApp);
-      if(app) openDiscoverApp(app);
-    });
-    panel.appendChild(section);
+    discSearchState = { query:q, apps, pending:false, done:true };
+    if(typeof renderSearch === "function") renderSearch(q);
   }catch(e){
     console.warn('Discover search failed:', e);
+    if(inputEl.value.trim() !== q) return;
+    discSearchState = { query:q, apps:[], pending:false, done:true };
+    if(typeof renderSearch === "function") renderSearch(q);
   }
 }
 
