@@ -2252,9 +2252,21 @@ function renderHome(){
     $("#hero-primary-btn").onclick = ()=>{ toast("There is nothing to download yet."); };
     $("#hero-dots").innerHTML = "";
   }
-  $("#hero-upload-btn").onclick = ()=>{ document.querySelector('.nav-btn[data-page="upload-page"]').click(); };
-  renderAppRow("#top-downloaded-row", [...list].sort((a,b)=>(b.downloadCount||0)-(a.downloadCount||0)).slice(0,20), true);
-  renderAppRow("#new-releases-row", [...list].sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0)).slice(0,20), false);
+    $("#hero-upload-btn").onclick = ()=>{ document.querySelector('.nav-btn[data-page="upload-page"]').click(); };
+  const discoverAsStore = (window.discover && discover.apps ? discover.apps : []).map(a => ({
+    id: 'disc__' + a.id, __discover: true, _discApp: a,
+    name: a.name, thumbUrl: a.icon, format: 'APK',
+    sizeLabel: a.sizeLabel, downloadCount: a.downloads || 0,
+    createdAtMs: 0, category: a.category
+  }));
+  const combined = state.activeCategory === "all" ? [...list, ...discoverAsStore] : list;
+  renderAppRow("#top-downloaded-row", [...combined].sort((a,b)=>(b.downloadCount||0)-(a.downloadCount||0)).slice(0,20), true);
+  renderAppRow("#new-releases-row", [...combined].sort((a,b)=>{
+    const aStore = !a.__discover, bStore = !b.__discover;
+    if(aStore && !bStore) return -1;
+    if(!aStore && bStore) return 1;
+    return (b.createdAtMs||0) - (a.createdAtMs||0);
+  }).slice(0,20), false);
 }
 function appLink(id){ return `${location.origin}${location.pathname}?app=${encodeURIComponent(id)}`; }
 async function shareApp(app, up){
@@ -2323,7 +2335,10 @@ function renderAppRow(selector, apps, showRank){
     const created = appCreatedMs(app);
     const ago = created ? fmtAgo(created) : "";
     node.querySelector(".meta span").textContent = ago ? `${dlText} • ${ago}` : dlText;
-    wrap.addEventListener("click", ()=>openAppDetail(app.id));
+    wrap.addEventListener("click", ()=>{
+  if(app.__discover && app._discApp) openDiscoverApp(app._discApp);
+  else openAppDetail(app.id);
+});
     row.appendChild(node);
   });
 }
@@ -5282,9 +5297,10 @@ async function discoverLoadHome(force){
     const data = await discoverFetch('/random?count=12');
     discover.apps = data.apps || [];
     try{ localStorage.setItem(cacheKey, JSON.stringify(discover.apps)); }catch(e){}
-    renderDiscoverRow(row, discover.apps);
-    section.hidden = false;
-  }catch(e){
+      renderDiscoverRow(row, discover.apps);
+  section.hidden = false;
+  setTimeout(()=>{ try{ if(typeof renderHome === "function") renderHome(); }catch(e){} }, 100);
+}catch(e){
     console.warn('Discover load failed:', e);
     row.innerHTML = '<div class="empty-row">Discover unavailable</div>';
     section.hidden = false;
@@ -5360,18 +5376,39 @@ Version: ${escapeHtml(app.version || '—')}</div>
     if(e.target === wrap || e.target.closest('[data-close]')) wrap.remove();
   });
   document.getElementById('disc-dl-btn').addEventListener('click', ()=>{
-    toast('Download started…');
-    const a = document.createElement('a');
-    a.href = DISCOVER_API + '/download/' + encodeURIComponent(app.id);
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=> a.remove(), 1000);
-  });
+  startDiscoverDownload(app);
+});
   document.getElementById('disc-cp-btn').addEventListener('click', async ()=>{
     const ok = await copyText(app.name + ' — ' + app.sizeLabel + '\nGet it on Pika Store');
     toast(ok ? 'Copied' : 'Copy failed', ok ? 'ic-check' : 'ic-close');
   });
+}
+
+async function startDiscoverDownload(app){
+  const url = DISCOVER_API + '/download/' + encodeURIComponent(app.id);
+  const filename = (app.package || app.name || 'app') + '.apk';
+  const dlId = 'disc__' + app.id;
+  if(typeof dlActive !== 'undefined' && dlActive.has(dlId)){ toast('Already downloading'); return; }
+  try{ dlActive.add(dlId); }catch(e){}
+  const controller = new AbortController();
+  const bubble = createDlBubble({ name: app.name }, ()=> controller.abort());
+  toast('Download started');
+  try{
+    await downloadInsideStore(url, filename, pct => bubble.set(pct), controller.signal);
+    bubble.set(100);
+    toast(`"${app.name}" downloaded`);
+  }catch(err){
+    if(err && err.name === 'AbortError'){ toast('Download cancelled'); }
+    else {
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      setTimeout(()=> a.remove(), 1000);
+      toast('Download opened in browser');
+    }
+  }
+  bubble.remove();
+  try{ dlActive.delete(dlId); }catch(e){}
 }
 
 let discSearchTimer = null;
