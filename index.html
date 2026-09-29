@@ -808,6 +808,12 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
         <div class="section-head"><h2>New Releases</h2></div>
         <div class="app-row" id="new-releases-row"><div class="empty-row">New uploads will show up here first.</div></div>
       </div>
+      <section class="section" id="discover-section" hidden>
+  <div class="section-head"><h2>🌟 Discover</h2></div>
+  <div class="app-row" id="discover-row">
+    <div class="empty-row">Loading…</div>
+  </div>
+</section>
       <div class="section" id="search-results-section" hidden>
         <div class="section-head"><h2>Search results</h2></div>
         <div class="app-row" id="search-results-row"></div>
@@ -5235,6 +5241,196 @@ initTheme();
 initNav();
 initUploadWizard();
 initOnboarding();
+/* =====================================================================
+   PIKA DISCOVER — AppTeka integration (ISOLATED MODULE)
+   ===================================================================== */
+const DISCOVER_API = "https://144-24-218-100.nip.io/discover";
+const discover = { apps: [], loading: false };
+
+async function discoverFetch(path){
+  const res = await fetch(DISCOVER_API + path);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || 'Server error');
+  return json;
+}
+
+async function discoverLoadHome(force){
+  if(discover.loading) return;
+  discover.loading = true;
+  const section = document.getElementById('discover-section');
+  const row = document.getElementById('discover-row');
+  if(!section || !row){ discover.loading = false; return; }
+
+  const today = new Date().toISOString().slice(0,10);
+  const cacheKey = 'pika_discover_' + today;
+
+  if(!force){
+    try{
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if(cached && cached.length >= 6){
+        discover.apps = cached;
+        renderDiscoverRow(row, cached);
+        section.hidden = false;
+        discover.loading = false;
+        return;
+      }
+    }catch(e){}
+  }
+
+  try{
+    const data = await discoverFetch('/random?count=12');
+    discover.apps = data.apps || [];
+    try{ localStorage.setItem(cacheKey, JSON.stringify(discover.apps)); }catch(e){}
+    renderDiscoverRow(row, discover.apps);
+    section.hidden = false;
+  }catch(e){
+    console.warn('Discover load failed:', e);
+    row.innerHTML = '<div class="empty-row">Discover unavailable</div>';
+    section.hidden = false;
+  }finally{
+    discover.loading = false;
+  }
+}
+
+function renderDiscoverRow(row, apps){
+  if(!apps || !apps.length){
+    row.innerHTML = '<div class="empty-row">Nothing to discover yet.</div>';
+    return;
+  }
+  row.innerHTML = '';
+  apps.forEach(app => {
+    const card = document.createElement('div');
+    card.className = 'app-card tappable';
+    card.innerHTML = `
+      <div class="icon-wrap">
+        <img alt="" src="${escapeHtml(app.icon || placeholderIcon(app.name))}" />
+        <span class="fmt-badge">APK</span>
+      </div>
+      <div class="name">${escapeHtml(app.name)}</div>
+      <div class="meta">
+        <svg width="11" height="11"><use href="#ic-download"/></svg>
+        <span>${escapeHtml(app.sizeLabel)}</span>
+      </div>
+    `;
+    card.addEventListener('click', ()=> openDiscoverApp(app));
+    row.appendChild(card);
+  });
+}
+
+function openDiscoverApp(app){
+  const html = `
+  <div class="sheet-backdrop" id="disc-backdrop"><div class="sheet">
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <div class="detail-hero">
+        <div class="bg" style="background-image:url('${escapeHtml(app.icon || placeholderIcon(app.name))}')"></div>
+        <div class="fade"></div>
+      </div>
+      <div class="detail-head">
+        <div class="detail-icon"><img src="${escapeHtml(app.icon || placeholderIcon(app.name))}" alt=""/></div>
+        <div class="detail-title">
+          <h1>${escapeHtml(app.name)}</h1>
+          <div class="dev">${escapeHtml(app.author || 'Developer')}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;padding:12px 18px 6px">
+        <button class="btn btn-primary" style="flex:2" id="disc-dl-btn"><svg><use href="#ic-download"/></svg> Download</button>
+        <button class="btn btn-ghost" style="flex:1" id="disc-cp-btn"><svg><use href="#ic-copy"/></svg> Share</button>
+      </div>
+      <div class="cat-pill"><svg width="11" height="11"><use href="#ic-grid"/></svg> ${escapeHtml(app.category || 'App')}</div>
+      <div class="detail-stats">
+        <div class="stat"><b>${fmtCount(app.downloads||0)}</b><span>Downloads</span></div>
+        <div class="stat"><b>${escapeHtml(app.sizeLabel)}</b><span>Size</span></div>
+        <div class="stat"><b>v${escapeHtml(app.version || '1.0')}</b><span>Version</span></div>
+      </div>
+      <div class="accordion">
+        <details class="accordion-item" open>
+          <summary>Details <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary>
+          <div class="body">Package: ${escapeHtml(app.package || '—')}
+Category: ${escapeHtml(app.category || 'App')}
+Size: ${escapeHtml(app.sizeLabel)}
+Version: ${escapeHtml(app.version || '—')}</div>
+        </details>
+      </div>
+      <div style="height:20px"></div>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  const wrap = document.getElementById('disc-backdrop');
+  wrap.addEventListener('click', e=>{
+    if(e.target === wrap || e.target.closest('[data-close]')) wrap.remove();
+  });
+  document.getElementById('disc-dl-btn').addEventListener('click', ()=>{
+    toast('Download started…');
+    const a = document.createElement('a');
+    a.href = DISCOVER_API + '/download/' + encodeURIComponent(app.id);
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=> a.remove(), 1000);
+  });
+  document.getElementById('disc-cp-btn').addEventListener('click', async ()=>{
+    const ok = await copyText(app.name + ' — ' + app.sizeLabel + '\nGet it on Pika Store');
+    toast(ok ? 'Copied' : 'Copy failed', ok ? 'ic-check' : 'ic-close');
+  });
+}
+
+let discSearchTimer = null;
+document.getElementById('search-input')?.addEventListener('input', e=>{
+  const q = e.target.value.trim();
+  if(discSearchTimer) clearTimeout(discSearchTimer);
+  if(!q || q.length < 2) return;
+  discSearchTimer = setTimeout(()=> discSearchAndAppend(q), 500);
+});
+
+async function discSearchAndAppend(q){
+  const inputEl = document.getElementById('search-input');
+  if(!inputEl || inputEl.value.trim() !== q) return;
+  const panel = document.getElementById('search-panel');
+  if(!panel || panel.hidden) return;
+  try{
+    const data = await discoverFetch('/search?q=' + encodeURIComponent(q));
+    const apps = (data.apps || []).slice(0, 8);
+    if(!apps.length) return;
+    if(inputEl.value.trim() !== q) return;
+    const old = panel.querySelector('.disc-search-results');
+    if(old) old.remove();
+    const section = document.createElement('div');
+    section.className = 'disc-search-results';
+    section.innerHTML = `<h4>Discover</h4><div class="settings-list">${apps.map(app=>`
+      <div class="mini-row tap" data-disc-app="${escapeHtml(app.id)}">
+        <img class="thumb" alt="" src="${escapeHtml(app.icon || placeholderIcon(app.name))}" />
+        <div class="mini-main">
+          <b>${escapeHtml(app.name)}</b>
+          <small>${escapeHtml(app.category)} • ${escapeHtml(app.sizeLabel)}</small>
+        </div>
+      </div>`).join('')}</div>`;
+    section.addEventListener('click', e=>{
+      const r = e.target.closest('[data-disc-app]');
+      if(!r) return;
+      closeSearchPanel();
+      const app = apps.find(a=> a.id === r.dataset.discApp);
+      if(app) openDiscoverApp(app);
+    });
+    panel.appendChild(section);
+  }catch(e){
+    console.warn('Discover search failed:', e);
+  }
+}
+
+(function(){
+  function tryLoad(){
+    const appEl = document.getElementById('app');
+    if(appEl && !appEl.hidden){ discoverLoadHome(); return true; }
+    return false;
+  }
+  if(!tryLoad()){
+    const obs = new MutationObserver(()=>{
+      if(tryLoad()) obs.disconnect();
+    });
+    obs.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['hidden'] });
+    setTimeout(()=>{ obs.disconnect(); discoverLoadHome(); }, 15000);
+  }
+})();
 </script>
 </body>
 </html>
