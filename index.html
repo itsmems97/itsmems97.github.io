@@ -250,6 +250,14 @@ html[data-theme="light"] .sheet-close{ background:rgba(0,0,0,.25); }
 .toast.error{ border-color:rgba(255,92,108,.5); }
 .toast.error svg{ color:var(--danger); }
 .theme-toggle{ width:38px; height:38px; flex-shrink:0; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+.help-btn{
+  width:38px; height:38px; flex-shrink:0; border-radius:50%;
+  background:var(--surface-2); display:flex; align-items:center; justify-content:center;
+  color:var(--accent-2); text-decoration:none;
+  transition:transform .12s var(--ease-snap), background-color .15s;
+}
+.help-btn:active{ transform:scale(0.94); background:var(--surface); }
+.help-btn svg{ width:18px; height:18px; }   
 .theme-toggle svg{ width:18px; height:18px; position:absolute; transition:transform .4s var(--ease-spring), opacity .3s; }
 .theme-toggle .i-sun{ opacity:0; transform:rotate(-90deg) scale(.4); color:var(--accent); }
 .theme-toggle .i-moon{ opacity:1; transform:none; color:var(--accent-2); }
@@ -804,11 +812,14 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
       <svg width="16" height="16"><use href="#ic-search"/></svg>
       <input id="search-input" type="text" placeholder="Search apps…" />
     </div>
-    <button class="theme-toggle" id="theme-toggle-btn" title="Toggle theme">
-      <svg class="i-sun"><use href="#ic-sun-line"/></svg>
-      <svg class="i-moon"><use href="#ic-moon-line"/></svg>
-    </button>
-  </header>
+      <button class="theme-toggle" id="theme-toggle-btn" title="Toggle theme">
+    <svg class="i-sun"><use href="#ic-sun-line"/></svg>
+    <svg class="i-moon"><use href="#ic-moon-line"/></svg>
+  </button>
+  <a class="help-btn" id="help-support-btn" href="#" title="Help & Support">
+    <svg><use href="#ic-chat"/></svg>
+  </a>
+</header>
 
   <main>
     <section id="home-page" class="page">
@@ -991,6 +1002,24 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
           Sign in with Google
         </button>
       </div>
+      <!-- Invite friends card -->
+<div id="invite-card" hidden style="margin:16px 18px;padding:16px;border-radius:16px;background:linear-gradient(135deg,rgba(255,198,26,.12),rgba(51,224,193,.10));border:1px solid rgba(255,198,26,.3)">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+    <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-size:22px">🎁</div>
+    <div style="flex:1;min-width:0">
+      <b style="font-size:14.5px;display:block">Invite 3 Friends → Get Blue Tick</b>
+      <small style="font-size:11.5px;color:var(--text-dim)">Real join hona zaroori hai (link click nahi)</small>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--text-dim)">
+    <span>Real joins: <b id="invite-count" style="color:var(--accent)">0</b></span>
+    <span>•</span>
+    <span id="invite-progress">0 / 3 real joins</span>
+  </div>
+  <button class="btn btn-primary btn-block" id="invite-share-btn" type="button" style="padding:11px 16px;font-size:13.5px">
+    <svg width="16" height="16"><use href="#ic-copy"/></svg> Invite 3 Friends → Blue Tick
+  </button>
+</div>
       <h3 class="section-title" id="account-details-title" hidden>Account details</h3>
 <div class="settings-list" id="account-details" hidden style="margin-bottom:16px"></div>
 <div class="settings-list">
@@ -1651,6 +1680,95 @@ async function startSession(){
   localStorage.setItem("pika_session", state.sessionId);
   await setDoc(doc(db,"sessions", state.isOwner ? "owner" : state.uid), { sessionId: state.sessionId, at: serverTimestamp() });
 }
+/* ================= INVITE SYSTEM ================= */
+async function processPendingInvite(){
+  const inviter = sessionStorage.getItem("pika_pending_invite");
+  if(!inviter) return;
+  sessionStorage.removeItem("pika_pending_invite");
+  if(!firebaseReady || !state.uid || state.isGuest) return;
+  if(inviter === state.uid) return;
+
+  const refRef = doc(db, "referrals", state.uid);
+  try{
+    const existing = await getDoc(refRef);
+    if(existing.exists()) return;
+  }catch(e){}
+
+  try{
+    const inviterDoc = await getDoc(doc(db, "users", inviter));
+    if(!inviterDoc.exists()) return;
+    const inviterData = inviterDoc.data();
+    if(inviterData.deviceId && inviterData.deviceId === state.deviceId) return;
+  }catch(e){ return; }
+
+  try{
+    await runTransaction(db, async tx => {
+      const refSnap = await tx.get(refRef);
+      if(refSnap.exists()) return;
+
+      const inviterRef = doc(db, "users", inviter);
+      const inviterSnap = await tx.get(inviterRef);
+      if(!inviterSnap.exists()) return;
+
+      const currentCount = (inviterSnap.data().inviteCount || 0) + 1;
+
+      tx.set(refRef, {
+        inviter: inviter,
+        newUid: state.uid,
+        at: serverTimestamp(),
+        createdAtMs: Date.now()
+      });
+
+      tx.update(inviterRef, {
+        inviteCount: increment(1),
+        updatedAt: serverTimestamp()
+      });
+
+      if(currentCount >= 3 && !inviterSnap.data().verified){
+  // Note: we only bump inviteCount + flag verified=true here.
+  // The inviter's own client will create verifiedClaims/{their-uid}
+  // on next login (see checkAutoVerification).
+  tx.update(inviterRef, { verified: true, updatedAt: serverTimestamp() });
+}
+    });
+    toast("🎉 Referral counted — welcome!", "ic-check");
+  }catch(e){
+    console.warn("Referral processing failed:", e);
+  }
+}
+
+function renderInviteCard(){
+  const el = document.getElementById("invite-card");
+  if(!el) return;
+  if(state.isGuest || state.isOwner){ el.hidden = true; return; }
+  el.hidden = false;
+  const me = state.users[state.uid] || {};
+  const count = me.inviteCount || 0;
+  const alreadyVerified = !!me.verified;
+
+  document.getElementById("invite-count").textContent = count;
+  document.getElementById("invite-progress").textContent = alreadyVerified
+    ? "✅ Blue tick unlocked!"
+    : `${count} / 3 real joins`;
+
+  const btn = document.getElementById("invite-share-btn");
+  if(btn){
+    btn.textContent = alreadyVerified ? "Share store" : `Invite 3 Friends → Blue Tick (${count}/3)`;
+  }
+}
+
+async function shareInviteLink(){
+  if(!state.uid){ toast("Please log in first", "ic-close"); return; }
+  const url = `${location.origin}${location.pathname}?invite=${encodeURIComponent(state.uid)}`;
+  const text = `🎁 Join Pika Store with my link!\n${url}\n\n(Google se sign in karo — tabhi mera invite count hoga 😉)`;
+  if(navigator.share){
+    try{ await navigator.share({ title: "Join Pika Store", text, url }); return; }
+    catch(e){ if(e && e.name === "AbortError") return; }
+  }
+  const ok = await copyText(text);
+  toast(ok ? "Invite link copied" : "Copy failed", ok ? "ic-check" : "ic-close");
+}
+/* ================= /INVITE SYSTEM ================= */
 async function dedupeOwnerDocs(){
   try{
     const snap = await getDocs(query(collection(db,"users"), where("owner","==",true)));
@@ -1726,18 +1844,32 @@ async function completeLogin(user){
   const r = await applyIdentity(user);
   if(r === "banned"){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
   if(state.isGuest){ await guestBoot(); return; }
-  await startSession(); await ensureProfile(); enterStore();
+  await startSession(); await ensureProfile();
+  await processPendingInvite();
+  enterStore();
 }
 async function upgradeGuest(user){
   const r = await applyIdentity(user);
   if(r === "banned"){ try{ await signOut(auth); }catch(e){} sessionStorage.setItem("pika_notice","banned"); location.reload(); return; }
-  await startSession(); await ensureProfile(); location.reload();
+  await startSession(); await ensureProfile();
+  await processPendingInvite();
+  location.reload();
 }
 async function onGoogleUser(user){
   if(booted && state.isGuest) await upgradeGuest(user); else await completeLogin(user);
 }
 async function initAuth(){
   const notice = sessionStorage.getItem("pika_notice"); sessionStorage.removeItem("pika_notice");
+  // ✅ FIX: capture invite from URL immediately, before login happens
+  try{
+  const inviteUid = new URLSearchParams(location.search).get("invite");
+  if(inviteUid && inviteUid.length > 10){
+    sessionStorage.setItem("pika_pending_invite", inviteUid);
+    const u = new URL(location.href);
+    u.searchParams.delete("invite");
+    history.replaceState(null, "", u.pathname + (u.search ? u.search : ""));
+  }
+}catch(e){}
   if(!firebaseReady){ showGate(notice); return; }
   try{
     const rr = await getRedirectResult(auth);
@@ -1758,6 +1890,7 @@ async function initAuth(){
     if(!s.exists() || !localSid){ await startSession(); } else { state.sessionId = localSid; }
   }catch(e){ console.warn(e); state.sessionId = localSid || ""; }
   await ensureProfile();
+  await processPendingInvite();
   enterStore();
 }
 function isStandalone(){
@@ -2182,6 +2315,14 @@ function initTheme(){
     localStorage.setItem("pika_theme", next);
     $("#theme-label").textContent = next === "dark" ? "Dark" : "Light";
   });
+  const helpBtn = document.getElementById("help-support-btn");
+  if(helpBtn){
+    helpBtn.addEventListener("click", e=>{
+      e.preventDefault();
+      const msg = encodeURIComponent(`Hi Pika Store support,\n\nMujhe madad chahiye:\n\n(Problem likho)\n\n— User: ${state.username || "Guest"}\n— UID: ${state.uid || "unknown"}`);
+      window.open(`https://wa.me/${CONFIG.supportWhatsApp}?text=${msg}`, "_blank", "noopener");
+    });
+  }
 }
 function initNav(){
   $$(".nav-btn").forEach(btn=>{
@@ -2336,14 +2477,15 @@ function applyDeepLink(){
   if(deepLinkDone) return;
   deepLinkDone = true;
   const qs = new URLSearchParams(location.search);
-  const cat = qs.get("cat"), appId = qs.get("app"), dm = qs.get("dm");
+  const cat = qs.get("cat"), appId = qs.get("app"), dm = qs.get("dm"), disc = qs.get("disc");
   if(cat){ state.activeCategory = cat; heroApps = []; renderHome(); $$(".nav-btn")[0].click(); }
   if(appId){
     if(state.apps.some(a=>a.id===appId)) openAppDetail(appId);
     else toast("This item is no longer available.", "ic-close");
   }
   if(dm && state.uid) openDmPanel(dm);
-  if(cat || appId || dm){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
+  if(disc){ setTimeout(()=> resolveDiscoverShareCode(disc), 800); }
+  if(cat || appId || dm || disc){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
 }
 function renderAppRow(selector, apps, showRank){
   const row = $(selector);
@@ -2567,16 +2709,23 @@ function openAppDetail(appId){
         <div class="stat"><div class="stars">${renderStars(app.rating||4.5)}</div><span>${(app.rating||4.5).toFixed(1)} rating</span></div>
       </div>
       ${shots.length ? `<div class="screens-row">${shots.map(s=>`<img src="${s}" alt=""/>`).join("")}</div>` : ""}
-      <div class="accordion">
-        <details class="accordion-item" open><summary>Description <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary><div class="body">${escapeHtml(desc)}</div></details>
-        <details class="accordion-item"><summary>File info <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary><div class="body">Format: ${app.format||"APK"}${app.sizeLabel? " • "+app.sizeLabel:""}\nUploaded by: ${escapeHtml(up.name)}\nCategory: ${escapeHtml(app.category||"Uncategorized")}${createdMs? "\nUploaded: " + new Date(createdMs).toLocaleString() : ""}</div></details>
-      </div>
-      <div style="height:20px"></div>
-  </div></div>`;
+    <div class="accordion">
+      <details class="accordion-item" open><summary>Description <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary><div class="body">${escapeHtml(desc)}</div></details>
+      <details class="accordion-item"><summary>File info <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary><div class="body">Format: ${app.format||"APK"}${app.sizeLabel? " • "+app.sizeLabel:""}\nUploaded by: ${escapeHtml(up.name)}\nCategory: ${escapeHtml(app.category||"Uncategorized")}${createdMs? "\nUploaded: " + new Date(createdMs).toLocaleString() : ""}</div></details>
+    </div>
+    <div style="padding:12px 18px 6px">
+      <button class="btn btn-ghost btn-block" id="detail-comments-btn" type="button" style="justify-content:center">
+        <svg width="16" height="16"><use href="#ic-chat"/></svg> Comments & Reviews
+      </button>
+    </div>
+    <div style="height:20px"></div>
+</div></div>`;
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#detail-backdrop");
   wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")) wrap.remove(); });
   $("#detail-copy-btn").addEventListener("click", async ()=>{ await shareApp(app, up); });
+  const cmtBtn = $("#detail-comments-btn");
+if(cmtBtn) cmtBtn.addEventListener("click", ()=> openCommentsSheet(app.id, "pika", app.name));
   const delBtn = $("#detail-delete-btn");
   if(delBtn) delBtn.addEventListener("click", async ()=>{ if(await deleteApp(app)) wrap.remove(); });
   $("#detail-download-btn").addEventListener("click", async ()=>{
@@ -3098,6 +3247,7 @@ function renderProfile(){
   $("#row-phone").hidden = g; $("#row-change-photo").hidden = g; $(".profile-stats").hidden = g;
   $("#guest-card").hidden = !g; $("#my-uploads-title").hidden = g; $("#my-uploads-list").hidden = g;
   if(g) mountProfileGoogle();
+  renderInviteCard();
   renderAccountDetails();
   const list = state.isOwner ? state.apps : mine;
   $("#my-uploads-title").textContent = state.isOwner ? "All uploads (Owner)" : "My uploads";
@@ -3371,14 +3521,25 @@ function showVerifiedCelebration(){
 async function checkAutoVerification(){
   if(state.isGuest || state.isOwner || !state.uid || !firebaseReady) return;
   const n = myUploadCount();
+  const me = state.users[state.uid] || {};
+  const invites = me.inviteCount || 0;
+  const meetsUploads = n >= UPLOADS_FOR_TICK;
+  const meetsInvites = invites >= 3;
   try{
-    if(n >= UPLOADS_FOR_TICK && !state.verified){
-      await setDoc(doc(db,"verifiedClaims",state.uid), { code:"auto-uploads", source:"uploads", uploadsAtGrant:n, at: serverTimestamp() });
+    if((meetsUploads || meetsInvites) && !state.verified){
+      await setDoc(doc(db,"verifiedClaims",state.uid), {
+        code: meetsInvites ? "referral-3" : "auto-uploads",
+        source: meetsInvites ? "referral" : "uploads",
+        uploadsAtGrant: n,
+        invitesAtGrant: invites,
+        at: serverTimestamp()
+      });
       await setDoc(doc(db,"users",state.uid), { verified: true, updatedAt: serverTimestamp() }, { merge:true });
       state.verified = true; showVerifiedCelebration(); renderProfile(); renderUsersPage();
-    } else if(n < UPLOADS_FOR_TICK && state.verified){
+    } else if(!meetsUploads && !meetsInvites && state.verified){
       const snap = await getDoc(doc(db,"verifiedClaims",state.uid));
-      if(snap.exists() && snap.data().source === "uploads"){
+      const src = snap.exists() ? snap.data().source : "";
+      if(src === "uploads" || src === "referral"){
         await deleteDoc(doc(db,"verifiedClaims",state.uid));
         await setDoc(doc(db,"users",state.uid), { verified: false, updatedAt: serverTimestamp() }, { merge:true });
         state.verified = false; renderProfile(); renderUsersPage();
@@ -3450,6 +3611,150 @@ function dmTickIcon(m, otherId, tid){
   if(isOnlineUid(otherId)) return `<svg class="dm-tick delivered"><use href="#ic-check2"/></svg>`;
   return `<svg class="dm-tick sent"><use href="#ic-check1"/></svg>`;
 }
+/* ================= COMMENTS SYSTEM ================= */
+function openCommentsSheet(appId, appType, appName){
+  if(guestBlock("comment on apps")) return;
+  if(!state.uid || !firebaseReady){ toast("Please log in first", "ic-close"); return; }
+
+  const key = appType === "discover" ? ("disc__" + appId) : appId;
+
+  document.body.insertAdjacentHTML("beforeend", `
+  <div class="sheet-backdrop" id="cmt-backdrop"><div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
+    <div class="sheet-handle"></div>
+    <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+    <div style="padding:14px 18px 6px">
+      <h3 style="margin:6px 0 2px;font-size:17px">Comments</h3>
+      <p style="margin:0;font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(appName || "App")}</p>
+    </div>
+    <div class="settings-list" id="cmt-list" style="margin:10px 18px 14px;overflow-y:auto;flex:1;min-height:120px;max-height:44vh">
+      <div class="mini-row" style="color:var(--text-faint)">Loading…</div>
+    </div>
+    <div style="padding:0 18px calc(18px + var(--safe-bottom))">
+      <div style="position:relative">
+        <textarea id="cmt-input" maxlength="500" placeholder="Write a comment… (max 500 chars)" rows="3"
+          style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:11px 13px;color:var(--text);font-size:13.5px;font-family:inherit;resize:none;outline:none;-webkit-user-select:text;user-select:text;"></textarea>
+        <span id="cmt-len" style="position:absolute;right:12px;bottom:8px;font-size:10.5px;color:var(--text-faint)">0/500</span>
+      </div>
+      <button class="btn btn-primary btn-block" id="cmt-send" style="margin-top:10px;padding:13px">Post Comment</button>
+    </div>
+  </div></div>`);
+
+  const wrap = document.getElementById("cmt-backdrop");
+  const listEl = document.getElementById("cmt-list");
+  const inputEl = document.getElementById("cmt-input");
+  const lenEl = document.getElementById("cmt-len");
+  const sendBtn = document.getElementById("cmt-send");
+
+  let unsub = null;
+  let currentComments = [];
+
+  const renderList = () => {
+    if(!currentComments.length){
+      listEl.innerHTML = `<div class="mini-row" style="color:var(--text-faint)">No comments yet. Be the first!</div>`;
+      return;
+    }
+    listEl.innerHTML = currentComments.map(c=>{
+      const u = state.users[c.uid] || {};
+      const photo = u.photoURL || "";
+      const verified = !!u.verified;
+      const canDel = state.isOwner || c.uid === state.uid;
+      const time = new Date(c.createdAtMs || Date.now()).toLocaleString([], { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
+      const shortId = c.uid ? c.uid.slice(0, 6) + "…" + c.uid.slice(-4) : "guest";
+      return `<div class="mini-row" style="align-items:flex-start;padding:12px 14px;position:relative">
+        ${avatarHtml(c.name, photo, "lg")}
+        <div class="mini-main" style="min-width:0">
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+            <b style="font-size:13.5px;pointer-events:none;user-select:none">${escapeHtml(c.name || "Member")}${verified ? tick(true) : ""}</b>
+            <small style="font-size:10.5px;color:var(--text-faint);font-family:ui-monospace,monospace;pointer-events:none;user-select:none">#${escapeHtml(shortId)}</small>
+          </div>
+          <div style="font-size:13px;line-height:1.5;margin-top:4px;word-break:break-word;white-space:pre-wrap;color:var(--text)">${escapeHtml(c.text)}</div>
+          <small style="font-size:10.5px;color:var(--text-faint);display:block;margin-top:5px">${time}</small>
+        </div>
+        ${canDel ? `<button class="icon-del" data-cmt-del="${c.id}" title="Delete" style="position:absolute;top:8px;right:6px"><svg width="14" height="14"><use href="#ic-trash"/></svg></button>` : ""}
+      </div>`;
+    }).join("");
+  };
+
+  const close = () => {
+    if(unsub){ unsub(); unsub = null; }
+    wrap.remove();
+  };
+
+  wrap.addEventListener("click", e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ close(); return; }
+    const del = e.target.closest("[data-cmt-del]");
+    if(del){
+      const cid = del.dataset.cmtDel;
+      const c = currentComments.find(x=>x.id === cid);
+      if(!c) return;
+      if(!(state.isOwner || c.uid === state.uid)){ toast("You can only delete your own comments", "ic-close"); return; }
+      confirmSheet("Delete comment?", "This will be removed for everyone.", "Delete").then(ok=>{
+        if(!ok) return;
+        updateDoc(doc(db, "comments", cid), { deleted: true, deletedBy: state.uid, deletedAt: serverTimestamp() })
+          .then(()=> toast("Comment deleted"))
+          .catch(err=> toast("Delete failed: " + (err.code||err.message), "ic-close"));
+      });
+    }
+  });
+
+  inputEl.addEventListener("input", ()=>{
+    lenEl.textContent = inputEl.value.length + "/500";
+  });
+
+  const send = async () => {
+    const text = inputEl.value.trim();
+    if(!text){ toast("Write something first", "ic-close"); return; }
+    if(text.length > 500){ toast("Too long (max 500)", "ic-close"); return; }
+
+    const problem = checkChatText(text, true, state.isOwner);
+    if(problem){ toast(problem, "ic-close"); return; }
+
+    sendBtn.disabled = true;
+    try{
+      await addDoc(collection(db, "comments"), {
+        appId: key,
+        appType: appType,
+        appName: appName || "",
+        uid: state.uid,
+        name: state.username || "Member",
+        text: text,
+        createdAt: serverTimestamp(),
+        createdAtMs: Date.now(),
+        deleted: false
+      });
+      inputEl.value = "";
+      lenEl.textContent = "0/500";
+      toast("Comment posted");
+    }catch(err){
+      console.error(err);
+      if((err.code||"").includes("permission-denied")){
+        rulesBanner("Comment posting is blocked by your Firestore rules. `comments` collection needs write access for signed-in users.");
+        toast("Comments need Firestore rules update", "ic-close");
+      } else {
+        toast("Failed: " + (err.code||err.message), "ic-close");
+      }
+    }finally{
+      sendBtn.disabled = false;
+    }
+  };
+  sendBtn.addEventListener("click", send);
+
+  const q = query(
+    collection(db, "comments"),
+    where("appId", "==", key),
+    where("deleted", "==", false)
+  );
+  unsub = onSnapshot(q, snap=>{
+    currentComments = snap.docs
+      .map(d=>({ id: d.id, ...d.data() }))
+      .sort((a,b)=> (b.createdAtMs || 0) - (a.createdAtMs || 0));
+    renderList();
+  }, err=>{
+    console.warn("comments listener", err);
+    listEl.innerHTML = `<div class="mini-row" style="color:var(--danger)">Could not load comments: ${escapeHtml(err.code || err.message || "")}</div>`;
+  });
+}
+/* ================= /COMMENTS SYSTEM ================= */
 function openDmPanel(otherId){
   if(guestBlock("send private messages")) return;
   if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return; }
@@ -3577,6 +3882,8 @@ function initProfileActions(){
     const app = state.apps.find(a=>a.id === b.dataset.delApp);
     if(app) await deleteApp(app);
   });
+  const _invBtn = document.getElementById("invite-share-btn");
+  if(_invBtn) _invBtn.addEventListener("click", shareInviteLink);
 }
 
 /* =====================================================================
@@ -4431,8 +4738,7 @@ function closeTelegramChannel(){
   $("#pktg-conv").classList.remove("pktg-preview-mode");
   $("#pktg").classList.remove("open");
   if(window.__pktgPlexusStop) window.__pktgPlexusStop();
-if(window.__fmtPollingTimer){ clearInterval(window.__fmtPollingTimer); window.__fmtPollingTimer = null; }
-state.tg.panelOpen = false;
+  state.tg.panelOpen = false;
 }
 async function openTelegramChannel(channelId, opts = {}){
   const ch = state.channels.find(c=>c.id===channelId);
@@ -5501,6 +5807,91 @@ async function discoverLoadHome(force){
   }
 }
 
+/* ================= DISCOVER CUSTOM SHARE ================= */
+function genShareCode(len = 10){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const arr = crypto.getRandomValues(new Uint32Array(len));
+  return Array.from(arr, n => chars[n % chars.length]).join("");
+}
+
+async function shareDiscoverApp(app){
+  if(!state.uid || !firebaseReady){ toast("Please log in first", "ic-close"); return; }
+
+  const code = genShareCode(10);
+  const now = Date.now();
+  const expiresAt = now + 30 * 24 * 60 * 60 * 1000;
+
+  try{
+    await setDoc(doc(db, "discoverShares", code), {
+      appId: app.id,
+      appName: app.name || "",
+      appIcon: app.icon || "",
+      appAuthor: app.author || "",
+      appCategory: app.category || "",
+      appPackage: app.package || "",
+      appSizeLabel: app.sizeLabel || "",
+      appVersion: app.version || "",
+      appDownloads: app.downloads || 0,
+      createdBy: state.uid,
+      createdByName: state.username || "",
+      createdAt: serverTimestamp(),
+      createdAtMs: now,
+      expiresAtMs: expiresAt
+    });
+  }catch(e){
+    console.error("share link save failed", e);
+    if((e.code||"").includes("permission-denied")){
+      rulesBanner("Creating share links is blocked. `discoverShares` needs write access for signed-in users.");
+      toast("Share needs Firestore rules update", "ic-close");
+    } else {
+      toast("Could not create share link", "ic-close");
+    }
+    return;
+  }
+
+  const url = `${location.origin}${location.pathname}?disc=${code}`;
+  const text = `📱 ${app.name}\n${app.category || "App"} • ${app.sizeLabel || ""}\n\nGet it on Pika Store:\n${url}`;
+
+  if(navigator.share){
+    try{ await navigator.share({ title: app.name, text, url }); return; }
+    catch(e){ if(e && e.name !== "AbortError") toast("Share failed", "ic-close"); }
+  }
+  const ok = await copyText(text);
+  toast(ok ? "Custom link copied" : "Copy failed", ok ? "ic-check" : "ic-close");
+}
+
+async function resolveDiscoverShareCode(code){
+  if(!code || !firebaseReady) return;
+  try{
+    const snap = await getDoc(doc(db, "discoverShares", code));
+    if(!snap.exists()){
+      toast("This shared link is invalid or expired", "ic-close");
+      return;
+    }
+    const d = snap.data();
+    if(d.expiresAtMs && d.expiresAtMs < Date.now()){
+      toast("This share link has expired", "ic-close");
+      return;
+    }
+    const app = {
+      id: d.appId,
+      name: d.appName,
+      icon: d.appIcon,
+      author: d.appAuthor,
+      category: d.appCategory,
+      package: d.appPackage,
+      sizeLabel: d.appSizeLabel,
+      version: d.appVersion,
+      downloads: d.appDownloads
+    };
+    openDiscoverApp(app);
+  }catch(e){
+    console.warn("share code resolve failed", e);
+    toast("Could not open shared item", "ic-close");
+  }
+}
+/* ================= /DISCOVER CUSTOM SHARE ================= */
+
 function openDiscoverApp(app){
   const html = `
   <div class="sheet-backdrop" id="disc-backdrop"><div class="sheet">
@@ -5535,6 +5926,11 @@ Size: ${escapeHtml(app.sizeLabel)}
 Version: ${escapeHtml(app.version || '—')}</div>
         </details>
       </div>
+      <div style="padding:12px 18px 6px">
+        <button class="btn btn-ghost btn-block" id="disc-comments-btn" type="button" style="justify-content:center">
+          <svg width="16" height="16"><use href="#ic-chat"/></svg> Comments & Reviews
+        </button>
+      </div>
       <div style="height:20px"></div>
   </div></div>`;
   document.body.insertAdjacentHTML('beforeend', html);
@@ -5545,10 +5941,10 @@ Version: ${escapeHtml(app.version || '—')}</div>
   document.getElementById('disc-dl-btn').addEventListener('click', ()=>{
   startDiscoverDownload(app);
 });
+document.getElementById('disc-comments-btn').addEventListener('click', ()=> openCommentsSheet(app.id, "discover", app.name));
   document.getElementById('disc-cp-btn').addEventListener('click', async ()=>{
-    const ok = await copyText(app.name + ' — ' + app.sizeLabel + '\nGet it on Pika Store');
-    toast(ok ? 'Copied' : 'Copy failed', ok ? 'ic-check' : 'ic-close');
-  });
+  await shareDiscoverApp(app);
+});
 }
 
 async function startDiscoverDownload(app){
