@@ -2247,7 +2247,7 @@ function renderHome(){
     $("#hero-dots").innerHTML = "";
   }
     $("#hero-upload-btn").onclick = ()=>{ document.querySelector('.nav-btn[data-page="upload-page"]').click(); };
-  const discoverAsStore = (window.discover && discover.apps ? discover.apps : []).map(a => ({
+  const discoverAsStore = (typeof discover !== 'undefined' && discover && discover.apps ? discover.apps : []).map(a => ({
     id: 'disc__' + a.id, __discover: true, _discApp: a,
     name: a.name, thumbUrl: a.icon, format: 'APK',
     sizeLabel: a.sizeLabel, downloadCount: a.downloads || 0,
