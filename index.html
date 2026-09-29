@@ -5832,7 +5832,7 @@ async function shareDiscoverApp(app){
       appSizeLabel: app.sizeLabel || "",
       appVersion: app.version || "",
       appDownloads: app.downloads || 0,
-      createdBy: state.uid,
+      createdBy: state.authUid || state.uid,
       createdByName: state.username || "",
       createdAt: serverTimestamp(),
       createdAtMs: now,
