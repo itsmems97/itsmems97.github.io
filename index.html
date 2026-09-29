@@ -5301,6 +5301,7 @@ initOnboarding();
    ===================================================================== */
 const DISCOVER_API = "https://144-24-218-100.nip.io/discover";
 const discover = { apps: [], loading: false };
+window.discover = discover;
 
 async function discoverFetch(path){
   const res = await fetch(DISCOVER_API + path);
