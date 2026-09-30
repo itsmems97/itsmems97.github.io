@@ -5341,19 +5341,23 @@ async function tgDownloadMessage(m){
       setTimeout(()=>{ try{ URL.revokeObjectURL(result.blobUrl); }catch(_){} }, 300000); // 5 min
     }
   }catch(e){
-    console.error(e);
-    if(e && e.name === "AbortError"){
-      // Already handled in cancel callback
-    } else if(e && e.code === "FILE_TOO_LARGE"){
-      bubble.remove();
-      toast("File too large for in-app download — using browser");
-      nativeDownload(url, filename);
-    } else {
-      bubble.remove();
-      toast("Using browser download…");
-      nativeDownload(url, filename);
-    }
+  console.error(e);
+  if(e && e.name === "AbortError"){
+    // Already handled in cancel callback
+  } else if(e && e.code === "FILE_TOO_LARGE"){
+    bubble.remove();
+    toast("File too large for in-app download — using browser");
+    nativeDownload(url, filename);
+  } else if(!navigator.onLine || (e && e.message && /network|fetch|failed to fetch/i.test(e.message))){
+    // ✅ NEW: internet break — keep chunks in IndexedDB, don't fallback
+    bubble.remove();
+    toast("Connection lost. Tap again to resume.", "ic-close");
+  } else {
+    bubble.remove();
+    toast("Using browser download…");
+    nativeDownload(url, filename);
   }
+}
   bubble.remove();
   dlActive.delete(m.id);
 }
