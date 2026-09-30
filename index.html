@@ -1292,56 +1292,128 @@ function withTimeout(promise, ms, label){
     promise.then(v => { clearTimeout(timer); resolve(v); }, e => { clearTimeout(timer); reject(e); });
   });
 }
+/* ========== IndexedDB Helpers for Resumable Downloads ========== */
+const IDB_NAME = "pika_downloads";
+const IDB_STORE = "chunks";
+
+function idbOpen(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbGet(key){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readonly");
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSet(key, value){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbDelete(key){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/* Main download with resume support */
 async function downloadInsideStore(url, filename, onProgress, signal){
-  // Step 1: Try HEAD — this also tests CORS
-  let total = 0;
+  const key = "dl_" + filename + "_" + url.slice(-40);
+
+  // Step 1: HEAD request — check size + range support
+  let total = 0, acceptsRanges = false;
   try{
     const head = await fetch(url, { method: "HEAD", signal });
     if(!head.ok) throw new Error("HEAD failed");
     total = Number(head.headers.get("content-length")) || 0;
+    acceptsRanges = (head.headers.get("accept-ranges") || "").toLowerCase().includes("bytes");
   }catch(e){
     if(e && e.name === "AbortError") throw e;
-    // CORS or network block — throw specific error for graceful fallback
     const err = new Error("CORS_BLOCKED");
     err.code = "CORS_BLOCKED";
     throw err;
   }
 
-  // Step 2: Size guard — avoid memory crash on mobile for large APKs
-  const SIZE_LIMIT = 30 * 1024 * 1024; // 30 MB
+  // Step 2: RAM-based size limit
+  // 4GB phone → 1.5GB, 8GB phone → 3GB, etc.
+  const deviceMemGB = navigator.deviceMemory || 4;
+  const SIZE_LIMIT = Math.min(deviceMemGB * 0.4, 2) * 1024 * 1024 * 1024; // max 2GB
   if(total > SIZE_LIMIT){
     const err = new Error("FILE_TOO_LARGE");
     err.code = "FILE_TOO_LARGE";
     throw err;
   }
 
-  // Step 3: Fetch with progress
-  const res = await fetch(url, { signal });
-  if(!res.ok) throw new Error(`Download failed (HTTP ${res.status})`);
+  // Step 3: Check for existing partial download
+  let startByte = 0;
+  let savedChunks = [];
+  const existing = await idbGet(key).catch(()=>null);
+  if(existing && existing.url === url && existing.total === total && acceptsRanges){
+    startByte = existing.downloaded || 0;
+    savedChunks = existing.chunks || [];
+    console.log("Resuming from byte:", startByte);
+  } else if(existing){
+    await idbDelete(key).catch(()=>{});
+  }
+
+  // Step 4: Fetch with Range header if resuming
+  const headers = {};
+  if(startByte > 0) headers["Range"] = `bytes=${startByte}-`;
+
+  const res = await fetch(url, { headers, signal });
+  if(!res.ok && res.status !== 206) throw new Error(`Download failed (HTTP ${res.status})`);
 
   if(!total) total = Number(res.headers.get("content-length")) || 0;
 
-  let blob;
-  if(total && res.body && res.body.getReader){
+  // Step 5: Stream chunks with progress + save to IndexedDB
+  const chunks = [...savedChunks];
+  let received = startByte;
+
+  if(res.body && res.body.getReader){
     const reader = res.body.getReader();
-    const chunks = [];
-    let received = 0;
     while(true){
       const { done, value } = await reader.read();
       if(done) break;
       chunks.push(value);
       received += value.length;
       onProgress && onProgress(Math.min(99, Math.round((received / total) * 100)));
+
+      // Save progress every ~5MB (avoid too frequent writes)
+      if(chunks.length % 20 === 0){
+        await idbSet(key, { url, total, downloaded: received, chunks, filename, savedAt: Date.now() }).catch(()=>{});
+      }
     }
-    blob = new Blob(chunks, { type: res.headers.get("content-type") || "application/octet-stream" });
   } else {
     onProgress && onProgress(null);
-    blob = await res.blob();
+    const buf = await res.arrayBuffer();
+    chunks.push(new Uint8Array(buf));
+    received += buf.byteLength;
   }
 
   if(signal && signal.aborted){ const err = new Error("cancelled"); err.name = "AbortError"; throw err; }
   onProgress && onProgress(100);
 
+  // Step 6: Build blob and trigger save
+  const blob = new Blob(chunks, { type: "application/octet-stream" });
   const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = blobUrl;
@@ -1351,7 +1423,17 @@ async function downloadInsideStore(url, filename, onProgress, signal){
   a.click();
   a.remove();
 
-  return { blob, blobUrl, filename };
+  // Step 7: Clean up IndexedDB after successful download
+  setTimeout(()=> idbDelete(key).catch(()=>{}), 5000);
+
+  return { blob, blobUrl, filename, key };
+}
+
+/* Cancel helper — deletes chunks from IndexedDB */
+async function cancelDownload(url, filename){
+  const key = "dl_" + filename + "_" + url.slice(-40);
+  await idbDelete(key).catch(()=>{});
+  console.log("Download cancelled, chunks deleted");
 }
 
 /* ---- Preview thumbnail generator (client-side, at upload time) ---- */
@@ -2815,7 +2897,11 @@ function createDlBubble(app, onCancel){
     if(!drag) return; drag = false;
     const armed = overTarget(e.clientX, e.clientY);
     target.classList.remove("show","armed");
-    if(armed){ cancelled = true; onCancel && onCancel(); }
+    if(armed){
+      cancelled = true;
+      // Support async cancel (e.g., IndexedDB cleanup)
+      Promise.resolve(onCancel && onCancel()).catch(()=>{});
+    }
   });
   el.addEventListener("click", ()=>{ if(!cancelled) toast(`Downloading "${app.name}"`); });
   const arc = el.querySelector(".arc"), label = el.querySelector(".pct");
@@ -5226,37 +5312,46 @@ async function tgDownloadMessage(m){
   if(dlActive.has(m.id)){ toast("Already downloading"); return; }
   dlActive.add(m.id);
 
+  const filename = m.filename || "download";
   const controller = new AbortController();
-  const fakeApp = { name: m.filename || "file" };
-  const bubble = createDlBubble(fakeApp, ()=> controller.abort());
+  const fakeApp = { name: filename };
+  const bubble = createDlBubble(fakeApp, async ()=>{
+    // CANCELLED — abort fetch AND delete IndexedDB chunks
+    controller.abort();
+    await cancelDownload(url, filename);
+    toast("Download cancelled — file deleted");
+  });
   toast("Download started");
 
   try{
     const result = await downloadInsideStore(
       url,
-      m.filename || "download",
+      filename,
       pct => bubble.set(pct),
       controller.signal
     );
     bubble.set(100);
-    toast(`"${m.filename || "File"}" downloaded`);
+    toast(`"${filename}" downloaded`);
 
     if(result && result.blob){
       setTimeout(()=>{
-        try{ showDownloadCompletePopup(m.filename || "File", result.blob, result.blobUrl); }
+        try{ showDownloadCompletePopup(filename, result.blob, result.blobUrl); }
         catch(e){ console.warn("popup failed", e); }
       }, 600);
-      setTimeout(()=>{ try{ URL.revokeObjectURL(result.blobUrl); }catch(_){} }, 120000);
+      setTimeout(()=>{ try{ URL.revokeObjectURL(result.blobUrl); }catch(_){} }, 300000); // 5 min
     }
   }catch(e){
     console.error(e);
     if(e && e.name === "AbortError"){
-      toast("Download cancelled");
+      // Already handled in cancel callback
+    } else if(e && e.code === "FILE_TOO_LARGE"){
+      bubble.remove();
+      toast("File too large for in-app download — using browser");
+      nativeDownload(url, filename);
     } else {
-      // Silent fallback to native browser download (no black screen, no confusing message)
       bubble.remove();
       toast("Using browser download…");
-      nativeDownload(url, m.filename || "download");
+      nativeDownload(url, filename);
     }
   }
   bubble.remove();
