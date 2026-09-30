@@ -1056,7 +1056,7 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 <input type="file" id="channel-content-input" accept="*/*" hidden />
 <input type="file" id="channel-icon-input" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.heic,.heif,application/octet-stream,*/*" hidden />
       <div id="danger-zone">
-        <div class="danger-note"><b>Please note:</b> if you do not open the app for <b>2 months (60 days)</b>, your account, all your uploads, chat messages and profile photo are <b>deleted automatically</b> (from the Oracle server too).</div>
+        <div class="danger-note"><b>Please note:</b> if you do not open the app for <b>2 months (60 days)</b>, your account, all your uploads, chat messages and profile photo are <b>deleted automatically</b> (from the Pika Store too).</div>
         <div class="settings-list" style="margin-top:12px">
           <div class="row tap" id="row-delete-account" style="color:var(--danger)"><div class="row-left" style="color:var(--danger)"><svg style="color:var(--danger)"><use href="#ic-trash"/></svg> Delete account permanently</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         </div>
@@ -5017,7 +5017,7 @@ if(isMemberHere){
   if(section){
     getDocs(query(collection(db, "channelKeys"), where("channelId", "==", channelId), where("generatedByUid", "==", state.uid))).then(snap => {
       if(snap.empty){
-        section.innerHTML = `<button class="btn btn-primary btn-block" id="chinfo-genkey" type="button"><svg><use href="#ic-key"/></svg> Generate My Key</button>`;
+        section.innerHTML = `<button class="btn btn-primary btn-block" id="chinfo-genkey" type="button"><svg><use href="#ic-key"/></svg> Generate My WallHack Key</button>`;
         document.getElementById("chinfo-genkey").addEventListener("click", async () => {
           const btn = document.getElementById("chinfo-genkey");
           btn.disabled = true; btn.innerHTML = "Generating...";
@@ -5034,7 +5034,7 @@ if(isMemberHere){
             });
             toast("Key generated successfully!");
             section.innerHTML = `<div style="background:var(--surface-2);padding:12px;border-radius:14px;text-align:center;margin-bottom:8px;">
-              <div style="font-size:11px;color:var(--text-faint);margin-bottom:4px;">Your Key</div>
+              <div style="font-size:11px;color:var(--text-faint);margin-bottom:4px;">Your WallHack Key</div>
               <div style="font-family:ui-monospace,monospace;font-size:15px;font-weight:800;letter-spacing:1px;color:var(--accent);" id="my-key-text">${newKey}</div>
               <button class="btn btn-ghost btn-block" id="copy-my-key" style="margin-top:8px;padding:8px;font-size:12px;"><svg><use href="#ic-copy"/></svg> Copy Key</button>
             </div>`;
@@ -5044,7 +5044,7 @@ if(isMemberHere){
             });
           }catch(e){
             console.error(e);
-            btn.disabled = false; btn.innerHTML = "<svg><use href='#ic-key'/></svg> Generate My Key";
+            btn.disabled = false; btn.innerHTML = "<svg><use href='#ic-key'/></svg> Generate My WallHack Key";
             toast("Failed to generate key", "ic-close");
           }
         });
