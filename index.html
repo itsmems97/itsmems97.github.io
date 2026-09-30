@@ -2778,7 +2778,51 @@ function renderAppRow(selector, apps, showRank){
     row.appendChild(node);
   });
 }
+function getFileTypeIcon(filename){
+  const ext = (String(filename||'').split('.').pop() || '').toLowerCase();
+  const map = {
+    zip:   { color: '#F59E0B', text: 'ZIP' },
+    rar:   { color: '#A855F7', text: 'RAR' },
+    '7z':  { color: '#F59E0B', text: '7Z' },
+    pak:   { color: '#10B981', text: 'PAK' },
+    json:  { color: '#3B82F6', text: 'JSON' },
+    txt:   { color: '#6B7280', text: 'TXT' },
+    pdf:   { color: '#EF4444', text: 'PDF' },
+    obb:   { color: '#F97316', text: 'OBB' },
+    mp4:   { color: '#EC4899', text: 'MP4' },
+    mp3:   { color: '#8B5CF6', text: 'MP3' },
+    doc:   { color: '#2563EB', text: 'DOC' },
+    docx:  { color: '#2563EB', text: 'DOC' },
+    xls:   { color: '#059669', text: 'XLS' },
+    xlsx:  { color: '#059669', text: 'XLS' },
+    ppt:   { color: '#EA580C', text: 'PPT' },
+    pptx:  { color: '#EA580C', text: 'PPT' }
+  };
+  const info = map[ext] || { color: '#6B7280', text: (ext || 'FILE').toUpperCase().slice(0, 4) };
+  const fontSize = info.text.length >= 4 ? 18 : 24;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="${info.color}"/><text x="50" y="${info.text.length >= 4 ? 60 : 62}" font-size="${fontSize}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="800" fill="#fff" letter-spacing="1">${info.text}</text></svg>`;
+  return {
+    dataUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+    color: info.color,
+    text: info.text
+  };
+}
+
+function fileTypeIconToFile(filename){
+  const ft = getFileTypeIcon(filename);
+  const svgContent = decodeURIComponent(ft.dataUrl.split(',')[1]);
+  const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+  return new File([blob], "icon.svg", { type: 'image/svg+xml' });
+}
 function placeholderIcon(name=""){
+  const dot = String(name||'').lastIndexOf('.');
+  if(dot > 0){
+    const ext = name.slice(dot+1).toLowerCase();
+    const known = ['zip','rar','7z','pak','json','txt','pdf','obb','mp4','mp3','doc','docx','xls','xlsx','ppt','pptx'];
+    if(known.includes(ext)){
+      return getFileTypeIcon(name).dataUrl;
+    }
+  }
   const letter = (name.trim()[0]||"P").toUpperCase();
   return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231E2430'/%3E%3Ctext x='50' y='62' font-size='42' text-anchor='middle' font-family='Arial' font-weight='800' fill='%23FFC61A'%3E${letter}%3C/text%3E%3C/svg%3E`;
 }
@@ -3102,62 +3146,63 @@ async function loadJSZip(){
   return window.JSZip;
 }
 async function autoIconFromApk(file){
-  if(state.upload.thumb || file.size > 300*1024*1024) return;
+  if(state.upload.thumb) return;
+  if(file.size > 500*1024*1024) return;
   try{
     const JSZip = await loadJSZip();
     const zip = await JSZip.loadAsync(file);
     const cands = [];
+    
     zip.forEach((path, entry)=>{
       if(entry.dir) return;
       const low = path.toLowerCase();
       if(/\.9\.png$/.test(low)) return;
       if(!/\.(png|webp|jpg|jpeg)$/i.test(low)) return;
-      const inRes    = /^res\//.test(low);
-      const inAssets = /^assets\//.test(low);
-      const inRoot   = /^[^/]+\.(png|webp|jpg|jpeg)$/i.test(low);
-      if(!inRes && !inAssets && !inRoot) return;
-
+      if(!/^res\//.test(low) && !/^assets\//.test(low)) return;
+      
       let score = 0;
-      if(/\/mipmap-/.test(low) || /^mipmap-/.test(low)) score += 80;
-      else if(/\/mipmap\//.test(low)) score += 60;
-      if(/ic_launcher\./.test(low) && !/foreground|background/.test(low)) score += 60;
-      if(/app_icon|launcher_icon/.test(low)) score += 50;
-      if(/(^|[_\-/])icon[_\-.]/.test(low)) score += 20;
-      if(/logo/.test(low)) score += 15;
-      if(/foreground|background|monochrome/.test(low)) score -= 30;
-      if(/round/.test(low)) score -= 12;
-      if(/xxxhdpi/.test(low)) score += 10;
-      else if(/xxhdpi/.test(low)) score += 8;
-      else if(/xhdpi/.test(low))  score += 6;
-      else if(/hdpi/.test(low))   score += 4;
-      if(/\.webp$/.test(low)) score -= 3;
-
+      if(/ic_launcher/.test(low)) score += 100;
+      if(/app_icon|launcher_icon|ic_app/.test(low)) score += 90;
+      if(/(^|[_\-/])icon[_\-.]/.test(low)) score += 40;
+      if(/logo/.test(low)) score += 25;
+      if(/mipmap/.test(low)) score += 30;
+      if(/foreground|background|monochrome|round|adaptive|notification|small/.test(low)) score -= 60;
+      if(/xxxhdpi/.test(low)) score += 15;
+      else if(/xxhdpi/.test(low)) score += 12;
+      else if(/xhdpi/.test(low)) score += 9;
+      else if(/hdpi/.test(low)) score += 6;
+      else if(/mdpi/.test(low)) score += 3;
+      
       cands.push({ path, entry, score });
     });
-
+    
     if(!cands.length) return;
-
-    let pool = cands.filter(c => c.score > 0).sort((a,b)=> b.score - a.score).slice(0, 25);
-    if(!pool.length) pool = cands.slice(0, 80);
-
+    
+    let pool = cands.filter(c => c.score > 0).sort((a,b)=> b.score - a.score).slice(0, 40);
+    if(!pool.length) pool = cands.slice(0, 100);
+    
     let best = null, bestVal = -1;
     for(const c of pool){
-      const ext  = c.path.split(".").pop().toLowerCase();
+      const ext = c.path.split(".").pop().toLowerCase();
       const mime = ext === "webp" ? "image/webp" : (ext === "png" ? "image/png" : "image/jpeg");
       try{
-        const blob = new Blob([await c.entry.async("arraybuffer")], { type: mime });
-        const bmp  = await createImageBitmap(blob).catch(()=> null);
+        const buf = await c.entry.async("arraybuffer");
+        if(buf.byteLength > 5*1024*1024) continue;
+        const blob = new Blob([buf], { type: mime });
+        const bmp = await createImageBitmap(blob).catch(()=> null);
         if(!bmp) continue;
         const w = bmp.width, h = bmp.height;
         if(bmp.close) bmp.close();
         if(w < 48 || h < 48) continue;
-        if(Math.abs(w - h) > Math.max(w, h) * 0.15) continue;
-        const val = c.score * 10 + Math.min(w, 512);
+        const sq = 1 - Math.abs(w-h)/Math.max(w,h);
+        if(sq < 0.75) continue;
+        const val = c.score * 10 + Math.min(w, 512) + sq * 50;
         if(val > bestVal){ bestVal = val; best = { blob, ext }; }
       }catch(e){ continue; }
     }
+    
     if(!best || state.upload.thumb) return;
-
+    
     const f = new File([best.blob], "icon." + best.ext, { type: best.blob.type });
     state.upload.thumb = f;
     const dz = $("#thumb-dropzone");
@@ -3240,7 +3285,16 @@ $("#file-dropzone").addEventListener("click", ()=> $("#file-input").click());
     const detected = extToFormat[ext];
     if(detected){ state.upload.format = detected; $$(".format-opt").forEach(o=> o.classList.toggle("active", o.dataset.format === detected)); }
     if(!state.upload.name){ state.upload.name = f.name.replace(/\.[a-z0-9]+$/i,""); $("#app-name-input").value = state.upload.name; }
-    if(ext === "apk") autoIconFromApk(f);
+    if(['apk','apks','xapk','apkm','apkx'].includes(ext)){
+  autoIconFromApk(f);
+} else if(!state.upload.thumb){
+  const ft = getFileTypeIcon(f.name);
+  const iconFile = fileTypeIconToFile(f.name);
+  state.upload.thumb = iconFile;
+  const dz2 = $("#thumb-dropzone");
+  dz2.classList.add("filled");
+  dz2.innerHTML = `<img class="file-thumb" src="${ft.dataUrl}" alt=""/><div><b>Auto: ${ft.text}</b><small style="display:block;font-size:11px;color:var(--text-faint);margin-top:2px;">Tap to change</small></div>`;
+}
   if($("#update-existing-card")) $("#update-existing-card").hidden = false;
 });
   $$(".format-opt").forEach(opt=>{
