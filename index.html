@@ -1245,7 +1245,7 @@ const CONFIG = {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   initializeFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, increment,
-  onSnapshot, query, orderBy, limit, serverTimestamp, where, runTransaction, arrayUnion, deleteField,
+  onSnapshot, query, orderBy, limit, serverTimestamp, where, runTransaction, arrayUnion, arrayRemove, deleteField,
   enableNetwork, disableNetwork, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, reauthenticateWithPopup, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -4985,7 +4985,20 @@ function openChannelCodesSheet(channelId){
       const metaLine = used && joinedBy
         ? `<b style="color:${statusColor}">Used</b> • joined by <span style="color:var(--text-dim);font-weight:600">${escapeHtml(joinedBy)}</span>`
         : `<b style="color:${statusColor}">${statusText}</b>`;
-      return `<div class="code-row"><div class="code-main"><span class="code-value">${escapeHtml(id)}</span><span class="code-meta">${metaLine}</span></div><button class="icon-del" data-copy-code="${escapeHtml(id)}" title="Copy code" style="color:var(--accent-2)"><svg style="color:var(--accent-2) !important"><use href="#ic-copy"/></svg></button></div>`;
+      return `<div class="code-row">
+  <div class="code-main">
+    <span class="code-value">${escapeHtml(id)}</span>
+    <span class="code-meta">${metaLine}</span>
+  </div>
+  <div style="display:flex;gap:6px;">
+    <button class="icon-del" data-copy-code="${escapeHtml(id)}" title="Copy code" style="color:var(--accent-2)">
+      <svg style="color:var(--accent-2) !important"><use href="#ic-copy"/></svg>
+    </button>
+    <button class="icon-del" data-del-code="${escapeHtml(id)}" title="Delete code" style="color:var(--danger)">
+      <svg style="color:var(--danger) !important"><use href="#ic-trash"/></svg>
+    </button>
+  </div>
+</div>`;
     }).join("");
   }
   async function loadAll(ids){
@@ -5013,8 +5026,22 @@ function openChannelCodesSheet(channelId){
   }, 4000);
   wrap.addEventListener("click", async e=>{
     if(e.target === wrap || e.target.closest("[data-close]")){ if(chDocUnsub){ chDocUnsub(); chDocUnsub = null; } clearInterval(pollTimer); wrap.remove(); return; }
-    const cp = e.target.closest("[data-copy-code]");
-    if(cp){ const ok = await copyText(cp.dataset.copyCode); toast(ok ? "Code copied" : "Could not copy", ok ? "ic-check" : "ic-close"); return; }
+    // DELETE CODE LOGIC
+const del = e.target.closest("[data-del-code]");
+if(del){
+  const codeToDel = del.dataset.delCode;
+  if(!(await confirmSheet("Delete Secret Code?", "This code will be removed forever. Members who already joined using this code will NOT be removed.", "Delete"))) return;
+  try{
+    await deleteDoc(doc(db, "channelCodes", codeToDel));
+    await updateDoc(doc(db, "channels", channelId), { codeIds: arrayRemove(codeToDel) }).catch(()=>{});
+    toast("Secret code deleted");
+  }catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
+  return;
+}
+
+// COPY CODE LOGIC
+const cp = e.target.closest("[data-copy-code]");
+if(cp){ const ok = await copyText(cp.dataset.copyCode); toast(ok ? "Code copied" : "Could not copy", ok ? "ic-check" : "ic-close"); return; }
     if(e.target.closest("#chcodes-add")){
       try{ const code = await generateUniqueChannelCode(channelId, ch.name); toast("New code: " + code, "ic-check"); }
       catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
