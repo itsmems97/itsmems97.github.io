@@ -4192,18 +4192,23 @@ async function joinChannelWithCode(channel, codeRaw){
   const memberKey = myMemberKey();
   try{
     await runTransaction(db, async tx=>{
-      const codeRef = doc(db,"channelCodes",code);
-      const codeSnap = await tx.get(codeRef);
-      if(!codeSnap.exists() || codeSnap.data().channelId !== channel.id || codeSnap.data().used){
-        const e = new Error("Wrong code"); e.code = "WRONGCODE"; throw e;
-      }
-      tx.update(codeRef, { used:true, usedBy: memberKey, usedAt: serverTimestamp() });
-      tx.set(doc(db,"channels",channel.id,"members",memberKey), {
-        uid: state.uid, name: state.username, photoURL: state.photoURL || "",
-        role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
-      });
-      tx.update(doc(db,"channels",channel.id), { memberCount: increment(1) });
-    });
+  const codeRef = doc(db,"channelCodes",code);
+  const codeSnap = await tx.get(codeRef);
+  if(!codeSnap.exists() || codeSnap.data().channelId !== channel.id || codeSnap.data().used){
+    const e = new Error("Wrong code"); e.code = "WRONGCODE"; throw e;
+  }
+  const channelRef = doc(db,"channels",channel.id);
+  const channelSnap = await tx.get(channelRef);
+  const isCustom = channelSnap.exists() && channelSnap.data().customMemberCount === true;
+  tx.update(codeRef, { used:true, usedBy: memberKey, usedAt: serverTimestamp() });
+  tx.set(doc(db,"channels",channel.id,"members",memberKey), {
+    uid: state.uid, name: state.username, photoURL: state.photoURL || "",
+    role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
+  });
+  if(!isCustom){
+    tx.update(channelRef, { memberCount: increment(1) });
+  }
+});
     toast("Joined " + channel.name);
     if(window.__pikaOneSignal){ try{ await window.__pikaOneSignal.User.addTag("channel_"+channel.id, "joined"); }catch(e){} }
     await refreshMyChannels();
@@ -4285,7 +4290,8 @@ function openChannelManageSheet(channelId){
         <div class="row tap" data-act="members"><div class="row-left"><svg><use href="#ic-users"/></svg> Members</div><span style="font-size:12px;color:var(--text-faint)">${fmtCount(ch.memberCount||1)}</span></div>
         <div class="row tap" data-act="add"><div class="row-left"><svg><use href="#ic-plus"/></svg> Add member</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
         <div class="row tap" data-act="codes"><div class="row-left"><svg><use href="#ic-key"/></svg> Secret codes</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
-        <div class="row tap" data-act="delete"><div class="row-left" style="color:var(--danger)"><svg style="color:var(--danger)"><use href="#ic-trash"/></svg> Delete channel permanently</div></div>
+<div class="row tap" data-act="setmembers"><div class="row-left"><svg><use href="#ic-users"/></svg> Set member count</div><span style="font-size:12px;color:var(--text-faint)">${fmtCount(ch.memberCount||1)}${ch.customMemberCount ? " • custom" : ""}</span></div>
+<div class="row tap" data-act="delete"><div class="row-left" style="color:var(--danger)"><svg style="color:var(--danger)"><use href="#ic-trash"/></svg> Delete channel permanently</div></div>
       </div>
   </div></div>`;
   document.body.insertAdjacentHTML("beforeend", html);
@@ -4312,16 +4318,36 @@ function openChannelManageSheet(channelId){
       input.click();
     } else if(a === "members"){ wrap.remove(); openChannelMembersSheet(channelId); }
     else if(a === "add"){
-      wrap.remove();
-      openUserPicker(async u=>{
-        try{
-          await setDoc(doc(db,"channels",channelId,"members",u.id), { uid:u.id, name:u.name||"", photoURL:u.photoURL||"", role:"member", blocked:false, joinedAt: serverTimestamp(), viaCode:"added-by-owner" });
-          await updateDoc(doc(db,"channels",channelId), { memberCount: increment(1) });
-          toast("Added to channel");
-        }catch(err){ toast("Failed", "ic-close"); }
-      });
-    } else if(a === "codes"){ wrap.remove(); openChannelCodesSheet(channelId); }
-    else if(a === "delete"){
+  wrap.remove();
+  openUserPicker(async u=>{
+    try{
+      await setDoc(doc(db,"channels",channelId,"members",u.id), { uid:u.id, name:u.name||"", photoURL:u.photoURL||"", role:"member", blocked:false, joinedAt: serverTimestamp(), viaCode:"added-by-owner" });
+      if(!ch.customMemberCount){
+        await updateDoc(doc(db,"channels",channelId), { memberCount: increment(1) });
+      }
+      toast("Added to channel");
+    }catch(err){ toast("Failed", "ic-close"); }
+  });
+} else if(a === "codes"){ wrap.remove(); openChannelCodesSheet(channelId); }
+else if(a === "setmembers"){
+  const v = await askText({ title:"Set member count", value: String(ch.memberCount || 1), placeholder:"Enter number (0 = reset to real)", max:8, okLabel:"Save" });
+  if(v === null) return;
+  const n = parseInt(v.trim(), 10);
+  if(!Number.isFinite(n) || n < 0){ toast("Enter a valid number", "ic-close"); return; }
+  try{
+    if(n === 0){
+      const memSnap = await getDocs(collection(db,"channels",channelId,"members"));
+      const realCount = Math.max(1, memSnap.size);
+      await updateDoc(doc(db,"channels",channelId), { memberCount: realCount, customMemberCount: false });
+      toast("Reset to real count: " + realCount);
+    } else {
+      await updateDoc(doc(db,"channels",channelId), { memberCount: n, customMemberCount: true });
+      toast("Member count set to " + fmtCount(n));
+    }
+    wrap.remove();
+  }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+}
+else if(a === "delete"){
       wrap.remove();
       if(!(await confirmSheet(`Delete "${ch.name}"?`, "This permanently deletes the channel, its member list and its content.", "Delete forever"))) return;
       await deleteChannelForever(ch);
@@ -4361,10 +4387,12 @@ function openChannelMembersSheet(channelId){
       if(act === "block") await updateDoc(doc(db,"channels",channelId,"members",uid), { blocked:true });
       else if(act === "unblock") await updateDoc(doc(db,"channels",channelId,"members",uid), { blocked:false });
       else if(act === "remove"){
-        if(!(await confirmSheet("Remove this member?", "They'll need a new code to rejoin.", "Remove"))) return;
-        await deleteDoc(doc(db,"channels",channelId,"members",uid));
-        await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
-      }
+  if(!(await confirmSheet("Remove this member?", "They'll need a new code to rejoin.", "Remove"))) return;
+  await deleteDoc(doc(db,"channels",channelId,"members",uid));
+  if(!ch.customMemberCount){
+    await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
+  }
+}
       toast("Updated");
     }catch(err){ toast("Failed", "ic-close"); }
   });
@@ -4530,9 +4558,12 @@ function openExitChannelConfirm(channelId){
     const memberKey = myMemberKey();
     try{
       ok.disabled = true;
-      await deleteDoc(doc(db,"channels",channelId,"members",memberKey)).catch(()=>{});
-      await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
-      toast("You left the channel");
+await deleteDoc(doc(db,"channels",channelId,"members",memberKey)).catch(()=>{});
+const chExit = state.channels.find(c=>c.id===channelId);
+if(!(chExit && chExit.customMemberCount)){
+  await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
+}
+toast("You left the channel");
       wrap.remove();
       closeTelegramChannel();
       refreshMyChannels();
@@ -4625,14 +4656,30 @@ function initTelegramUI(){
     } else if(act === "copy"){
       const t = m.text || m.caption || m.filename || "";
       const ok = await copyText(t); toast(ok ? "Copied" : "Copy failed", ok ? "ic-check" : "ic-close");
-    } else if(act === "delete"){
-      const ch = state.channels.find(c=>c.id === m.channelId);
-      if(!isChannelOwner(ch)){ toast("Only the channel owner can delete messages", "ic-close"); return; }
-      if(!(await confirmSheet("Delete message?", "Removed for everyone.", "Delete"))) return;
-      try{ await deleteDoc(doc(db,"channelMessages", m.id)); await deleteDoc(doc(db,"channelMessageMedia", m.id)).catch(()=>{}); toast("Message deleted"); }
-      catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
-    }
-  });
+      } else if(act === "views"){
+    const ch = state.channels.find(c=>c.id === m.channelId);
+    if(!isChannelOwner(ch)){ toast("Only the channel owner can set views", "ic-close"); return; }
+    const v = await askText({ title:"Set views", value: String(m.views || 0), placeholder:"Enter number (0 = reset to real)", max:8, okLabel:"Save" });
+    if(v === null) return;
+    const n = parseInt(v.trim(), 10);
+    if(!Number.isFinite(n) || n < 0){ toast("Enter a valid number", "ic-close"); return; }
+    try{
+      if(n === 0){
+        await updateDoc(doc(db,"channelMessages", m.id), { views: 0, customViews: false });
+        toast("Views reset to auto");
+      } else {
+        await updateDoc(doc(db,"channelMessages", m.id), { views: n, customViews: true });
+        toast("Views set to " + fmtCount(n));
+      }
+    }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+  } else if(act === "delete"){
+    const ch = state.channels.find(c=>c.id === m.channelId);
+    if(!isChannelOwner(ch)){ toast("Only the channel owner can delete messages", "ic-close"); return; }
+    if(!(await confirmSheet("Delete message?", "Removed for everyone.", "Delete"))) return;
+    try{ await deleteDoc(doc(db,"channelMessages", m.id)); await deleteDoc(doc(db,"channelMessageMedia", m.id)).catch(()=>{}); toast("Message deleted"); }
+    catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
+  }
+});
   P("pktg-upload-cancel").addEventListener("click", ()=>{ if(state.tg.uploadAbort){ try{ state.tg.uploadAbort(); }catch(e){} } hideTgUpload(); });
   P("pktg-rec-cancel").addEventListener("click", ()=> stopVoiceRecording(true));
   P("pktg-rec-send").addEventListener("click", ()=> stopVoiceRecording(false));
@@ -4945,12 +4992,13 @@ async function countViews(messages){
     const seen = getViewedMsgs();
     const toIncrement = [];
     for(const m of messages){
-      if(!m || m.deleted) continue;
-      if(m.senderUid === state.uid) continue;
-      if(seen.has(m.id)) continue;
-      seen.add(m.id);
-      toIncrement.push(m.id);
-    }
+  if(!m || m.deleted) continue;
+  if(m.senderUid === state.uid) continue;
+  if(m.customViews) continue;
+  if(seen.has(m.id)) continue;
+  seen.add(m.id);
+  toIncrement.push(m.id);
+}
     saveViewedMsgs(seen);
     for(const id of toIncrement){ updateDoc(doc(db,"channelMessages", id), { views: increment(1) }).catch(()=>{}); }
   }finally{ viewsInFlight = false; }
@@ -5285,10 +5333,11 @@ function showTgCtx(x, y, msg){
   const owner = isChannelOwner(ch);
   const items = [];
   if(owner){
-    items.push(`<button class="pktg-ctx-item" data-ctx="reply"><svg><use href="#ic-chat"/></svg> Reply</button>`);
-    items.push(`<button class="pktg-ctx-item" data-ctx="copy"><svg><use href="#ic-copy"/></svg> Copy</button>`);
-    items.push(`<button class="pktg-ctx-item pktg-danger" data-ctx="delete"><svg><use href="#ic-trash"/></svg> Delete</button>`);
-  } else {
+  items.push(`<button class="pktg-ctx-item" data-ctx="reply"><svg><use href="#ic-chat"/></svg> Reply</button>`);
+  items.push(`<button class="pktg-ctx-item" data-ctx="copy"><svg><use href="#ic-copy"/></svg> Copy</button>`);
+  items.push(`<button class="pktg-ctx-item" data-ctx="views"><svg><use href="#ic-users"/></svg> Set views</button>`);
+  items.push(`<button class="pktg-ctx-item pktg-danger" data-ctx="delete"><svg><use href="#ic-trash"/></svg> Delete</button>`);
+} else {
     items.push(`<button class="pktg-ctx-item" data-ctx="copy"><svg><use href="#ic-copy"/></svg> Copy</button>`);
   }
   ctx.innerHTML = items.join("");
