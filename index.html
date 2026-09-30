@@ -4476,27 +4476,81 @@ async function joinChannelWithCode(channel, codeRaw){
 async function openCreateChannelSheet(){
   if(guestBlock("create a channel")) return;
   if(!state.verified && !state.isOwner){ toast("Only blue-tick members can create a channel", "ic-close"); return; }
-  const v = await askText({ title:"Channel name", placeholder:"e.g. My VIP Channel", max:30, okLabel:"Create" });
-  if(v === null) return;
-  const nn = v.trim();
-  if(nn.length < 3){ toast("Name is too short", "ic-close"); return; }
-  const memberKey = myMemberKey();
-  try{
-    const ref = doc(collection(db,"channels"));
-    await setDoc(ref, {
-      name: nn, nameLower: lowerName(nn), photoURL: "",
-      ownerUid: state.uid, ownerName: state.username,
-      memberCount: 1, codeIds: [],
-      createdAt: serverTimestamp(), createdAtMs: Date.now()
-    });
-    await setDoc(doc(db,"channels",ref.id,"members",memberKey), {
-      uid: state.uid, name: state.username, photoURL: state.photoURL || "",
-      role: "owner", blocked: false, joinedAt: serverTimestamp(), viaCode: "owner"
-    });
-    toast("Channel created");
-    refreshMyChannels();
-    openTelegramChannel(ref.id);
-  }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+
+  // Naya Security Gate: Secret Code Check
+  document.body.insertAdjacentHTML("beforeend", `
+  <div class="sheet-backdrop dlg" id="chcreate-backdrop">
+    <div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">
+      <div style="width:56px;height:56px;border-radius:18px;background:rgba(255,198,26,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+        <svg width="26" height="26" style="color:var(--accent)"><use href="#ic-key"/></svg>
+      </div>
+      <h3 style="text-align:center;font-size:18px;margin:0 0 8px;">Secret Code Required</h3>
+      <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;">To create a channel, you must enter the Secret Code. <br>Only the Store Owner can give you this code.</p>
+      
+      <div class="field" style="margin-bottom:12px;">
+        <input type="text" id="chcreate-code" placeholder="Enter Secret Code" autocomplete="off" style="text-align:center; font-size:16px; letter-spacing:2px;" />
+      </div>
+      
+      <button class="btn btn-ghost btn-block" id="chcreate-get" type="button" style="margin-bottom:12px;">
+        <svg><use href="#ic-chat"/></svg> Get Secret Code (WhatsApp)
+      </button>
+      
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" style="flex:1" id="chcreate-cancel" type="button">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" id="chcreate-ok" type="button">Confirm & Create</button>
+      </div>
+    </div>
+  </div>`);
+
+  const wrap = $("#chcreate-backdrop");
+  const codeInput = $("#chcreate-code");
+
+  // Close actions
+  $("#chcreate-cancel").addEventListener("click", ()=> wrap.remove());
+  wrap.addEventListener("click", e=>{ if(e.target === wrap) wrap.remove(); });
+  codeInput.focus();
+
+  // WhatsApp Support Link
+  $("#chcreate-get").addEventListener("click", ()=>{
+    const msg = encodeURIComponent("Hi PIKAZOOARMY, I want to create a channel on Pika Store. Please give me the Secret Code.");
+    window.open(`https://wa.me/923041891897?text=${msg}`, "_blank", "noopener");
+  });
+
+  // Confirm Button Action
+  $("#chcreate-ok").addEventListener("click", async ()=>{
+    const enteredCode = codeInput.value.trim();
+    
+    // Secret Code Check (16241897)
+    if(enteredCode !== "16241897"){
+      toast("Wrong Secret Code! Please contact support.", "ic-close");
+      return;
+    }
+
+    // Agar Code Sahi Hai, toh Channel Name Pucho
+    wrap.remove();
+    const v = await askText({ title:"Channel name", placeholder:"e.g. My VIP Channel", max:30, okLabel:"Create" });
+    if(v === null) return;
+    const nn = v.trim();
+    if(nn.length < 3){ toast("Name is too short", "ic-close"); return; }
+
+    const memberKey = myMemberKey();
+    try{
+      const ref = doc(collection(db,"channels"));
+      await setDoc(ref, {
+        name: nn, nameLower: lowerName(nn), photoURL: "",
+        ownerUid: state.uid, ownerName: state.username,
+        memberCount: 1, codeIds: [],
+        createdAt: serverTimestamp(), createdAtMs: Date.now()
+      });
+      await setDoc(doc(db,"channels",ref.id,"members",memberKey), {
+        uid: state.uid, name: state.username, photoURL: state.photoURL || "",
+        role: "owner", blocked: false, joinedAt: serverTimestamp(), viaCode: "owner"
+      });
+      toast("🎉 Channel created successfully!");
+      refreshMyChannels();
+      openTelegramChannel(ref.id);
+    }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+  });
 }
 async function copyChannelLink(ch){
   const url = `${location.origin}${location.pathname}?channel=${ch.id}`;
