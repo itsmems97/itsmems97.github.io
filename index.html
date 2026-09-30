@@ -4762,22 +4762,40 @@ function openChannelKeysManagementSheet(channelId){
     
     keys.sort((a,b)=> (b.createdAtMs||0) - (a.createdAtMs||0));
     
-    box.innerHTML = keys.map(k => `
-      <div class="code-row">
-        <div class="code-main">
-          <span class="code-value" style="font-size:13px;">${escapeHtml(k.keyCode)}</span>
-          <span class="code-meta">
-            <b style="color:${k.isActive ? 'var(--accent-2)' : 'var(--danger)'}">${k.isActive ? 'ACTIVE' : 'PAUSED'}</b> • By ${escapeHtml(k.generatedByName)} • ${new Date(k.createdAtMs||0).toLocaleDateString()}
-          </span>
-        </div>
-        <button class="icon-del" data-key-action="${k.isActive ? 'pause' : 'resume'}" data-key-id="${k.id}" title="${k.isActive ? 'Pause' : 'Resume'}" style="color:${k.isActive ? 'var(--accent)' : 'var(--accent-2)'}">
-          <svg style="color:inherit !important"><use href="${k.isActive ? '#ic-pause' : '#ic-play'}"/></svg>
-        </button>
-        <button class="icon-del" data-key-action="delete" data-key-id="${k.id}" title="Delete" style="color:var(--danger)">
-          <svg style="color:var(--danger) !important"><use href="#ic-trash"/></svg>
-        </button>
+    box.innerHTML = keys.map(k => {
+  const isActivated = !!k.hwid;
+  const activatedDate = k.activatedAtMs ? new Date(k.activatedAtMs).toLocaleString() : null;
+  const createdDate = k.createdAtMs ? new Date(k.createdAtMs).toLocaleDateString() : '—';
+  const deviceInfo = k.deviceBrand && k.deviceModel ? `${k.deviceBrand} ${k.deviceModel}` : null;
+  
+  return `
+  <div class="code-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+    <div style="display:flex;align-items:center;gap:8px;width:100%">
+      <div class="code-main" style="flex:1">
+        <span class="code-value" style="font-size:13px;">${escapeHtml(k.keyCode)}</span>
+        <span class="code-meta" style="display:block;margin-top:4px;">
+          <b style="color:${k.isActive ? 'var(--accent-2)' : 'var(--danger)'}">${k.isActive ? 'ACTIVE' : 'PAUSED'}</b> • By ${escapeHtml(k.generatedByName)}
+        </span>
       </div>
-    `).join("");
+      <button class="icon-del" data-key-action="${k.isActive ? 'pause' : 'resume'}" data-key-id="${k.id}" title="${k.isActive ? 'Pause' : 'Resume'}" style="color:${k.isActive ? 'var(--accent)' : 'var(--accent-2)'}">
+        <svg style="color:inherit !important"><use href="${k.isActive ? '#ic-pause' : '#ic-play'}"/></svg>
+      </button>
+      ${isActivated ? `<button class="icon-del" data-key-action="revoke" data-key-id="${k.id}" title="Revoke (allow re-use on any device)" style="color:var(--accent-2)">
+        <svg style="color:var(--accent-2) !important"><use href="#ic-refresh"/></svg>
+      </button>` : ''}
+      <button class="icon-del" data-key-action="delete" data-key-id="${k.id}" title="Delete" style="color:var(--danger)">
+        <svg style="color:var(--danger) !important"><use href="#ic-trash"/></svg>
+      </button>
+    </div>
+    <div style="font-size:10.5px;color:var(--text-faint);line-height:1.65;padding-left:2px;border-top:1px solid var(--border);padding-top:6px;">
+      <div>📅 Created: ${createdDate}</div>
+      ${isActivated 
+        ? `<div style="color:var(--accent-2)">✅ Activated: ${activatedDate || 'Yes'}</div>
+           <div>📱 Device: ${escapeHtml(deviceInfo || 'Unknown')}</div>`
+        : `<div style="color:var(--text-faint)">⏳ Not activated yet</div>`}
+    </div>
+  </div>`;
+}).join("");
   };
 
   const loadKeys = async () => {
@@ -4834,10 +4852,20 @@ function openChannelKeysManagementSheet(channelId){
     } else if(act === "pause"){
       try{ await updateDoc(doc(db, "channelKeys", keyId), { isActive: false }); toast("Key paused"); loadKeys(); }
       catch(err){ toast("Failed", "ic-close"); }
-    } else if(act === "resume"){
-      try{ await updateDoc(doc(db, "channelKeys", keyId), { isActive: true }); toast("Key resumed"); loadKeys(); }
-      catch(err){ toast("Failed", "ic-close"); }
-    }
+    } else if(act === "revoke"){
+  if(!(await confirmSheet("Revoke this key?", "This will unbind the key from its device. User can use it again on the same or any device. (Useful after factory reset)", "Revoke"))) return;
+  try{ 
+    await updateDoc(doc(db, "channelKeys", keyId), { 
+      hwid: deleteField(),
+      activatedAtMs: deleteField(),
+      deviceModel: deleteField(),
+      deviceBrand: deleteField()
+    }); 
+    toast("Key revoked — user can use again"); 
+    loadKeys(); 
+  }
+  catch(err){ toast("Revoke failed", "ic-close"); }
+}
   });
 }
 function openChannelCodesSheet(channelId){
