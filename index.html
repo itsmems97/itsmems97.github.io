@@ -775,6 +775,7 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 <symbol id="ic-send" viewBox="0 0 24 24"><path d="M22 2 11 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m22 2-7 20-4-9-9-4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
 <symbol id="ic-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></symbol>
 <symbol id="ic-eye-off" viewBox="0 0 24 24"><path d="M2 2l20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6.71 6.71A10.94 10.94 0 0 0 1 12s4 7 11 7a10.94 10.94 0 0 0 5.29-1.29M9.9 9.9a3 3 0 0 0 4.2 4.2M14.12 5.34A10.94 10.94 0 0 1 23 12a11 11 0 0 1-2.14 3.34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M20 11A8 8 0 0 0 6.3 5.7L3 9m0 0V4m0 5h5m-4 4a8 8 0 0 0 13.7 5.3L21 15m0 0v5m0-5h-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
 <div id="splash"><img class="logo" alt="Pika" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" /><div class="spinner"></div><p>Please wait…</p></div>
@@ -865,22 +866,41 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
         <i data-step="1" class="done"></i><i data-step="2"></i><i data-step="3"></i><i data-step="4"></i>
       </div>
       <div class="wizard-step" data-step="1">
-        <div class="card">
-          <h3><svg><use href="#ic-cube"/></svg> App file</h3>
-          <label class="dropzone" id="file-dropzone" for="file-input">
-            <svg><use href="#ic-upload"/></svg>
-            <b>Tap to choose a file</b>
-            Supports .apk, .zip and .rar files
-          </label>
-          <input type="file" id="file-input" accept=".apk,.zip,.rar" hidden />
-          <div class="format-grid">
-            <div class="format-opt active" data-format="APK">APK<small>Android</small></div>
-            <div class="format-opt" data-format="APK+">APK+<small>Split bundle</small></div>
-            <div class="format-opt" data-format="ZIP">ZIP<small>Archive</small></div>
-            <div class="format-opt" data-format="RAR">RAR<small>Archive</small></div>
-          </div>
+  <div class="card">
+    <h3><svg><use href="#ic-cube"/></svg> App file</h3>
+    <label class="dropzone" id="file-dropzone" for="file-input">
+      <svg><use href="#ic-upload"/></svg>
+      <b>Tap to choose a file</b>
+      Supports .apk, .zip and .rar files
+    </label>
+    <input type="file" id="file-input" accept="*/*" hidden />
+    <div class="format-grid">
+      <div class="format-opt active" data-format="APK">APK<small>Android</small></div>
+      <div class="format-opt" data-format="APK+">APK+<small>Split bundle</small></div>
+      <div class="format-opt" data-format="ZIP">ZIP<small>Archive</small></div>
+      <div class="format-opt" data-format="RAR">RAR<small>Archive</small></div>
+    </div>
+  </div>
+  <div class="card" id="update-existing-card" hidden>
+    <h3><svg><use href="#ic-refresh"/></svg> Update an existing upload</h3>
+    <div class="switch-row">
+      <div class="lbl">
+        <svg><use href="#ic-refresh"/></svg>
+        <div>Replace one of your uploads
+          <small>Keeps downloads, views and position. Only the date changes.</small>
         </div>
       </div>
+      <div class="switch" id="update-existing-switch"><i></i></div>
+    </div>
+    <div id="update-existing-picker" hidden style="margin-top:14px;">
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px;">Pick the upload to replace</label>
+      <div class="settings-list" id="update-existing-list" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);"></div>
+      <div id="update-existing-chosen" hidden style="margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(51,224,193,.1);border:1px solid rgba(51,224,193,.35);font-size:12.5px;color:var(--accent-2);">
+        <b>Will replace:</b> <span id="update-existing-name"></span>
+      </div>
+    </div>
+  </div>
+</div>
       <div class="wizard-step" data-step="2" hidden>
         <div class="card">
           <h3><svg><use href="#ic-image"/></svg> Thumbnail (app icon)</h3>
@@ -889,14 +909,14 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
             <b>Add a square icon</b>
             Shown on the home page and app card
           </label>
-          <input type="file" id="thumb-input" accept=".png,.jpg,.jpeg,.webp" hidden />
+          <input type="file" id="thumb-input" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.heic,.heif,application/octet-stream,*/*" hidden />
         </div>
         <div class="card">
           <h3><svg><use href="#ic-sparkle"/></svg> Screenshots (up to 3)</h3>
           <div class="thumb-strip" id="screens-strip">
             <button class="add-shot" id="add-screenshot-btn"><svg><use href="#ic-plus"/></svg></button>
           </div>
-          <input type="file" id="screens-input" accept="image/*" multiple hidden />
+          <input type="file" id="screens-input" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.heic,.heif,application/octet-stream,*/*" multiple hidden />
         </div>
       </div>
       <div class="wizard-step" data-step="3" hidden>
@@ -1031,10 +1051,10 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
   <div class="row tap" id="row-verify"><div class="row-left"><svg><use href="#ic-verified"/></svg> Enter blue-tick code</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
   <div class="row tap" id="row-logout"><div class="row-left"><svg><use href="#ic-close"/></svg> Log out</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 </div>
-<input type="file" id="profile-photo-input" accept="image/*" hidden />
-<input type="file" id="channel-photo-input" accept="image/*" hidden />
+<input type="file" id="profile-photo-input" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.heic,.heif,application/octet-stream,*/*" hidden />
+<input type="file" id="channel-photo-input" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.heic,.heif,application/octet-stream,*/*" hidden />
 <input type="file" id="channel-content-input" accept="*/*" hidden />
-<input type="file" id="channel-icon-input" accept="image/*" hidden />
+<input type="file" id="channel-icon-input" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.heic,.heif,application/octet-stream,*/*" hidden />
       <div id="danger-zone">
         <div class="danger-note"><b>Please note:</b> if you do not open the app for <b>2 months (60 days)</b>, your account, all your uploads, chat messages and profile photo are <b>deleted automatically</b> (from the Oracle server too).</div>
         <div class="settings-list" style="margin-top:12px">
@@ -1139,10 +1159,10 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
       <div class="pktg-sheet-item" id="pktg-attach-camera"><div class="pktg-sheet-icon" style="background:#ff2d55"><svg width="24" height="24"><use href="#ic-camera"/></svg></div><span class="pktg-sheet-label">Camera</span></div>
     </div>
   </div>
-  <input type="file" id="pktg-input-gallery" accept="image/*" style="display:none">
-  <input type="file" id="pktg-input-video" accept="video/*" style="display:none">
-  <input type="file" id="pktg-input-file" accept="*/*" style="display:none">
-  <input type="file" id="pktg-input-camera" accept="image/*" capture="environment" style="display:none">
+  <input type="file" id="pktg-input-gallery" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.heic,.heif,*/*" style="display:none">
+<input type="file" id="pktg-input-video" accept="video/*,*/*" style="display:none">
+<input type="file" id="pktg-input-file" accept="*/*" style="display:none">
+<input type="file" id="pktg-input-camera" accept="image/*" capture="environment" style="display:none">
 
   <div class="pktg-viewer" id="pktg-viewer">
     <div class="pktg-viewer-header">
@@ -1633,6 +1653,139 @@ function resizeImage(file, size=256){
     };
     img.onerror = ()=> reject(new Error("This is not a valid image"));
     img.src = url;
+  });
+}
+/* ===================== INTERACTIVE IMAGE CROP ===================== */
+function cropImageToFile(file, opts = {}){
+  const aspect = opts.aspect || 1;
+  const outputSize = opts.size || 256;
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const srcUrl = URL.createObjectURL(file);
+    img.onerror = () => { URL.revokeObjectURL(srcUrl); reject(new Error("Invalid image")); };
+    img.onload = () => {
+      URL.revokeObjectURL(srcUrl);
+      const natW = img.naturalWidth, natH = img.naturalHeight;
+      if(!natW || !natH){ reject(new Error("Empty image")); return; }
+
+      document.body.insertAdjacentHTML("beforeend", `
+        <div id="crop-backdrop" style="position:fixed;inset:0;z-index:400;background:#000;display:flex;flex-direction:column;">
+          <div style="display:flex;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top)) 12px 8px;color:#fff;align-items:center;">
+            <button id="crop-cancel" style="color:#fff;font-size:15px;font-weight:600;padding:8px 12px;background:none;border:none;">Cancel</button>
+            <div style="font-size:15px;font-weight:700;">Crop</div>
+            <button id="crop-done" style="color:var(--accent);font-size:15px;font-weight:800;padding:8px 12px;background:none;border:none;">Done</button>
+          </div>
+          <div id="crop-stage" style="flex:1;position:relative;overflow:hidden;touch-action:none;">
+            <canvas id="crop-canvas" style="position:absolute;left:0;top:0;display:block;"></canvas>
+            <div id="crop-frame" style="position:absolute;pointer-events:none;border:2px solid rgba(255,255,255,.95);box-shadow:0 0 0 9999px rgba(0,0,0,.6);border-radius:6px;"></div>
+          </div>
+          <div style="text-align:center;color:rgba(255,255,255,.7);font-size:11.5px;padding:10px 16px calc(14px + env(safe-area-inset-bottom));">Drag to move • Pinch to zoom</div>
+        </div>`);
+
+      const backdrop = document.getElementById("crop-backdrop");
+      const stage    = document.getElementById("crop-stage");
+      const canvas   = document.getElementById("crop-canvas");
+      const frameEl  = document.getElementById("crop-frame");
+      const ctx      = canvas.getContext("2d");
+
+      const stageW = stage.clientWidth, stageH = stage.clientHeight;
+      const pad = 28;
+      const frameSize = Math.max(80, Math.min(stageW, stageH) - pad*2);
+      const frameLeft = (stageW - frameSize) / 2;
+      const frameTop  = (stageH - frameSize) / 2;
+      frameEl.style.width = frameSize + "px";
+      frameEl.style.height = frameSize + "px";
+      frameEl.style.left = frameLeft + "px";
+      frameEl.style.top = frameTop + "px";
+
+      canvas.width = stageW; canvas.height = stageH;
+      canvas.style.width = stageW + "px"; canvas.style.height = stageH + "px";
+
+      const baseScale = Math.max(frameSize / natW, frameSize / natH);
+      let scale = baseScale;
+      let offsetX = 0, offsetY = 0;
+      const frameCX = frameLeft + frameSize/2;
+      const frameCY = frameTop + frameSize/2;
+
+      const draw = ()=>{
+        ctx.clearRect(0, 0, stageW, stageH);
+        ctx.save();
+        ctx.translate(frameCX + offsetX, frameCY + offsetY);
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, -natW/2, -natH/2);
+        ctx.restore();
+      };
+      const clampOffsets = ()=>{
+        const halfW = (natW * scale) / 2;
+        const halfH = (natH * scale) / 2;
+        const maxX = Math.max(0, halfW - frameSize/2);
+        const maxY = Math.max(0, halfH - frameSize/2);
+        offsetX = Math.max(-maxX, Math.min(maxX, offsetX));
+        offsetY = Math.max(-maxY, Math.min(maxY, offsetY));
+      };
+      draw();
+
+      let dragging = false, lastX = 0, lastY = 0, pinchStartDist = 0, pinchStartScale = 1;
+      stage.addEventListener("pointerdown", e=>{
+        if(e.touches && e.touches.length > 1) return;
+        dragging = true; lastX = e.clientX; lastY = e.clientY;
+        try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+      });
+      stage.addEventListener("pointermove", e=>{
+        if(!dragging) return;
+        offsetX += e.clientX - lastX;
+        offsetY += e.clientY - lastY;
+        lastX = e.clientX; lastY = e.clientY;
+        clampOffsets(); draw();
+      });
+      stage.addEventListener("pointerup", e=>{ dragging = false; try{ stage.releasePointerCapture(e.pointerId); }catch(_){} });
+      stage.addEventListener("pointercancel", ()=>{ dragging = false; });
+
+      stage.addEventListener("touchstart", e=>{
+        if(e.touches.length === 2){
+          dragging = false;
+          const [a,b] = e.touches;
+          pinchStartDist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+          pinchStartScale = scale;
+        }
+      }, { passive:true });
+      stage.addEventListener("touchmove", e=>{
+        if(e.touches.length === 2 && pinchStartDist > 0){
+          e.preventDefault();
+          const [a,b] = e.touches;
+          const d = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+          scale = Math.max(baseScale, Math.min(baseScale * 6, pinchStartScale * (d / pinchStartDist)));
+          clampOffsets(); draw();
+        }
+      }, { passive:false });
+      stage.addEventListener("touchend", ()=>{ pinchStartDist = 0; });
+      stage.addEventListener("wheel", e=>{
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : 0.9;
+        scale = Math.max(baseScale, Math.min(baseScale * 6, scale * factor));
+        clampOffsets(); draw();
+      }, { passive:false });
+
+      document.getElementById("crop-cancel").addEventListener("click", ()=>{
+        backdrop.remove();
+        reject(new Error("Crop cancelled"));
+      });
+      document.getElementById("crop-done").addEventListener("click", ()=>{
+        const srcSize = frameSize / scale;
+        const srcX = natW/2 - offsetX/scale - srcSize/2;
+        const srcY = natH/2 - offsetY/scale - srcSize/2;
+        const out = document.createElement("canvas");
+        out.width = out.height = outputSize;
+        const octx = out.getContext("2d");
+        octx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, outputSize, outputSize);
+        out.toBlob(b=>{
+          backdrop.remove();
+          if(b) resolve(b); else reject(new Error("Crop failed"));
+        }, "image/jpeg", 0.9);
+      });
+    };
+    img.src = srcUrl;
   });
 }
 function blobToDataURL(blob){
@@ -2949,44 +3102,67 @@ async function loadJSZip(){
   return window.JSZip;
 }
 async function autoIconFromApk(file){
-  if(state.upload.thumb || file.size > 250*1024*1024) return;
+  if(state.upload.thumb || file.size > 300*1024*1024) return;
   try{
     const JSZip = await loadJSZip();
     const zip = await JSZip.loadAsync(file);
     const cands = [];
     zip.forEach((path, entry)=>{
-      if(entry.dir || !/^res\/.+\.(png|webp|jpg|jpeg)$/i.test(path)) return;
+      if(entry.dir) return;
       const low = path.toLowerCase();
+      if(/\.9\.png$/.test(low)) return;
+      if(!/\.(png|webp|jpg|jpeg)$/i.test(low)) return;
+      const inRes    = /^res\//.test(low);
+      const inAssets = /^assets\//.test(low);
+      const inRoot   = /^[^/]+\.(png|webp|jpg|jpeg)$/i.test(low);
+      if(!inRes && !inAssets && !inRoot) return;
+
       let score = 0;
-      if(/ic_launcher/.test(low)) score += 50;
-      if(/round/.test(low)) score -= 10;
-      if(/foreground|background|monochrome/.test(low)) score -= 15;
-      if(/(^|\/)mipmap/.test(low)) score += 20;
-      if(/icon|logo/.test(low)) score += 10;
-      if(/xxxhdpi/.test(low)) score += 8; else if(/xxhdpi/.test(low)) score += 6; else if(/xhdpi/.test(low)) score += 4; else if(/hdpi/.test(low)) score += 2;
+      if(/\/mipmap-/.test(low) || /^mipmap-/.test(low)) score += 80;
+      else if(/\/mipmap\//.test(low)) score += 60;
+      if(/ic_launcher\./.test(low) && !/foreground|background/.test(low)) score += 60;
+      if(/app_icon|launcher_icon/.test(low)) score += 50;
+      if(/(^|[_\-/])icon[_\-.]/.test(low)) score += 20;
+      if(/logo/.test(low)) score += 15;
+      if(/foreground|background|monochrome/.test(low)) score -= 30;
+      if(/round/.test(low)) score -= 12;
+      if(/xxxhdpi/.test(low)) score += 10;
+      else if(/xxhdpi/.test(low)) score += 8;
+      else if(/xhdpi/.test(low))  score += 6;
+      else if(/hdpi/.test(low))   score += 4;
+      if(/\.webp$/.test(low)) score -= 3;
+
       cands.push({ path, entry, score });
     });
-    cands.sort((a,b)=> b.score - a.score);
-    const named = cands.filter(c=> c.score > 0).slice(0, 12);
-    const pool = named.length ? named : cands.filter(c=> /mipmap|drawable/.test(c.path.toLowerCase())).slice(0, 40);
+
+    if(!cands.length) return;
+
+    let pool = cands.filter(c => c.score > 0).sort((a,b)=> b.score - a.score).slice(0, 25);
+    if(!pool.length) pool = cands.slice(0, 80);
+
     let best = null, bestVal = -1;
     for(const c of pool){
-      const ext = c.path.split(".").pop().toLowerCase();
+      const ext  = c.path.split(".").pop().toLowerCase();
       const mime = ext === "webp" ? "image/webp" : (ext === "png" ? "image/png" : "image/jpeg");
-      const blob = new Blob([await c.entry.async("arraybuffer")], { type: mime });
-      const bmp = await createImageBitmap(blob).catch(()=> null);
-      if(!bmp) continue;
-      const w = bmp.width, h = bmp.height; if(bmp.close) bmp.close();
-      if(w < 64 || Math.abs(w-h) > w*0.15) continue;
-      const val = c.score*10 + Math.min(w, 512);
-      if(val > bestVal){ bestVal = val; best = { blob, ext }; }
+      try{
+        const blob = new Blob([await c.entry.async("arraybuffer")], { type: mime });
+        const bmp  = await createImageBitmap(blob).catch(()=> null);
+        if(!bmp) continue;
+        const w = bmp.width, h = bmp.height;
+        if(bmp.close) bmp.close();
+        if(w < 48 || h < 48) continue;
+        if(Math.abs(w - h) > Math.max(w, h) * 0.15) continue;
+        const val = c.score * 10 + Math.min(w, 512);
+        if(val > bestVal){ bestVal = val; best = { blob, ext }; }
+      }catch(e){ continue; }
     }
     if(!best || state.upload.thumb) return;
+
     const f = new File([best.blob], "icon." + best.ext, { type: best.blob.type });
     state.upload.thumb = f;
     const dz = $("#thumb-dropzone");
     dz.classList.add("filled");
-    dz.innerHTML = `<img class="file-thumb" src="${URL.createObjectURL(f)}" alt=""/><div><b>Icon detected automatically</b></div>`;
+    dz.innerHTML = `<img class="file-thumb" src="${URL.createObjectURL(f)}" alt=""/><div><b>Icon detected automatically</b><small style="display:block;font-size:11px;color:var(--text-faint);margin-top:2px;">Tap to change</small></div>`;
     toast("App icon detected");
   }catch(e){ console.warn("Auto icon failed", e); }
 }
@@ -3008,7 +3184,51 @@ function initUploadWizard(){
     if(step < total){ goto(step+1); return; }
     await submitUpload();
   });
-  $("#file-dropzone").addEventListener("click", ()=> $("#file-input").click());
+  // ============ Update existing upload feature ============
+state.upload.replaceAppId = null;
+const updCard     = $("#update-existing-card");
+const updSwitch   = $("#update-existing-switch");
+const updPicker   = $("#update-existing-picker");
+const updList     = $("#update-existing-list");
+const updChosen   = $("#update-existing-chosen");
+const updName     = $("#update-existing-name");
+
+function renderReplaceList(){
+  const mine = state.apps.filter(a => a.uploaderUid === state.uid);
+  if(!mine.length){
+    updList.innerHTML = `<div class="mini-row" style="color:var(--text-faint)">You have no uploads yet.</div>`;
+    return;
+  }
+  updList.innerHTML = mine.map(a => `
+    <div class="mini-row tap" data-replace-id="${a.id}" style="${state.upload.replaceAppId===a.id?'background:var(--surface-2);':''}">
+      <img class="thumb" alt="" src="${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}"/>
+      <div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • ${fmtCount(a.downloadCount||0)} downloads</small></div>
+      ${state.upload.replaceAppId===a.id ? `<svg width="18" height="18" style="color:var(--accent)"><use href="#ic-check"/></svg>` : ""}
+    </div>`).join("");
+}
+updSwitch.addEventListener("click", ()=>{
+  const on = !updSwitch.classList.contains("on");
+  updSwitch.classList.toggle("on", on);
+  updPicker.hidden = !on;
+  if(on) renderReplaceList();
+  else { state.upload.replaceAppId = null; updChosen.hidden = true; renderReplaceList(); }
+});
+updList.addEventListener("click", e=>{
+  const r = e.target.closest("[data-replace-id]"); if(!r) return;
+  const appId = r.dataset.replaceId;
+  state.upload.replaceAppId = appId;
+  const app = state.apps.find(a=>a.id === appId);
+  if(app){
+    updChosen.hidden = false;
+    updName.textContent = app.name;
+    if(!state.upload.name){ state.upload.name = app.name; $("#app-name-input").value = app.name; }
+    if(!state.upload.desc){ state.upload.desc = app.description || ""; $("#app-desc-input").value = app.description || ""; }
+    if(!state.upload.category){ state.upload.category = app.category || ""; renderCategoryChips(); }
+  }
+  renderReplaceList();
+});
+// =========================================================
+$("#file-dropzone").addEventListener("click", ()=> $("#file-input").click());
   $("#file-input").addEventListener("change", e=>{
     const f = e.target.files[0]; if(!f) return;
     state.upload.file = f;
@@ -3021,7 +3241,8 @@ function initUploadWizard(){
     if(detected){ state.upload.format = detected; $$(".format-opt").forEach(o=> o.classList.toggle("active", o.dataset.format === detected)); }
     if(!state.upload.name){ state.upload.name = f.name.replace(/\.[a-z0-9]+$/i,""); $("#app-name-input").value = state.upload.name; }
     if(ext === "apk") autoIconFromApk(f);
-  });
+  if($("#update-existing-card")) $("#update-existing-card").hidden = false;
+});
   $$(".format-opt").forEach(opt=>{
     opt.addEventListener("click", ()=>{ $$(".format-opt").forEach(o=>o.classList.remove("active")); opt.classList.add("active"); state.upload.format = opt.dataset.format; });
   });
@@ -3103,24 +3324,43 @@ function initUploadWizard(){
       }
       setPct(90);
       const passwordHash = state.upload.hasPassword ? await sha256(state.upload.password) : null;
-      let contactPhone = null;
-      if(state.upload.hasUrl && state.upload.url.trim()){
-        contactPhone = normPhone(state.upload.url);
-        if(!isPhone(contactPhone)) throw new Error("Enter the WhatsApp number with the country code, starting with +");
-        localStorage.setItem("pika_contact", contactPhone);
-      }
-      await withTimeout(setDoc(doc(db,"apps",appId), {
-        name: state.upload.name.trim(), description: state.upload.desc.trim(), format: state.upload.format,
-        category: state.upload.category || "Uncategorized",
-        fileUrl: fileRes.url, filePath: fileRes.path, thumbUrl, screenshots: screenshotUrls,
-        downloadUrl: null, contactPhone, hasPassword: !!state.upload.hasPassword, passwordHash,
-        uploaderName: state.username, uploaderUid: state.uid, isOwner: state.isOwner, uploaderDevice: state.deviceId,
-        downloadCount: 0, rating: 4.5, sizeLabel: (state.upload.file.size/1024/1024).toFixed(1)+" MB",
-        createdAt: serverTimestamp(), createdAtMs: Date.now()
-      }), 25000, "Saving to database");
-      setPct(100);
-      toast("Uploaded! Your app is now live");
-      notifyEveryone(`${state.username} just uploaded "${state.upload.name}"`);
+let contactPhone = null;
+if(state.upload.hasUrl && state.upload.url.trim()){
+  contactPhone = normPhone(state.upload.url);
+  if(!isPhone(contactPhone)) throw new Error("Enter the WhatsApp number with the country code, starting with +");
+  localStorage.setItem("pika_contact", contactPhone);
+}
+if(state.upload.replaceAppId){
+  const existRef = doc(db,"apps", state.upload.replaceAppId);
+  const updData = {
+    name: state.upload.name.trim(),
+    description: state.upload.desc.trim(),
+    format: state.upload.format,
+    category: state.upload.category || "Uncategorized",
+    fileUrl: fileRes.url, filePath: fileRes.path,
+    contactPhone, hasPassword: !!state.upload.hasPassword, passwordHash,
+    sizeLabel: (state.upload.file.size/1024/1024).toFixed(1)+" MB",
+    updatedAt: serverTimestamp(), updatedAtMs: Date.now(), edited: true
+  };
+  if(thumbUrl) updData.thumbUrl = thumbUrl;
+  if(screenshotUrls.length) updData.screenshots = screenshotUrls;
+  await withTimeout(updateDoc(existRef, updData), 25000, "Updating app");
+  setPct(100);
+  toast("Upload updated — position and downloads preserved");
+} else {
+  await withTimeout(setDoc(doc(db,"apps",appId), {
+    name: state.upload.name.trim(), description: state.upload.desc.trim(), format: state.upload.format,
+    category: state.upload.category || "Uncategorized",
+    fileUrl: fileRes.url, filePath: fileRes.path, thumbUrl, screenshots: screenshotUrls,
+    downloadUrl: null, contactPhone, hasPassword: !!state.upload.hasPassword, passwordHash,
+    uploaderName: state.username, uploaderUid: state.uid, isOwner: state.isOwner, uploaderDevice: state.deviceId,
+    downloadCount: 0, rating: 4.5, sizeLabel: (state.upload.file.size/1024/1024).toFixed(1)+" MB",
+    createdAt: serverTimestamp(), createdAtMs: Date.now()
+  }), 25000, "Saving to database");
+  setPct(100);
+  toast("Uploaded! Your app is now live");
+  notifyEveryone(`${state.username} just uploaded "${state.upload.name}"`);
+}
       resetUploadForm(); goto(1);
       $$(".nav-btn")[0].click();
     }catch(e){ console.error(e); toast(e && e.message ? e.message : "Upload failed", "ic-close"); }
@@ -3135,9 +3375,15 @@ function initUploadWizard(){
     $("#thumb-dropzone").className = "dropzone";
     $("#thumb-dropzone").innerHTML = `<svg><use href="#ic-image"/></svg><b>Add a square icon</b>Shown on the home page and app card`;
     $("#app-name-input").value = ""; $("#app-desc-input").value = "";
-    $("#password-switch").classList.remove("on"); $("#password-field").hidden = true; $("#app-password-input").value="";
-    renderScreenshotStrip();
-  }
+  $("#password-switch").classList.remove("on"); $("#password-field").hidden = true; $("#app-password-input").value="";
+  renderScreenshotStrip();
+  state.upload.replaceAppId = null;
+  const _ue = $("#update-existing-card"), _us = $("#update-existing-switch"), _up = $("#update-existing-picker"), _uc = $("#update-existing-chosen");
+  if(_ue) _ue.hidden = true;
+  if(_us) _us.classList.remove("on");
+  if(_up) _up.hidden = true;
+  if(_uc) _uc.hidden = true;
+}
   goto(1);
 }
 
@@ -3384,9 +3630,17 @@ function renderProfile(){
 async function changeMyPhoto(file){
   if(!file) return;
   if(guestBlock("change your photo")) return;
+  let croppedBlob;
+  try{
+    croppedBlob = await cropImageToFile(file, { aspect: 1, size: 256 });
+  }catch(err){
+    if(err && err.message === "Crop cancelled") return;
+    toast("Could not open image", "ic-close"); return;
+  }
   toast("Uploading photo…", "ic-upload");
   try{
-    const url = await uploadAvatar(file);
+    const cropFile = new File([croppedBlob], "avatar.jpg", { type: "image/jpeg" });
+    const url = await uploadAvatar(cropFile);
     await setDoc(doc(db,"users",state.uid), { photoURL: url, verified: state.verified, updatedAt: serverTimestamp() }, { merge:true });
     state.photoURL = url; toast("Profile photo updated"); renderProfile();
   }catch(e){ toast("Failed", "ic-close"); }
@@ -4307,16 +4561,27 @@ function openChannelManageSheet(channelId){
       try{ await updateDoc(doc(db,"channels",channelId), { name: nn, nameLower: lowerName(nn) }); toast("Renamed"); wrap.remove(); openChannelManageSheet(channelId); }
       catch(err){ toast("Failed", "ic-close"); }
     } else if(a === "photo"){
-      wrap.remove();
-      const input = $("#channel-photo-input");
-      input.onchange = async e2=>{
-        const file = e2.target.files[0]; e2.target.value = "";
-        if(!file) return;
-        try{ const url = await uploadAvatar(file); await updateDoc(doc(db,"channels",channelId), { photoURL: url }); toast("Photo updated"); }
-        catch(err){ toast("Failed", "ic-close"); }
-      };
-      input.click();
-    } else if(a === "members"){ wrap.remove(); openChannelMembersSheet(channelId); }
+  wrap.remove();
+  const input = $("#channel-photo-input");
+  input.onchange = async e2=>{
+    const file = e2.target.files[0]; e2.target.value = "";
+    if(!file) return;
+    let croppedBlob;
+    try{ croppedBlob = await cropImageToFile(file, { aspect: 1, size: 256 }); }
+    catch(err){
+      if(err && err.message === "Crop cancelled") return;
+      toast("Could not open image", "ic-close"); return;
+    }
+    try{
+      const cropFile = new File([croppedBlob], "channel.jpg", { type: "image/jpeg" });
+      const url = await uploadAvatar(cropFile);
+      await updateDoc(doc(db,"channels",channelId), { photoURL: url });
+      toast("Channel photo updated");
+    }catch(err){ toast("Failed", "ic-close"); }
+  };
+  input.click();
+}
+else if(a === "members"){ wrap.remove(); openChannelMembersSheet(channelId); }
     else if(a === "add"){
   wrap.remove();
   openUserPicker(async u=>{
@@ -4656,7 +4921,11 @@ function initTelegramUI(){
     } else if(act === "copy"){
       const t = m.text || m.caption || m.filename || "";
       const ok = await copyText(t); toast(ok ? "Copied" : "Copy failed", ok ? "ic-check" : "ic-close");
-      } else if(act === "views"){
+          } else if(act === "edit"){
+  const ch = state.channels.find(c=>c.id === m.channelId);
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can edit messages", "ic-close"); return; }
+  openChannelMessageEdit(m);
+} else if(act === "views"){
     const ch = state.channels.find(c=>c.id === m.channelId);
     if(!isChannelOwner(ch)){ toast("Only the channel owner can set views", "ic-close"); return; }
     const v = await askText({ title:"Set views", value: String(m.views || 0), placeholder:"Enter number (0 = reset to real)", max:8, okLabel:"Save" });
@@ -5185,7 +5454,7 @@ if(!preview){
 }
 if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</div>`;
   const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
-  html += `<div class="pktg-meta"><span>${m.views || 0} views</span><span>•</span><span>${time}</span></div>`;
+  html += `<div class="pktg-meta">${m.edited ? `<span style="color:var(--accent-2);font-weight:700">edited</span><span>•</span>` : ""}<span>${m.views || 0} views</span><span>•</span><span>${time}</span></div>`;
   card.innerHTML = html;
   if(preview){ return card; }
   const ref = card.querySelector("[data-tg-jump]");
@@ -5335,6 +5604,7 @@ function showTgCtx(x, y, msg){
   if(owner){
   items.push(`<button class="pktg-ctx-item" data-ctx="reply"><svg><use href="#ic-chat"/></svg> Reply</button>`);
   items.push(`<button class="pktg-ctx-item" data-ctx="copy"><svg><use href="#ic-copy"/></svg> Copy</button>`);
+  items.push(`<button class="pktg-ctx-item" data-ctx="edit"><svg><use href="#ic-refresh"/></svg> Edit / Re-upload</button>`);
   items.push(`<button class="pktg-ctx-item" data-ctx="views"><svg><use href="#ic-users"/></svg> Set views</button>`);
   items.push(`<button class="pktg-ctx-item pktg-danger" data-ctx="delete"><svg><use href="#ic-trash"/></svg> Delete</button>`);
 } else {
@@ -5412,6 +5682,147 @@ async function tgDownloadMessage(m){
 }
 
 // Helper: clean native download without black screen
+/* ===================== EDIT CHANNEL MESSAGE ===================== */
+function openChannelMessageEdit(m){
+  const existingThumb = m.previewThumbUrl || "";
+  const existingIcon  = m.iconUrl || "";
+  const existingCaption = m.caption || "";
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="ch-edit-backdrop">
+      <div class="sheet" style="padding:22px 20px calc(22px + var(--safe-bottom));max-height:92vh;overflow-y:auto;">
+        <h3 style="text-align:center;font-size:17px;margin:0 0 8px;">Edit / Re-upload</h3>
+        <p style="font-size:12px;color:var(--text-dim);text-align:center;margin:0 0 14px;line-height:1.5;">Views count and position stay the same. Only the upload date changes.</p>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:var(--surface-2);margin-bottom:14px;">
+          <div id="che-icon" style="width:56px;height:56px;border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border);flex-shrink:0;">
+            ${existingThumb ? `<img src="${escapeHtml(existingThumb)}" style="width:100%;height:100%;object-fit:cover;"/>` : (existingIcon ? `<img src="${escapeHtml(existingIcon)}" style="width:100%;height:100%;object-fit:cover;"/>` : `<svg width="26" height="26" style="color:var(--accent-2)"><use href="#ic-cube"/></svg>`)}
+          </div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.filename || m.type || "Message")}</div>
+            <div style="font-size:11.5px;color:var(--text-faint);margin-top:2px;">${fmtBytes(m.size||0)} • ${m.views||0} views</div>
+          </div>
+        </div>
+
+        <button class="btn btn-ghost btn-block" id="che-pick-file" type="button" style="justify-content:center;margin-bottom:8px;">
+          <svg><use href="#ic-upload"/></svg> <span id="che-pick-label">Choose replacement file</span>
+        </button>
+        <div id="che-newfile-info" style="display:none;margin:0 0 12px;font-size:11.5px;color:var(--accent-2);text-align:center;"></div>
+
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px;">Description</label>
+          <textarea id="che-desc" rows="3" style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:13.5px;font-family:inherit;resize:vertical;min-height:70px;outline:none;-webkit-user-select:text;user-select:text;">${escapeHtml(existingCaption)}</textarea>
+        </div>
+
+        <button class="btn btn-ghost btn-block" id="che-change-thumb" type="button" style="margin-bottom:14px;">
+          <svg><use href="#ic-image"/></svg> Change thumbnail (optional)
+        </button>
+
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="che-cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" id="che-save" type="button">Upload</button>
+        </div>
+      </div>
+    </div>`);
+
+  const wrap = document.getElementById("ch-edit-backdrop");
+  let newFile = null, newThumbFile = null;
+
+  document.getElementById("che-pick-file").addEventListener("click", ()=>{
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "*/*"; inp.style.display = "none";
+    inp.onchange = (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      newFile = f;
+      const info = document.getElementById("che-newfile-info");
+      info.style.display = "block";
+      info.textContent = "Selected: " + f.name + " (" + fmtBytes(f.size) + ")";
+      document.getElementById("che-pick-label").textContent = "Change replacement file";
+    };
+    document.body.appendChild(inp); inp.click();
+    setTimeout(()=> inp.remove(), 1200);
+  });
+
+  document.getElementById("che-change-thumb").addEventListener("click", ()=>{
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "image/*"; inp.style.display = "none";
+    inp.onchange = async (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      try{
+        newThumbFile = await cropImageToFile(f, { aspect: 1, size: 256 });
+        const u = URL.createObjectURL(newThumbFile);
+        document.getElementById("che-icon").innerHTML = `<img src="${u}" style="width:100%;height:100%;object-fit:cover;"/>`;
+        toast("New thumbnail selected");
+      }catch(err){ if(err && err.message !== "Crop cancelled") toast("Could not load image", "ic-close"); }
+    };
+    document.body.appendChild(inp); inp.click();
+    setTimeout(()=> inp.remove(), 1200);
+  });
+
+  document.getElementById("che-cancel").addEventListener("click", ()=> wrap.remove());
+  document.getElementById("che-save").addEventListener("click", async ()=>{
+    const newDesc = (document.getElementById("che-desc").value || "").trim();
+    await saveChannelMessageEdit(m, newFile, newDesc, newThumbFile);
+    wrap.remove();
+  });
+  wrap.addEventListener("click", e=>{ if(e.target === wrap) wrap.remove(); });
+}
+
+async function saveChannelMessageEdit(m, newFile, newDesc, newThumbFile){
+  const ch = state.channels.find(c=>c.id === m.channelId);
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can edit messages", "ic-close"); return; }
+  if(newFile && !storageReady()){ toast("Connect your VPS upload API first", "ic-close"); return; }
+
+  showTgUpload(newFile ? newFile.name : "Updating message…");
+  try{
+    const updates = {
+      caption: newDesc,
+      edited: true,
+      updatedAt: serverTimestamp(),
+      updatedAtMs: Date.now()
+    };
+    const mediaUpdates = {};
+
+    if(newFile){
+      const msgId = "chmsg_" + state.tg.channelId + "_" + generateAppId();
+      const res = await uploadFileToServer(newFile, msgId, "file", p => setTgUpload(p));
+      mediaUpdates.mediaUrl = res.url;
+      updates.filename = newFile.name;
+      updates.mimeType = newFile.type || "";
+      updates.size = newFile.size;
+      if(newFile.type && newFile.type.startsWith("image/")) updates.type = "image";
+      else if(newFile.type && newFile.type.startsWith("video/")) updates.type = "video";
+      else if(newFile.type && newFile.type.startsWith("audio/")) updates.type = "audio";
+      else updates.type = "file";
+
+      const thumbBlob = await generatePreviewThumb(newFile);
+      if(thumbBlob){
+        try{
+          const tf = new File([thumbBlob], "preview.jpg", { type: "image/jpeg" });
+          const tr = await uploadFileToServer(tf, msgId + "_preview", "icon", null);
+          updates.previewThumbUrl = tr.url;
+        }catch(e){}
+      }
+    }
+
+    if(newThumbFile){
+  const msgId2 = "chmsg_" + state.tg.channelId + "_" + generateAppId();
+  const iconWrapper = new File([newThumbFile], "thumb.jpg", { type: newThumbFile.type || "image/jpeg" });
+  const iconRes = await uploadFileToServer(iconWrapper, msgId2 + "_icon", "icon", null);
+  updates.iconUrl = iconRes.url;
+}
+
+    setTgUpload(100);
+    await updateDoc(doc(db,"channelMessages", m.id), updates);
+    if(Object.keys(mediaUpdates).length){
+      await setDoc(doc(db,"channelMessageMedia", m.id), mediaUpdates, { merge: true });
+    }
+    toast("Message updated — position and views preserved");
+  }catch(e){
+    console.error(e);
+    toast(e.message || "Update failed", "ic-close");
+  }finally{ hideTgUpload(); }
+}
 function nativeDownload(url, filename){
   const a = document.createElement("a");
   a.href = url;
