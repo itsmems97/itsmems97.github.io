@@ -505,8 +505,9 @@ html[data-theme="light"] .pktg-file-icon{ background: rgba(255,255,255,.75); }
 .pktg-reply-banner .pktg-rb-title{ color:var(--accent-2); font-weight:700; font-size:12px; }
 .pktg-reply-banner .pktg-rb-preview{ color:var(--text-dim); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pktg-bar{ display:flex; align-items:center; background:var(--bg-elevated); border:1px solid var(--border); border-radius:26px; padding:4px 6px; gap:3px; box-shadow:var(--shadow); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); min-height:50px; transition:border-color .2s; }
-.pktg-input{ flex:1; border:none; outline:none; background:transparent; padding:10px 8px; font-size:15px; color:var(--text); max-height:100px; resize:none; font-family:inherit; -webkit-user-select:text; user-select:text; }
-.pktg-input::placeholder{ color:var(--text-faint); }
+.pktg-input{ flex:1; border:none; outline:none; background:transparent; padding:10px 8px; font-size:15px; color:var(--text); max-height:100px; overflow-y:auto; font-family:inherit; -webkit-user-select:text; user-select:text; white-space:pre-wrap; word-wrap:break-word; line-height:1.4; }
+.pktg-input:empty::before{ content:attr(data-placeholder); color:var(--text-faint); pointer-events:none; }
+.pktg-input .pktg-ce{ width:1.35em; height:1.35em; vertical-align:-0.3em; object-fit:contain; display:inline-block; margin:0 1px; }
 .pktg-action-btn{ width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--text-dim); flex-shrink:0; background:transparent; }
 .pktg-action-btn:active{ background:rgba(128,128,128,.15); }
 .pktg-action-btn svg{ width:22px; height:22px; }
@@ -1193,7 +1194,8 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 </div>
       <div class="pktg-bar" id="pktg-bar">
   <button class="pktg-action-btn" id="pktg-emoji-btn" aria-label="Emoji"><svg><use href="#ic-emoji"/></svg></button>
-  <textarea class="pktg-input" id="pktg-input" rows="1" placeholder="Broadcast"></textarea>
+  <div class="pktg-input" id="pktg-input" contenteditable="true" 
+     data-placeholder="Broadcast" spellcheck="false"></div>
   <button class="pktg-action-btn" id="pktg-fmt-btn-manual" aria-label="Format text" title="Format selected text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 20V4h6a4 4 0 0 1 0 8H6" stroke-linecap="round"/><path d="M6 12h7a4 4 0 0 1 0 8H6" stroke-linecap="round"/></svg></button>
   <button class="pktg-action-btn" id="pktg-attach-btn" aria-label="Attach"><svg><use href="#ic-clip"/></svg></button>
   <button class="pktg-action-btn pktg-send" id="pktg-send-btn" aria-label="Send"><svg id="pktg-send-icon"><use href="#ic-mic"/></svg></button>
@@ -5400,12 +5402,17 @@ function initTelegramUI(){
   P("pktg-search-input").addEventListener("input", e=>{ state.tg.searchQuery = e.target.value; renderTelegramFeed(); });
   P("pktg-menu-btn").addEventListener("click", ()=>{ if(state.tg.channelId) openChannelInfoSheet(state.tg.channelId); });
   const input = P("pktg-input");
-  input.addEventListener("input", ()=>{
-    input.style.height = "auto";
-    input.style.height = Math.min(input.scrollHeight, 100) + "px";
-    updateSendBtnIcon();
-    if(input.value.trim().length > 0) pingTyping();
-  });
+input.addEventListener("input", ()=>{
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 100) + "px";
+  updateSendBtnIcon();
+  if(getTgInputText().trim().length > 0) pingTyping();
+});
+input.addEventListener("paste", e=>{
+  e.preventDefault();
+  const txt = (e.clipboardData || window.clipboardData).getData("text/plain");
+  insertNodeAtCaret(input, document.createTextNode(txt));
+});
   input.addEventListener("keydown", e=>{ if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); tgSendOrRecord(); } });
   P("pktg-send-btn").addEventListener("click", tgSendOrRecord);
   P("pktg-attach-btn").addEventListener("click", ()=>{
@@ -5692,10 +5699,51 @@ function initFmtToolbar(){
     });
   }
 }
+/* ===== Contenteditable composer helpers ===== */
+function getTgInputText(){
+  const el = document.getElementById("pktg-input");
+  if(!el) return "";
+  return serializeComposerNode(el);
+}
+function serializeComposerNode(node){
+  let out = "";
+  node.childNodes.forEach(n => {
+    if(n.nodeType === 3){ out += n.nodeValue; }
+    else if(n.nodeType === 1){
+      if(n.tagName === "IMG" && n.classList.contains("pktg-ce")){
+        out += `[[ce:${n.dataset.id}]]`;
+      } else if(n.tagName === "BR"){
+        out += "\n";
+      } else {
+        out += serializeComposerNode(n);
+      }
+    }
+  });
+  return out;
+}
+function insertNodeAtCaret(el, node){
+  el.focus();
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount && el.contains(sel.anchorNode)){
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(node);
+    range.setStartAfter(node);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else {
+    el.appendChild(node);
+  }
+}
+function clearTgInput(){
+  const el = document.getElementById("pktg-input");
+  if(el) el.innerHTML = "";
+}
+
 function updateSendBtnIcon(){
-  const input = $("#pktg-input");
   const icon = $("#pktg-send-icon"); if(!icon) return;
-  const hasText = input && input.value.trim().length > 0;
+  const hasText = getTgInputText().trim().length > 0;
   icon.innerHTML = hasText ? `<use href="#ic-send"/>` : `<use href="#ic-mic"/>`;
 }
 function closeTelegramChannel(){
@@ -6447,8 +6495,7 @@ function openDownloadedFile(filename, blob, blobUrl){
 function tgSendOrRecord(){
   const ch = state.channels.find(c=>c.id === state.tg.channelId);
   if(!isChannelOwner(ch)){ toast("Only the channel owner can post here", "ic-close"); return; }
-  const input = $("#pktg-input");
-  const text = input ? input.value.trim() : "";
+  const text = getTgInputText().trim();
   if(text){ tgSendText(); return; }
   if(state.tg.recording) return;
   startVoiceRecording();
@@ -6457,13 +6504,13 @@ async function tgSendText(){
   const ch = state.channels.find(c=>c.id === state.tg.channelId);
   if(!isChannelOwner(ch)){ toast("Only the channel owner can post here", "ic-close"); return; }
   const input = $("#pktg-input");
-  const text = input.value.trim();
+  const text = getTgInputText().trim();
   if(!text) return;
   if(!state.tg.channelId){ toast("Open a channel first", "ic-close"); return; }
   if(guestBlock("broadcast in channels")) return;
   const problem = checkChatText(text, state.verified, state.isOwner);
   if(problem){ toast(problem, "ic-close"); return; }
-  input.value = ""; input.style.height = "auto"; updateSendBtnIcon();
+  clearTgInput(); input.style.height = "auto"; updateSendBtnIcon();
   try{
     await addDoc(collection(db,"channelMessages"), {
       channelId: state.tg.channelId,
@@ -6870,28 +6917,27 @@ function renderTgEmojiGrid(){
     : `<div class="pktg-emoji-empty">No emoji</div>`;
 
   grid.querySelectorAll(".pktg-emoji-item").forEach(b=> b.onclick = ()=>{
-    const input = $("#pktg-input"); if(!input) return;
-    const start = input.selectionStart ?? input.value.length;
-    const end = input.selectionEnd ?? input.value.length;
-    input.value = input.value.slice(0, start) + b.textContent + input.value.slice(end);
-    input.focus();
-    const pos = start + b.textContent.length;
-    try{ input.setSelectionRange(pos, pos); }catch(e){}
-    updateSendBtnIcon();
-  });
+  const input = document.getElementById("pktg-input"); if(!input) return;
+  insertNodeAtCaret(input, document.createTextNode(b.textContent));
+  updateSendBtnIcon();
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+});
 }
 
 function insertCustomEmoji(id){
   const input = document.getElementById("pktg-input");
   if(!input) return;
-  const token = `[[ce:${id}]]`;
-  const start = input.selectionStart ?? input.value.length;
-  const end = input.selectionEnd ?? input.value.length;
-  input.value = input.value.slice(0, start) + token + input.value.slice(end);
-  input.focus();
-  const pos = start + token.length;
-  try{ input.setSelectionRange(pos, pos); }catch(e){}
-  if(typeof updateSendBtnIcon === "function") updateSendBtnIcon();
+  const ce = CUSTOM_EMOJI_MAP[id];
+  if(!ce){ toast("Emoji not loaded", "ic-close"); return; }
+  const img = document.createElement("img");
+  img.className = "pktg-ce";
+  img.src = ce.url;
+  img.dataset.id = id;
+  img.alt = ce.name;
+  img.draggable = false;
+  insertNodeAtCaret(input, img);
+  updateSendBtnIcon();
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 document.addEventListener("gesturestart", e=> e.preventDefault());
