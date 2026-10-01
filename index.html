@@ -526,7 +526,14 @@ html[data-theme="light"] .pktg-file-icon{ background: rgba(255,255,255,.75); }
 #pktg-conv.pktg-recording .pktg-bar,
 #pktg-conv.pktg-recording .pktg-upload{ display:none; }
 #pktg-conv.pktg-recording .pktg-rec-bar{ display:flex; }
-.pktg-emoji{ position:absolute; left:0; right:0; bottom:calc(58px + var(--safe-bottom)); z-index:40; display:none; flex-direction:column; max-height:min(52dvh,440px); background:#12161F; background-color:var(--bg-elevated); border:1px solid var(--border); border-radius:22px; box-shadow:0 14px 44px rgba(0,0,0,.5); overflow:hidden; isolation:isolate; contain:layout paint; transform:translateZ(0); backface-visibility:hidden; -webkit-backface-visibility:hidden; }
+.pktg-emoji{
+  position:absolute; left:0; right:0; bottom:calc(58px + var(--safe-bottom)); z-index:40; display:none; flex-direction:column;
+  height: 380px;
+  max-height: min(60dvh, 420px);
+  background:#12161F; background-color:var(--bg-elevated); border:1px solid var(--border);
+  border-radius:22px; box-shadow:0 14px 44px rgba(0,0,0,.5);
+  overflow:hidden; isolation:isolate;
+}
 html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFFFF; }
 .pktg-emoji.active{ display:flex; background-color:var(--bg-elevated); }
 .pktg-emoji-search-wrap{ padding:9px 10px 6px; background:transparent; }
@@ -534,8 +541,49 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 .pktg-emoji-cats{ display:flex; gap:4px; padding:4px 8px 7px; overflow-x:auto; border-bottom:1px solid var(--border); background:transparent; }
 .pktg-emoji-cat{ min-width:39px; height:35px; border:0; border-radius:11px; background:transparent; color:var(--text); font-size:19px; }
 .pktg-emoji-cat.active{ background:rgba(255,198,26,.15); }
-.pktg-emoji-grid{ overflow:auto; padding:8px; display:grid; grid-template-columns:repeat(8,1fr); gap:3px; background:transparent; }
-.pktg-emoji-item{ border:0; background:transparent; border-radius:10px; min-height:40px; font-size:25px; display:grid; place-items:center; }
+.pktg-emoji-grid{
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 3px;
+  align-content: start;
+  background: transparent;
+}
+.pktg-emoji-item{
+  border:0; background:transparent; border-radius:10px;
+  aspect-ratio: 1;
+  min-height: 0;
+  font-size:22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+.pktg-emoji-item img{
+  position: absolute;
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  object-fit: contain;
+  pointer-events: none;
+  display: block;
+  font-size: 0;
+  color: transparent;
+}
+.pktg-emoji-item.pktg-custom-emoji{
+  padding: 0;
+}
+.pktg-emoji-item.pktg-custom-emoji img{
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+}
 .pktg-emoji-item:active{ background:rgba(255,198,26,.2); transform:scale(.88); }
 .pktg-emoji-empty{ grid-column:1/-1; text-align:center; color:var(--text-faint); padding:25px; }
 .pktg-sheet-overlay{ display:none; position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.5); backdrop-filter:blur(2px); }
@@ -5212,76 +5260,104 @@ toast("You left the channel");
 }
 
 /* =====================================================================
-   TELEGRAM UI
+   CUSTOM EMOJIS — AUTO-DETECT from GitHub folders
+   HOW IT WORKS:
+   - Bas folder name add karo (e.g. "emoji", "emoji1", "emoji2")
+   - GitHub me jo bhi .png files hain, automatic detect ho jayengi
+   - Koi manual filename list nahi likhni
+   - Har 6 hours me auto-refresh (rate limit se bachne ke liye)
    ===================================================================== */
-   /* =====================================================================
-   CUSTOM EMOJIS — 60 custom emojis (numbers, letters, symbols)
-   ===================================================================== */
-const CUSTOM_EMOJIS = [
-  { id: "n0", name: "0", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/0.png" },
-  { id: "n1", name: "1", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/1.png" },
-  { id: "n2", name: "2", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/2.png" },
-  { id: "n3", name: "3", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/3.png" },
-  { id: "n4", name: "4", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/4.png" },
-  { id: "n5", name: "5", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/5.png" },
-  { id: "n6", name: "6", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/6.png" },
-  { id: "n7", name: "7", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/7.png" },
-  { id: "n8", name: "8", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/8.png" },
-  { id: "n9", name: "9", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/9.png" },
-  { id: "a", name: "A", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/A.png" },
-  { id: "b", name: "B", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/B.png" },
-  { id: "c", name: "C", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/C.png" },
-  { id: "d", name: "D", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/D.png" },
-  { id: "e", name: "E", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/E.png" },
-  { id: "f", name: "F", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/F.png" },
-  { id: "g", name: "G", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/G.png" },
-  { id: "h", name: "H", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/H.png" },
-  { id: "i", name: "I", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/I.png" },
-  { id: "j", name: "J", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/J.png" },
-  { id: "k", name: "K", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/K.png" },
-  { id: "l", name: "L", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/L.png" },
-  { id: "m", name: "M", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/M.png" },
-  { id: "n", name: "N", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/N.png" },
-  { id: "o", name: "O", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/O.png" },
-  { id: "p", name: "P", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/P.png" },
-  { id: "q", name: "Q", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Q.png" },
-  { id: "r", name: "R", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/R.png" },
-  { id: "s", name: "S", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/S.png" },
-  { id: "t", name: "T", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/T.png" },
-  { id: "u", name: "U", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/U.png" },
-  { id: "v", name: "V", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/V.png" },
-  { id: "w", name: "W", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/W.png" },
-  { id: "x", name: "X", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/X.png" },
-  { id: "y", name: "Y", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Y.png" },
-  { id: "z", name: "Z", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Z.png" },
-  { id: "s1",  name: "Symbol 1",  url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol1.png" },
-  { id: "s2",  name: "Symbol 2",  url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol2.png" },
-  { id: "s3",  name: "Symbol 3",  url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol3.png" },
-  { id: "s4",  name: "Symbol 4",  url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol4.png" },
-  { id: "s5",  name: "Symbol 5",  url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol5.png" },
-  { id: "s6",  name: "Symbol 6",  url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol6.png" },
-  { id: "s7",  name: "Symbol 7",  url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol7.png" },
-  { id: "s8",  name: "Symbol 8",  url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol8.png" },
-  { id: "s9",  name: "Symbol 9",  url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol9.png" },
-  { id: "s10", name: "Symbol 10", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol10.png" },
-  { id: "s11", name: "Symbol 11", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol11.png" },
-  { id: "s12", name: "Symbol 12", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol12.png" },
-  { id: "s13", name: "Symbol 13", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol13.png" },
-  { id: "s14", name: "Symbol 14", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol14.png" },
-  { id: "s15", name: "Symbol 15", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol15.png" },
-  { id: "s16", name: "Symbol 16", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol16.png" },
-  { id: "s17", name: "Symbol 17", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol17.png" },
-  { id: "s18", name: "Symbol 18", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol18.png" },
-  { id: "s19", name: "Symbol 19", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol19.png" },
-  { id: "s20", name: "Symbol 20", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol20.png" },
-  { id: "s21", name: "Symbol 21", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol21.png" },
-  { id: "s22", name: "Symbol 22", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol22.png" },
-  { id: "s23", name: "Symbol 23", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol23.png" },
-  { id: "s24", name: "Symbol 24", url: "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/emoji/Symbol24.png" }
+
+const EMOJI_FOLDERS = [
+  { label: "⭐", path: "emoji"  },
+  // Future folders — bas uncomment karo:
+  // { label: "🎮", path: "emoji1" },
+  // { label: "💎", path: "emoji2" },
+  // { label: "🔥", path: "emoji3" },
 ];
 
+const GITHUB_USER = "itsmems97";
+const GITHUB_REPO = "itsmems97.github.io";
+const GITHUB_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/`;
+const EMOJI_CACHE_KEY = "pika_emoji_folders_cache_v1";
+const EMOJI_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+
+const CUSTOM_EMOJIS = [];
 const CUSTOM_EMOJI_MAP = {};
-CUSTOM_EMOJIS.forEach(e => CUSTOM_EMOJI_MAP[e.id] = e);
+
+function filenameToId(filename){
+  const base = filename.replace(/\.(png|jpg|jpeg|webp|gif)$/i, "");
+  return base.toLowerCase().replace(/[^a-z0-9_\-]/g, "_");
+}
+function filenameToName(filename){
+  return filename.replace(/\.(png|jpg|jpeg|webp|gif)$/i, "").toUpperCase();
+}
+
+/* GitHub API se folder me kaunsi .png files hain — auto detect */
+async function fetchFolderFiles(folderPath){
+  const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${encodeURIComponent(folderPath)}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("GitHub API " + res.status);
+  const data = await res.json();
+  if(!Array.isArray(data)) throw new Error("Not a folder");
+  return data
+    .filter(f => f.type === "file" && /\.(png|jpg|jpeg|webp|gif)$/i.test(f.name))
+    .map(f => f.name)
+    .sort(); // stable order
+}
+
+/* Cache read/write */
+function readEmojiCache(){
+  try{
+    const raw = localStorage.getItem(EMOJI_CACHE_KEY);
+    if(!raw) return null;
+    const cached = JSON.parse(raw);
+    if(Date.now() - cached.at > EMOJI_CACHE_TTL) return null;
+    return cached.data;
+  }catch(e){ return null; }
+}
+function writeEmojiCache(data){
+  try{ localStorage.setItem(EMOJI_CACHE_KEY, JSON.stringify({ at: Date.now(), data })); }catch(e){}
+}
+
+/* File map → CUSTOM_EMOJIS + EMOJI_FOLDERS.items rebuild */
+function applyEmojiFileMap(fileMap){
+  CUSTOM_EMOJIS.length = 0;
+  Object.keys(CUSTOM_EMOJI_MAP).forEach(k => delete CUSTOM_EMOJI_MAP[k]);
+  EMOJI_FOLDERS.forEach(folder => {
+    const files = fileMap[folder.path] || [];
+    folder.items = files.map(filename => {
+      const id = filenameToId(filename);
+      const name = filenameToName(filename);
+      const url = GITHUB_BASE + folder.path + "/" + filename;
+      const obj = { id, name, url, folder: folder.path };
+      CUSTOM_EMOJI_MAP[id] = obj;
+      CUSTOM_EMOJIS.push(obj);
+      return obj;
+    });
+  });
+}
+
+/* Main loader — cache se ya GitHub API se */
+async function loadAllEmojiFolders(){
+  const cached = readEmojiCache();
+  if(cached){
+    applyEmojiFileMap(cached);
+    return;
+  }
+  const result = {};
+  await Promise.all(EMOJI_FOLDERS.map(async f => {
+    try{ result[f.path] = await fetchFolderFiles(f.path); }
+    catch(e){ console.warn("Emoji folder load failed:", f.path, e); result[f.path] = []; }
+  }));
+  writeEmojiCache(result);
+  applyEmojiFileMap(result);
+}
+
+/* Force refresh (cache clear) — future ke liye */
+function clearEmojiCache(){
+  try{ localStorage.removeItem(EMOJI_CACHE_KEY); }catch(e){}
+}
 const EMOJI_CATEGORIES = {
   '😀': '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😙 😚 😋 😛 😝 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🤭 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👹 👺 🤡 💩 👻 💀 ☠️ 👽 👾 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾'.split(' '),
   '❤️': '❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 💌 💋 👥 👤 💯 💢 💥 💫 💦 💨 🕳️ 💣 💬 👁️ 🗨️ 🗯️ 💭 💤 ✨ ⭐ 🌟 💫 🔥 🌈 ☀️ 🌤️ ☁️ ❄️ ⚡ ☔ 💧 🌊 🌙 🌛 🌜 🌚 🌝 🌞 🪐'.split(' '),
@@ -5305,6 +5381,13 @@ function saveViewedMsgs(set){
 }
 function initTelegramUI(){
   const P = id => document.getElementById(id);
+
+  // ⬇️ YEH 2 LINES ADD KARO
+  loadAllEmojiFolders().then(() => {
+    if(typeof renderTgEmojiCats === "function") renderTgEmojiCats();
+    if(typeof renderTgEmojiGrid === "function") renderTgEmojiGrid();
+  });
+
   P("pktg-back").addEventListener("click", ()=>{ closeTelegramChannel(); });
   P("pktg-info").addEventListener("click", ()=>{ if(state.tg.channelId) openChannelInfoSheet(state.tg.channelId); });
   P("pktg-manage-btn").addEventListener("click", ()=>{
@@ -6753,26 +6836,34 @@ function closeTgEmoji(){
 }
 function renderTgEmojiCats(){
   const el = $("#pktg-emoji-cats"); if(!el) return;
-  const cats = ["⭐", ...Object.keys(EMOJI_CATEGORIES)];
+  const customTabs = EMOJI_FOLDERS.map(f => f.label);
+  const cats = [...customTabs, ...Object.keys(EMOJI_CATEGORIES)];
   el.innerHTML = cats.map(k=>`<button class="pktg-emoji-cat ${k===tgEmojiCategory?"active":""}" data-cat="${k}">${k}</button>`).join("");
   el.querySelectorAll(".pktg-emoji-cat").forEach(b=> b.onclick = ()=>{ tgEmojiCategory = b.dataset.cat; renderTgEmojiCats(); renderTgEmojiGrid(); });
 }
 function renderTgEmojiGrid(){
   const grid = $("#pktg-emoji-grid"); if(!grid) return;
 
-  if(tgEmojiCategory === "⭐"){
-    grid.innerHTML = CUSTOM_EMOJIS.length
-      ? CUSTOM_EMOJIS.map(e=>`
-          <button class="pktg-emoji-item pktg-custom-emoji" type="button" data-ce-id="${escapeHtml(e.id)}" title="${escapeHtml(e.name)}">
-            <img src="${escapeHtml(e.url)}" alt="${escapeHtml(e.name)}" loading="lazy"/>
-          </button>`).join("")
-      : `<div class="pktg-emoji-empty">No custom emojis.</div>`;
+  // Check if current tab is a custom emoji folder
+  const folder = EMOJI_FOLDERS.find(f => f.label === tgEmojiCategory);
+  if(folder){
+    const items = folder.items || [];
+    if(!items.length){
+      grid.innerHTML = `<div class="pktg-emoji-empty">Loading emojis…</div>`;
+      return;
+    }
+    grid.innerHTML = items.map(e=>`
+      <button class="pktg-emoji-item pktg-custom-emoji" type="button" data-ce-id="${escapeHtml(e.id)}" title="${escapeHtml(e.name)}">
+        <img src="${escapeHtml(e.url)}" alt="" loading="lazy"
+             onerror="var b=this.closest('button'); if(b) b.remove();"/>
+      </button>`).join("");
     grid.querySelectorAll(".pktg-custom-emoji").forEach(b=>{
       b.onclick = ()=> insertCustomEmoji(b.dataset.ceId);
     });
     return;
   }
 
+  // Normal emojis
   const arr = EMOJI_CATEGORIES[tgEmojiCategory] || [];
   grid.innerHTML = arr.length
     ? arr.map(e=>`<button class="pktg-emoji-item" type="button">${e}</button>`).join("")
