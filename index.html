@@ -323,9 +323,254 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .rules-banner b{ color:var(--accent); display:block; margin-bottom:4px; font-size:13px; }
 .rules-banner ol{ margin:8px 0 0; padding-left:18px; color:var(--text-dim); }
 .rules-banner .nb-x{ float:right; width:24px; height:24px; padding:0; color:var(--text-faint); }
-#splash{ position:fixed; inset:0; z-index:200; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:var(--bg); transition:opacity .3s; }
-#splash .logo{ width:72px; height:72px; border-radius:22px; object-fit:cover; background:#FFC61A; }
-#splash p, #loading-overlay p{ margin:0; font-size:13px; color:var(--text-dim); }
+#loading-overlay p{ margin:0; font-size:13px; color:var(--text-dim); }
+
+/* ============ PREMIUM SPLASH SCREEN ============ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+#splash{
+  position:fixed; inset:0; z-index:9999;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:#07090F; overflow:hidden; isolation:isolate;
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  transition:opacity 0.7s cubic-bezier(0.65, 0, 0.35, 1);
+}
+#splash.exit{ opacity:0; pointer-events:none; }
+
+.pks-bg-layer{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.pks-mesh{
+  position:absolute; inset:-20%;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 30%, rgba(255,198,26,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 80% 70%, rgba(51,224,193,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 60% at 50% 50%, rgba(120,90,255,0.10) 0%, transparent 70%);
+  filter: blur(60px); opacity:0;
+  animation: pksMeshIn 2s ease-out 0.1s forwards, pksMeshDrift 18s ease-in-out 2s infinite alternate;
+  will-change: transform, opacity;
+}
+@keyframes pksMeshIn{ to { opacity:1; } }
+@keyframes pksMeshDrift{
+  0%   { transform: translate(0,0) scale(1); }
+  50%  { transform: translate(3%,-2%) scale(1.05); }
+  100% { transform: translate(-2%,3%) scale(1.02); }
+}
+
+.pks-grid{
+  position:absolute; inset:0;
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 50%, black 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 50%, black 0%, transparent 78%);
+  opacity:0; animation: pksGridIn 1.6s ease-out 0.4s forwards;
+}
+@keyframes pksGridIn{ to { opacity:1; } }
+
+.pks-vignette{
+  position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(0,0,0,0.55) 100%);
+}
+
+#pks-particles{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+
+.pks-content{
+  position:relative; display:flex; flex-direction:column; align-items:center;
+  z-index:3; padding:0 20px;
+  transform: scale(0.95); opacity:0;
+  animation: pksContentIn 1.2s cubic-bezier(0.22,1,0.36,1) 0.15s forwards;
+}
+@keyframes pksContentIn{ to { transform:scale(1); opacity:1; } }
+
+.pks-logo-wrap{
+  position:relative;
+  width: clamp(96px, 24vw, 128px);
+  height: clamp(96px, 24vw, 128px);
+  margin-bottom:32px; display:flex; align-items:center; justify-content:center;
+}
+.pks-halo{
+  position:absolute; inset:-20px; border-radius:50%;
+  background: conic-gradient(from 0deg,
+    transparent 0%, rgba(255,198,26,0.9) 15%, transparent 30%,
+    transparent 50%, rgba(51,224,193,0.85) 65%, transparent 80%);
+  filter: blur(18px); animation: pksHaloSpin 5s linear infinite;
+  opacity:0; transition: opacity 0.8s ease-out;
+}
+.pks-halo.on{ opacity:1; }
+@keyframes pksHaloSpin{ to { transform: rotate(360deg); } }
+
+.pks-ring{
+  position:absolute; inset:-8px; border-radius:32px;
+  border: 1.5px solid rgba(255,198,26,0.5); opacity:0;
+}
+.pks-ring.on{ animation: pksRingPulse 2.8s cubic-bezier(0.25,0.46,0.45,0.94) infinite; }
+.pks-ring-delay{ animation-delay:1.4s; border-color: rgba(51,224,193,0.45); }
+@keyframes pksRingPulse{
+  0%   { transform: scale(0.92); opacity:0.85; }
+  100% { transform: scale(1.5); opacity:0; }
+}
+
+.pks-logo-container{
+  position:relative; width:100%; height:100%;
+  border-radius:28px; overflow:hidden;
+  transform: scale(0.4) rotateY(-40deg) rotateX(20deg) translateY(30px);
+  opacity:0;
+  box-shadow:
+    0 30px 80px rgba(255,198,26,0.30),
+    0 12px 30px rgba(0,0,0,0.6),
+    0 2px 6px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.4);
+  animation: pksLogo3DIn 1.4s cubic-bezier(0.22,1,0.36,1) 0.35s forwards;
+  will-change: transform, opacity; backface-visibility:hidden;
+}
+@keyframes pksLogo3DIn{
+  0%   { transform: scale(0.4) rotateY(-40deg) rotateX(20deg) translateY(30px); opacity:0; }
+  55%  { opacity:1; }
+  100% { transform: scale(1) rotateY(0deg) rotateX(0deg) translateY(0); opacity:1; }
+}
+.pks-logo-container img{
+  width:100%; height:100%; object-fit:cover;
+  background:#FFC61A; display:block;
+}
+.pks-shine{
+  position:absolute; inset:0;
+  background: linear-gradient(115deg,
+    transparent 30%, rgba(255,255,255,0.75) 48%,
+    rgba(255,255,255,0.95) 50%, rgba(255,255,255,0.75) 52%,
+    transparent 70%);
+  transform: translateX(-150%) skewX(-15deg);
+  pointer-events:none; mix-blend-mode:screen;
+}
+.pks-shine.on{ animation: pksShine 1.4s cubic-bezier(0.5,0,0.5,1) 1.5s forwards; }
+@keyframes pksShine{
+  0%   { transform: translateX(-150%) skewX(-15deg); }
+  100% { transform: translateX(180%) skewX(-15deg); }
+}
+
+.pks-sparkle{
+  position:absolute; width:8px; height:8px; border-radius:50%;
+  background:#fff; opacity:0; pointer-events:none;
+  box-shadow: 0 0 12px 4px rgba(255,255,255,0.9), 0 0 24px 8px rgba(255,198,26,0.7);
+}
+.pks-s1{ top:4%; right:8%; animation: pksSparklePop 1.2s ease-out 1.9s forwards; }
+.pks-s2{ bottom:10%; left:4%; animation: pksSparklePop 1.2s ease-out 2.15s forwards; }
+.pks-s3{ top:20%; left:-2%; animation: pksSparklePop 1.2s ease-out 2.4s forwards; }
+@keyframes pksSparklePop{
+  0%   { opacity:0; transform: scale(0); }
+  40%  { opacity:1; transform: scale(1.4); }
+  100% { opacity:0; transform: scale(0.6); }
+}
+
+.pks-brand{
+  font-size: clamp(30px, 7.5vw, 40px);
+  font-weight:900; letter-spacing:0.06em; color:#F4F5F7;
+  margin-bottom:12px; display:flex; line-height:1; perspective:600px;
+}
+.pks-brand span{
+  display:inline-block;
+  transform: translateY(140%) rotateX(-90deg);
+  opacity:0; transform-origin: center bottom;
+  animation: pksLetterFlip 0.9s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  will-change: transform, opacity;
+}
+.pks-brand span:nth-child(1){ animation-delay:1.0s; }
+.pks-brand span:nth-child(2){ animation-delay:1.08s; }
+.pks-brand span:nth-child(3){ animation-delay:1.16s; }
+.pks-brand span:nth-child(4){ animation-delay:1.24s; }
+.pks-brand .pks-accent{
+  background: linear-gradient(135deg, #FFC61A 0%, #FFA800 40%, #33E0C1 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 18px rgba(255,198,26,0.5));
+}
+@keyframes pksLetterFlip{
+  0%   { transform: translateY(140%) rotateX(-90deg); opacity:0; }
+  70%  { opacity:1; }
+  100% { transform: translateY(0) rotateX(0deg); opacity:1; }
+}
+
+.pks-tagline-wrap{
+  display:flex; align-items:center; gap:12px;
+  opacity:0; transform: translateY(10px);
+  animation: pksTaglineIn 1s cubic-bezier(0.22,1,0.36,1) 1.6s forwards;
+}
+@keyframes pksTaglineIn{ to { opacity:1; transform: translateY(0); } }
+.pks-tagline-line{
+  width:24px; height:1px;
+  background: linear-gradient(90deg, transparent, rgba(255,198,26,0.7));
+}
+.pks-tagline-line.pks-right{
+  background: linear-gradient(90deg, rgba(51,224,193,0.7), transparent);
+}
+.pks-tagline{
+  font-size: clamp(10px, 2.4vw, 11.5px);
+  font-weight:600; letter-spacing:0.42em; text-transform:uppercase;
+  color: rgba(244,245,247,0.55); padding-left:0.42em;
+}
+
+.pks-bottom-ui{
+  position:absolute;
+  bottom: max(52px, calc(env(safe-area-inset-bottom) + 52px));
+  left:50%; transform: translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:18px;
+  z-index:3; opacity:0;
+  animation: pksBottomIn 0.8s ease-out 1.7s forwards;
+}
+@keyframes pksBottomIn{ to { opacity:1; } }
+.pks-progress-track{
+  position:relative; width:200px; height:2.5px; border-radius:3px;
+  background: rgba(255,255,255,0.07); overflow:hidden;
+}
+.pks-progress-track::before{
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  animation: pksShimmerBg 2s linear infinite;
+}
+@keyframes pksShimmerBg{
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.pks-progress-bar{
+  position:relative; height:100%; width:0%; border-radius:3px;
+  background: linear-gradient(90deg, #FFC61A 0%, #FFA800 50%, #33E0C1 100%);
+  box-shadow: 0 0 14px rgba(255,198,26,0.7), 0 0 26px rgba(51,224,193,0.4);
+  animation: pksProgressFill 2.6s cubic-bezier(0.55,0,0.35,1) 1.7s forwards;
+}
+.pks-progress-bar::after{
+  content:''; position:absolute; right:-2px; top:50%; transform: translateY(-50%);
+  width:6px; height:6px; border-radius:50%; background:#fff;
+  box-shadow: 0 0 12px 3px rgba(255,255,255,0.95), 0 0 22px 8px rgba(255,198,26,0.6);
+}
+@keyframes pksProgressFill{
+  0%   { width:0%; }
+  25%  { width:35%; }
+  55%  { width:62%; }
+  80%  { width:88%; }
+  100% { width:100%; }
+}
+.pks-loading-text{
+  font-size:10.5px; font-weight:600; letter-spacing:0.28em;
+  text-transform:uppercase; color: rgba(244,245,247,0.4);
+}
+.pks-dots-anim{ display:inline-flex; gap:2px; margin-left:3px; }
+.pks-dots-anim i{
+  display:block; width:3px; height:3px; border-radius:50%;
+  background: rgba(255,198,26,0.85);
+  animation: pksDotBounce 1.3s ease-in-out infinite;
+}
+.pks-dots-anim i:nth-child(2){ animation-delay:0.15s; }
+.pks-dots-anim i:nth-child(3){ animation-delay:0.30s; }
+@keyframes pksDotBounce{
+  0%, 100% { transform: translateY(0); opacity:0.4; }
+  50%      { transform: translateY(-3px); opacity:1; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  #splash, #splash *, #splash *::before, #splash *::after{
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 .spinner{ width:34px; height:34px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:pkspin .8s linear infinite; }
 @keyframes pkspin{ to{ transform:rotate(360deg); } }
 #loading-overlay{ position:fixed; inset:0; z-index:300; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:rgba(0,0,0,.55); backdrop-filter:blur(3px); }
@@ -865,7 +1110,221 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 <symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M20 11A8 8 0 0 0 6.3 5.7L3 9m0 0V4m0 5h5m-4 4a8 8 0 0 0 13.7 5.3L21 15m0 0v5m0-5h-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
-<div id="splash"><img class="logo" alt="Pika" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" /><div class="spinner"></div><p>Please wait…</p></div>
+<!-- ============ PREMIUM SPLASH SCREEN ============ -->
+<div id="splash">
+  <div class="pks-bg-layer"><div class="pks-mesh"></div></div>
+  <div class="pks-grid"></div>
+  <canvas id="pks-particles"></canvas>
+  <div class="pks-vignette"></div>
+
+  <div class="pks-content">
+    <div class="pks-logo-wrap">
+      <div class="pks-halo" id="pks-halo"></div>
+      <div class="pks-ring" id="pks-ring1"></div>
+      <div class="pks-ring pks-ring-delay" id="pks-ring2"></div>
+      <div class="pks-logo-container">
+        <img alt="Pika Store" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
+        <div class="pks-shine" id="pks-shine"></div>
+      </div>
+      <div class="pks-sparkle pks-s1"></div>
+      <div class="pks-sparkle pks-s2"></div>
+      <div class="pks-sparkle pks-s3"></div>
+    </div>
+
+    <div class="pks-brand">
+      <span>P</span><span>I</span><span>K</span><span class="pks-accent">A</span>
+    </div>
+
+    <div class="pks-tagline-wrap">
+      <div class="pks-tagline-line"></div>
+      <div class="pks-tagline">Premium App Store</div>
+      <div class="pks-tagline-line pks-right"></div>
+    </div>
+  </div>
+
+  <div class="pks-bottom-ui">
+    <div class="pks-progress-track"><div class="pks-progress-bar"></div></div>
+    <div class="pks-loading-text">
+      Loading
+      <span class="pks-dots-anim"><i></i><i></i><i></i></span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ SPLASH SCREEN BOOT LOGIC + BOOT SOUND ============ */
+(function(){
+  /* ---- BOOT SOUND (Web Audio API synthesis — no file needed) ---- */
+  function playBootSound(){
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return null;
+      const ctx = new AC();
+      const t = ctx.currentTime;
+
+      // Deep sub-bass swell
+      const o1 = ctx.createOscillator(), g1 = ctx.createGain();
+      o1.type = 'sine';
+      o1.frequency.setValueAtTime(60, t);
+      o1.frequency.exponentialRampToValueAtTime(180, t + 1.2);
+      g1.gain.setValueAtTime(0.0001, t);
+      g1.gain.exponentialRampToValueAtTime(0.28, t + 0.15);
+      g1.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+      o1.connect(g1).connect(ctx.destination);
+      o1.start(t); o1.stop(t + 1.5);
+
+      // Mid chime (C5 → G5)
+      const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+      o2.type = 'sine';
+      o2.frequency.setValueAtTime(523.25, t + 0.35);
+      o2.frequency.exponentialRampToValueAtTime(783.99, t + 0.9);
+      g2.gain.setValueAtTime(0.0001, t + 0.35);
+      g2.gain.exponentialRampToValueAtTime(0.14, t + 0.45);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+      o2.connect(g2).connect(ctx.destination);
+      o2.start(t + 0.35); o2.stop(t + 1.7);
+
+      // High sparkle (G6 → C7)
+      const o3 = ctx.createOscillator(), g3 = ctx.createGain();
+      o3.type = 'triangle';
+      o3.frequency.setValueAtTime(1567.98, t + 0.6);
+      o3.frequency.exponentialRampToValueAtTime(2093.00, t + 1.1);
+      g3.gain.setValueAtTime(0.0001, t + 0.6);
+      g3.gain.exponentialRampToValueAtTime(0.08, t + 0.72);
+      g3.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+      o3.connect(g3).connect(ctx.destination);
+      o3.start(t + 0.6); o3.stop(t + 1.5);
+
+      // Whoosh noise
+      const bufSize = Math.floor(ctx.sampleRate * 1.2);
+      const buffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i = 0; i < bufSize; i++){
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 2);
+      }
+      const noise = ctx.createBufferSource(); noise.buffer = buffer;
+      const nf = ctx.createBiquadFilter();
+      nf.type = 'bandpass'; nf.Q.value = 1.5;
+      nf.frequency.setValueAtTime(200, t);
+      nf.frequency.exponentialRampToValueAtTime(4000, t + 1.0);
+      const ng = ctx.createGain();
+      ng.gain.setValueAtTime(0.0001, t);
+      ng.gain.exponentialRampToValueAtTime(0.06, t + 0.3);
+      ng.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+      noise.connect(nf).connect(ng).connect(ctx.destination);
+      noise.start(t);
+
+      return ctx;
+    }catch(e){ return null; }
+  }
+
+  // Try immediate play. If browser blocks, wait for first tap.
+  (function tryBoot(){
+    const c = playBootSound();
+    if(!c) return;
+    if(c.state === 'suspended'){
+      const resume = () => {
+        c.resume().then(() => playBootSound()).catch(()=>{});
+        document.removeEventListener('touchstart', resume);
+        document.removeEventListener('click', resume);
+      };
+      document.addEventListener('touchstart', resume, { once:true, passive:true });
+      document.addEventListener('click', resume, { once:true });
+    }
+  })();
+
+  /* ---- Particle canvas ---- */
+  const canvas = document.getElementById('pks-particles');
+  const ctx2d = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1, particles = [], rafId = null;
+
+  function resizeCanvas(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx2d.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  function createParticles(){
+    particles = [];
+    for(let i = 0; i < 40; i++){
+      particles.push({
+        x: Math.random() * W,
+        y: H + Math.random() * 100,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: -(0.3 + Math.random() * 0.9),
+        size: 0.6 + Math.random() * 2.2,
+        alpha: 0.15 + Math.random() * 0.55,
+        hue: Math.random() < 0.6 ? 45 : 165,
+        life: 0, maxLife: 400 + Math.random() * 400
+      });
+    }
+  }
+  function step(){
+    ctx2d.clearRect(0, 0, W, H);
+    for(const p of particles){
+      p.x += p.vx; p.y += p.vy; p.life++;
+      p.vx += (Math.random() - 0.5) * 0.015;
+      p.vx = Math.max(-0.5, Math.min(0.5, p.vx));
+      const lr = p.life / p.maxLife;
+      let alpha = p.alpha;
+      if(lr > 0.7) alpha *= (1 - (lr - 0.7) / 0.3);
+      if(p.y < -20 || p.life > p.maxLife){
+        p.x = Math.random() * W; p.y = H + 20; p.life = 0;
+        p.alpha = 0.15 + Math.random() * 0.55;
+      }
+      const g = ctx2d.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4);
+      g.addColorStop(0, `hsla(${p.hue},100%,75%,${alpha})`);
+      g.addColorStop(0.4, `hsla(${p.hue},100%,65%,${alpha * 0.4})`);
+      g.addColorStop(1, `hsla(${p.hue},100%,60%,0)`);
+      ctx2d.fillStyle = g;
+      ctx2d.beginPath(); ctx2d.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2); ctx2d.fill();
+      ctx2d.fillStyle = `hsla(${p.hue},100%,92%,${alpha * 0.9})`;
+      ctx2d.beginPath(); ctx2d.arc(p.x, p.y, p.size * 0.55, 0, Math.PI * 2); ctx2d.fill();
+    }
+    rafId = requestAnimationFrame(step);
+  }
+  resizeCanvas(); createParticles(); rafId = requestAnimationFrame(step);
+  window.addEventListener('resize', resizeCanvas);
+
+  /* ---- Animation sequence triggers ---- */
+  setTimeout(() => document.getElementById('pks-halo').classList.add('on'), 1100);
+  setTimeout(() => document.getElementById('pks-ring1').classList.add('on'), 1200);
+  setTimeout(() => document.getElementById('pks-ring2').classList.add('on'), 1200);
+  setTimeout(() => document.getElementById('pks-shine').classList.add('on'), 1500);
+
+  /* ---- Exit control ---- */
+  window.__pksCanExit = false;
+  window.__pksExitPending = false;
+  window.__pksExited = false;
+
+  function doExit(){
+    if(window.__pksExited) return;
+    window.__pksExited = true;
+    const s = document.getElementById('splash');
+    if(!s) return;
+    s.classList.add('exit');
+    if(rafId) cancelAnimationFrame(rafId);
+    setTimeout(() => { const el = document.getElementById('splash'); if(el) el.remove(); }, 750);
+  }
+
+  // Minimum display time: 4s (so animation completes fully)
+  setTimeout(() => {
+    window.__pksCanExit = true;
+    if(window.__pksExitPending) doExit();
+  }, 4000);
+
+  // Safety net: force exit after 15s
+  setTimeout(doExit, 15000);
+
+  // Global hide function called by app
+  window.__pksHide = function(){
+    if(window.__pksExited) return;
+    if(!window.__pksCanExit){ window.__pksExitPending = true; return; }
+    doExit();
+  };
+})();
+</script>
 
 <div id="username-gate" hidden>
   <img class="gate-logo" alt="Pika Store" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
@@ -2166,7 +2625,10 @@ async function ensureProfile(){
   try{ await setDoc(ref, existing ? base : { ...base, joinedAt: serverTimestamp() }, { merge:true }); }
   catch(e){ console.warn(e); }
 }
-function hideSplash(){ const s = document.getElementById("splash"); if(!s) return; s.style.opacity = "0"; setTimeout(()=> s.remove(), 350); }
+function hideSplash(){
+  if(window.__pksHide){ window.__pksHide(); return; }
+  const s = document.getElementById("splash"); if(s) s.remove();
+}
 function showLoading(msg){ hideLoading(); const d = document.createElement("div"); d.id = "loading-overlay"; d.innerHTML = `<div class="spinner"></div><p>${escapeHtml(msg || "Please wait…")}</p>`; document.body.appendChild(d); }
 function hideLoading(){ const d = document.getElementById("loading-overlay"); if(d) d.remove(); }
 function enterStore(){
