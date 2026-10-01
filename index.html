@@ -591,7 +591,7 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 .pktg-sheet-overlay.active{ display:block; }
 .pktg-sheet{ position:fixed; bottom:0; left:0; right:0; background:var(--bg-elevated); color:var(--text); border-top-left-radius:22px; border-top-right-radius:22px; padding:18px 16px calc(18px + var(--safe-bottom)); z-index:101; max-width:760px; margin:0 auto; transform:translateY(100%); transition:transform .28s var(--ease-spring); }
 .pktg-sheet.active{ transform:translateY(0); }
-.pktg-sheet-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; padding:8px 0; }
+.pktg-sheet-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; padding:8px 0; }
 .pktg-sheet-item{ display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; }
 .pktg-sheet-icon{ width:54px; height:54px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; }
 .pktg-sheet-label{ font-size:11.5px; color:var(--text); font-weight:600; }
@@ -1240,13 +1240,14 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 
   <div class="pktg-sheet-overlay" id="pktg-sheet-overlay"></div>
   <div class="pktg-sheet" id="pktg-sheet">
-    <div class="pktg-sheet-grid">
-      <div class="pktg-sheet-item" id="pktg-attach-gallery"><div class="pktg-sheet-icon" style="background:#007aff"><svg width="24" height="24"><use href="#ic-image"/></svg></div><span class="pktg-sheet-label">Gallery</span></div>
-      <div class="pktg-sheet-item" id="pktg-attach-video"><div class="pktg-sheet-icon" style="background:#ff9500"><svg width="24" height="24"><use href="#ic-video"/></svg></div><span class="pktg-sheet-label">Video</span></div>
-      <div class="pktg-sheet-item" id="pktg-attach-file"><div class="pktg-sheet-icon" style="background:#5856d6"><svg width="24" height="24"><use href="#ic-cube"/></svg></div><span class="pktg-sheet-label">File</span></div>
-      <div class="pktg-sheet-item" id="pktg-attach-camera"><div class="pktg-sheet-icon" style="background:#ff2d55"><svg width="24" height="24"><use href="#ic-camera"/></svg></div><span class="pktg-sheet-label">Camera</span></div>
-    </div>
+  <div class="pktg-sheet-grid">
+    <div class="pktg-sheet-item" id="pktg-attach-store"><div class="pktg-sheet-icon" style="background:#10b981"><svg width="24" height="24"><use href="#ic-cube"/></svg></div><span class="pktg-sheet-label">Store</span></div>
+    <div class="pktg-sheet-item" id="pktg-attach-gallery"><div class="pktg-sheet-icon" style="background:#007aff"><svg width="24" height="24"><use href="#ic-image"/></svg></div><span class="pktg-sheet-label">Gallery</span></div>
+    <div class="pktg-sheet-item" id="pktg-attach-video"><div class="pktg-sheet-icon" style="background:#ff9500"><svg width="24" height="24"><use href="#ic-video"/></svg></div><span class="pktg-sheet-label">Video</span></div>
+    <div class="pktg-sheet-item" id="pktg-attach-file"><div class="pktg-sheet-icon" style="background:#5856d6"><svg width="24" height="24"><use href="#ic-cube"/></svg></div><span class="pktg-sheet-label">File</span></div>
+    <div class="pktg-sheet-item" id="pktg-attach-camera"><div class="pktg-sheet-icon" style="background:#ff2d55"><svg width="24" height="24"><use href="#ic-camera"/></svg></div><span class="pktg-sheet-label">Camera</span></div>
   </div>
+</div>
   <input type="file" id="pktg-input-gallery" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.heic,.heif,*/*" style="display:none">
 <input type="file" id="pktg-input-video" accept="video/*,*/*" style="display:none">
 <input type="file" id="pktg-input-file" accept="*/*" style="display:none">
@@ -5463,6 +5464,12 @@ input.addEventListener("paste", e=>{
   });
   P("pktg-reply-cancel").addEventListener("click", ()=>{ state.tg.replyTo = null; updateTgReplyBar(); });
   P("pktg-sheet-overlay").addEventListener("click", closeTgSheet);
+  P("pktg-attach-store").addEventListener("click", ()=>{
+  const ch = state.channels.find(c=>c.id === state.tg.channelId);
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can upload here", "ic-close"); return; }
+  closeTgSheet();
+  openStoreAppPickerForChannel();
+});
   P("pktg-attach-gallery").addEventListener("click", ()=>{ P("pktg-input-gallery").click(); closeTgSheet(); });
   P("pktg-attach-video").addEventListener("click", ()=>{ P("pktg-input-video").click(); closeTgSheet(); });
   P("pktg-attach-file").addEventListener("click", ()=>{ P("pktg-input-file").click(); closeTgSheet(); });
@@ -6141,6 +6148,7 @@ function tgMsgLabel(m){
   if(m.type === "video") return m.caption || m.filename || "Video";
   if(m.type === "audio") return m.caption || "Voice message";
   if(m.type === "file") return m.filename || m.caption || "Document";
+  if(m.type === "store_app") return m.appName || m.caption || "Store App";
   return m.text || m.caption || "Message";
 }
 function maskFilename(name){
@@ -6222,6 +6230,17 @@ function buildTelegramMsg(m){
     } else {
       html += buildAudioPlayerHTML(m, mediaUrl);
     }
+    } else if(m.type === "store_app"){
+  const thumb = safeImg(m.appThumb || "");
+  const appNm = preview ? "█████" : (m.appName || "Store App");
+  html += `<button type="button" class="pktg-file-card" data-tg-store="${escapeHtml(m.appId||"")}">
+    <span class="pktg-file-icon">${thumb && !preview ? `<img src="${escapeHtml(thumb)}" alt=""/>` : `<svg><use href="#ic-cube"/></svg>`}</span>
+    <span class="pktg-file-info">
+      <span class="pktg-file-name">${escapeHtml(appNm)}</span>
+      <span class="pktg-file-size">${escapeHtml(m.appFormat || "APK")}${m.appSize ? " • " + escapeHtml(m.appSize) : ""}${preview ? "" : " • Tap to open"}</span>
+    </span>
+    <span class="pktg-dl-btn" title="Open in store"><svg><use href="#ic-play"/></svg></span>
+  </button>`;
   } else if(m.type === "file"){
     const iconUrl = safeImg(m.iconUrl || "");
     const name = preview ? maskFilename(m.filename || "Document") : (m.filename || "Document");
@@ -6268,6 +6287,14 @@ if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</
   if(fileBtn) fileBtn.addEventListener("click", e=>{ e.preventDefault(); e.stopPropagation(); if(e.target.closest("[data-tg-dl]")) return; });
   const dl = card.querySelector("[data-tg-dl]");
   if(dl) dl.addEventListener("click", e=>{ e.stopPropagation(); tgDownloadMessage(m); });
+  const storeBtn = card.querySelector("[data-tg-store]");
+if(storeBtn) storeBtn.addEventListener("click", e=>{
+  e.stopPropagation();
+  const appId = storeBtn.dataset.tgStore;
+  if(!appId) return;
+  if(state.apps.some(a=>a.id===appId)) openAppDetail(appId);
+  else toast("This app is no longer available in the store.", "ic-close");
+});
   const audioEl = card.querySelector(".pktg-audio");
   if(audioEl) initAudioPlayer(audioEl);
   // Spoiler tap-to-reveal
@@ -6905,6 +6932,112 @@ async function sendVoiceBlob(blob, durationSec, description){
     if((e.code||"").includes("permission-denied")){ rulesBanner("Posting voice messages to this channel is blocked by your current Firestore rules."); toast("Firestore rules need updating", "ic-close"); }
     else toast(e.message || "Voice upload failed", "ic-close");
   }finally{ hideTgUpload(); }
+}
+/* ============ STORE APP → CHANNEL ============ */
+function openStoreAppPickerForChannel(){
+  if(!state.apps.length){ toast("No apps in your store yet", "ic-close"); return; }
+  const html = `
+  <div class="sheet-backdrop dlg" id="tgpick-backdrop"><div class="sheet" style="max-height:80vh;display:flex;flex-direction:column">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <h3 style="padding:22px 18px 8px;margin:0;font-size:17px">Send a store app</h3>
+      <p class="hint-p" style="margin:0 18px 10px">Pick any app from your Pika Store to send to this channel.</p>
+      <div class="field" style="margin:0 18px 10px"><input type="text" id="tgpick-search" placeholder="Search apps…" autocomplete="off" /></div>
+      <div class="settings-list" id="tgpick-list" style="margin:0 14px 20px;overflow-y:auto"></div>
+  </div></div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const wrap = $("#tgpick-backdrop"), list = $("#tgpick-list");
+  const draw = ()=>{
+    const q = $("#tgpick-search").value.trim();
+    const items = q ? state.apps.map(a=>({a, s:fuzzyScore(q,a.name)})).filter(x=>x.s>=40).sort((x,y)=>y.s-x.s).map(x=>x.a) : state.apps;
+    list.innerHTML = items.map(a=>`<div class="mini-row tap" data-pick="${a.id}"><img class="thumb" alt="" src="${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}" /><div class="mini-main"><b>${escapeHtml(a.name)}</b><small>${escapeHtml(a.format||"APK")} • ${fmtCount(a.downloadCount||0)} downloads</small></div></div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No apps found.</div>`;
+  };
+  draw();
+  $("#tgpick-search").addEventListener("input", draw);
+  wrap.addEventListener("click", e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
+    const r = e.target.closest("[data-pick]");
+    if(r){
+      const app = state.apps.find(a=>a.id===r.dataset.pick);
+      wrap.remove();
+      if(app) openStoreAppPreviewForChannel(app);
+    }
+  });
+}
+
+function openStoreAppPreviewForChannel(app){
+  state.tg.pendingAttachment = { storeApp: app, kind: "store" };
+  state.tg.pendingIconFile = null;
+  state.tg.pendingDescription = "";
+  const thumbUrl = app.thumbUrl || placeholderIcon(app.name);
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="store-preview-backdrop">
+      <div class="sheet" style="padding:22px 20px calc(22px + var(--safe-bottom));max-height:90vh;overflow-y:auto;">
+        <h3 style="text-align:center;font-size:17px;margin:0 0 14px;">Send store app</h3>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:14px;background:var(--surface-2);margin-bottom:14px;">
+          <div style="width:56px;height:56px;border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border);flex-shrink:0;">
+            <img src="${escapeHtml(thumbUrl)}" style="width:100%;height:100%;object-fit:cover;"/>
+          </div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(app.name)}</div>
+            <div style="font-size:11.5px;color:var(--text-faint);margin-top:2px;">${escapeHtml(app.format||"APK")}${app.sizeLabel? " • "+escapeHtml(app.sizeLabel):""}</div>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px;">Description (optional)</label>
+          <textarea id="store-pv-desc" rows="3" placeholder="Add a description, install notes, or any message for this app…" style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:13.5px;font-family:inherit;resize:vertical;min-height:70px;max-height:180px;outline:none;-webkit-user-select:text;user-select:text;"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="store-pv-cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" id="store-pv-send" type="button">Send to channel</button>
+        </div>
+      </div>
+    </div>`);
+  const wrap = $("#store-preview-backdrop");
+  const close = ()=>{ wrap.remove(); state.tg.pendingAttachment = null; state.tg.pendingDescription = ""; };
+  $("#store-pv-cancel").addEventListener("click", close);
+  $("#store-pv-send").addEventListener("click", ()=>{
+    state.tg.pendingDescription = ($("#store-pv-desc").value || "").trim();
+    wrap.remove();
+    sendStoreAppToChannel();
+  });
+  wrap.addEventListener("click", e=>{ if(e.target === wrap) close(); });
+}
+
+async function sendStoreAppToChannel(){
+  const att = state.tg.pendingAttachment;
+  if(!att || !att.storeApp) return;
+  const app = att.storeApp;
+  const description = (state.tg.pendingDescription || "").trim();
+  state.tg.pendingAttachment = null;
+  state.tg.pendingDescription = "";
+  if(!state.tg.channelId) return;
+  if(guestBlock("broadcast in channels")) return;
+  try{
+    await addDoc(collection(db,"channelMessages"), {
+      channelId: state.tg.channelId,
+      type: "store_app",
+      text: "",
+      caption: description,
+      appId: app.id,
+      appName: app.name,
+      appThumb: app.thumbUrl || "",
+      appFormat: app.format || "APK",
+      appSize: app.sizeLabel || "",
+      senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
+      createdAt: serverTimestamp(), createdAtMs: Date.now(),
+      deleted: false,
+      replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null,
+      views: 0
+    });
+    state.tg.replyTo = null;
+    updateTgReplyBar();
+    toast("App sent to channel");
+  }catch(e){
+    console.error(e);
+    if((e.code||"").includes("permission-denied")){ rulesBanner("Posting to this channel is blocked by your current Firestore rules."); toast("Firestore rules need updating", "ic-close"); }
+    else toast("Send failed: " + (e.code||e.message), "ic-close");
+  }
 }
 async function tgHandleFile(e, kind){
   const ch = state.channels.find(c=>c.id === state.tg.channelId);
