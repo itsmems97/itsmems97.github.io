@@ -727,43 +727,64 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 }
 #pktg-conv.pktg-preview-mode .pktg-preview-badge{ display:inline-flex; }
 /* =====================================================================
-   Inline formatting toolbar (appears on text selection in composer)
+   Inline formatting toolbar (appears on text selection everywhere)
    ===================================================================== */
 .pktg-fmt-toolbar{
   position: fixed;
-  left: 10px;
-  right: 10px;
-  bottom: calc(78px + var(--safe-bottom));
   z-index: 500;
   display: none;
   align-items: center;
-  justify-content: space-around;
-  gap: 2px;
-  padding: 6px;
+  gap: 1px;
+  padding: 5px 6px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow: 0 12px 40px rgba(0,0,0,.55);
-  animation: pktgFmtIn .18s ease;
+  animation: pktgFmtIn .16s ease;
+  width: max-content;
+  max-width: calc(100vw - 12px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.pktg-fmt-toolbar::-webkit-scrollbar{ display: none; }
 .pktg-fmt-toolbar.active{ display: flex; }
 @keyframes pktgFmtIn{ from{ opacity:0; transform: translateY(6px) scale(.96); } to{ opacity:1; transform: none; } }
 .pktg-fmt-btn{
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-width: 58px; height: 54px; padding: 4px 6px;
-  border-radius: 12px;
+  min-width: 48px; height: 46px; padding: 3px 6px;
+  border-radius: 10px;
   background: transparent; color: var(--text);
-  font-weight: 700; gap: 2px; flex: 1;
-  transition: background .12s;
+  font-weight: 700; gap: 1px; flex: 0 0 auto;
+  transition: background .12s, transform .12s;
+  border: none;
+  cursor: pointer;
 }
-.pktg-fmt-btn:active{ background: var(--surface-2); }
-.pktg-fmt-btn svg{ width: 18px; height: 18px; }
-.pktg-fmt-btn.pktg-fmt-b{ font-weight: 900; font-family: Georgia, serif; }
-.pktg-fmt-btn.pktg-fmt-i{ font-style: italic; font-family: Georgia, serif; }
-.pktg-fmt-btn.pktg-fmt-m{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; }
-.pktg-fmt-btn.pktg-fmt-s{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; letter-spacing: 1px; }
-.pktg-fmt-sep{ width: 1px; height: 22px; background: var(--border); margin: 0 3px; }
-.pktg-fmt-btn.pktg-fmt-danger{ color: var(--danger); }
+.pktg-fmt-btn:hover{ background: var(--surface-2); }
+.pktg-fmt-btn:active{ background: var(--surface-2); transform: scale(.94); }
+.pktg-fmt-btn svg{ width: 17px; height: 17px; }
+.pktg-fmt-btn > b,
+.pktg-fmt-btn > i,
+.pktg-fmt-btn > span:first-child{
+  font-size: 16px;
+  line-height: 1;
+  display: block;
+}
+.pktg-fmt-btn span:last-child{
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-faint);
+  line-height: 1;
+  margin-top: 2px;
+}
+.pktg-fmt-sep{
+  width: 1px;
+  height: 26px;
+  background: var(--border);
+  margin: 0 3px;
+  flex: 0 0 auto;
+}
 /* Mono tap-to-copy cursor */
 .pktg-mono{ cursor: pointer; }
 .pktg-mono:active{ background: rgba(128,128,128,.35); }
@@ -1245,6 +1266,28 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 
 <!-- Inline formatting toolbar -->
 <div class="pktg-fmt-toolbar" id="pktg-fmt-toolbar">
+  <button class="pktg-fmt-btn" data-fmt="selectall" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+      <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/>
+      <path d="M8 12h8M12 8v8" stroke-linecap="round"/>
+    </svg>
+    <span style="font-size:9px;font-weight:600;color:var(--text-faint);">All</span>
+  </button>
+  <button class="pktg-fmt-btn" data-fmt="cut" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+      <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
+      <path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12" stroke-linecap="round"/>
+    </svg>
+    <span style="font-size:9px;font-weight:600;color:var(--text-faint);">Cut</span>
+  </button>
+  <button class="pktg-fmt-btn" data-fmt="copy" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+      <rect x="9" y="9" width="13" height="13" rx="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/>
+    </svg>
+    <span style="font-size:9px;font-weight:600;color:var(--text-faint);">Copy</span>
+  </button>
+  <span class="pktg-fmt-sep"></span>
   <button class="pktg-fmt-btn" data-fmt="bold" type="button">
     <b style="font-size:18px;">B</b>
     <span style="font-size:9px;font-weight:600;color:var(--text-faint);">Bold</span>
@@ -1266,7 +1309,7 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
       <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" stroke-linecap="round"/>
       <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5" stroke-linecap="round"/>
     </svg>
-        <span style="font-size:9px;font-weight:600;color:var(--text-faint);">Link</span>
+    <span style="font-size:9px;font-weight:600;color:var(--text-faint);">Link</span>
   </button>
 </div>
 
@@ -5494,7 +5537,7 @@ P("pktg-unlock-bar").addEventListener("click", ()=>{
 }
 /* =====================================================================
    GLOBAL FORMATTING TOOLBAR
-   Works for ALL registered textareas/inputs across the store:
+   Works for ALL registered textareas/inputs/contenteditables:
    - Channel composer (#pktg-input)
    - Upload description (#app-desc-input)
    - Channel edit description (#che-desc)
@@ -5532,42 +5575,59 @@ function fmtScheduleShow(input, delay){
   if(!input || !document.body.contains(input)) return;
   fmtActiveInput = input;
   if(fmtHideTimer) clearTimeout(fmtHideTimer);
-  fmtHideTimer = setTimeout(()=> fmtTryShow(input), delay || 250);
+  fmtHideTimer = setTimeout(()=> fmtTryShow(input), delay || 200);
 }
 
 function fmtTryShow(input){
   if(!input || document.activeElement !== input) return;
-  const s = input.selectionStart;
-  const e = input.selectionEnd;
-  if(s == null || e == null || s === e) return;
-  fmtSavedSel = { start: s, end: e };
+
+  let rect = null;
+  let hasSelection = false;
+
+  // --- Contenteditable ---
+  if(input.isContentEditable){
+    const sel = window.getSelection();
+    if(sel && sel.rangeCount && !sel.isCollapsed){
+      try{
+        const range = sel.getRangeAt(0);
+        rect = range.getBoundingClientRect();
+        if(rect && (rect.width || rect.height)) hasSelection = true;
+      }catch(e){}
+    }
+  } else {
+    // --- Textarea / input ---
+    const s = input.selectionStart;
+    const e = input.selectionEnd;
+    if(s != null && e != null && s !== e){
+      fmtSavedSel = { start: s, end: e };
+      hasSelection = true;
+      try{
+        const range = document.createRange();
+        range.setStart(input, Math.min(s, input.value.length));
+        range.setEnd(input, Math.min(e, input.value.length));
+        rect = range.getBoundingClientRect();
+      }catch(err){}
+    }
+  }
+
+  if(!hasSelection) return;
+  if(!rect || (rect.width === 0 && rect.height === 0)) rect = input.getBoundingClientRect();
 
   const toolbar = fmtToolbar();
   if(!toolbar) return;
 
-  let rect = null;
-  if(input.tagName === "TEXTAREA"){
-    try{
-      const range = document.createRange();
-      range.setStart(input, Math.min(s, input.value.length));
-      range.setEnd(input, Math.min(e, input.value.length));
-      rect = range.getBoundingClientRect();
-    }catch(err){}
-  }
-  if(!rect || (rect.width === 0 && rect.height === 0)) rect = input.getBoundingClientRect();
+  toolbar.style.right = "auto";
+  toolbar.style.bottom = "auto";
+  toolbar.classList.add("active");
 
   const cx = rect.left + rect.width / 2;
-  const topY = Math.max(70, rect.top - 52);
-
-  toolbar.style.left = cx + "px";
-  toolbar.style.top = topY + "px";
-  toolbar.classList.add("active");
 
   requestAnimationFrame(()=>{
     const r = toolbar.getBoundingClientRect();
     let nx = cx - r.width / 2;
-    let ny = topY;
-    if(r.right > window.innerWidth - 8) nx = window.innerWidth - r.width - 8;
+    let ny = rect.top - r.height - 10;
+    if(ny < 60) ny = rect.bottom + 10;
+    if(nx + r.width > window.innerWidth - 8) nx = window.innerWidth - r.width - 8;
     if(nx < 8) nx = 8;
     if(ny + r.height > window.innerHeight - 8) ny = window.innerHeight - r.height - 8;
     if(ny < 60) ny = 60;
@@ -5583,11 +5643,18 @@ function fmtAttachTo(input){
   input.addEventListener("blur", ()=>{
     setTimeout(()=>{
       if(document.activeElement !== input) fmtHide();
-    }, 220);
+    }, 200);
   });
-  input.addEventListener("select", ()=> fmtScheduleShow(input, 220));
-  input.addEventListener("touchend", ()=> fmtScheduleShow(input, 450));
-  input.addEventListener("mouseup", ()=> fmtScheduleShow(input, 60));
+  if(!input.isContentEditable){
+    input.addEventListener("select", ()=> fmtScheduleShow(input, 150));
+  }
+  input.addEventListener("touchend", ()=> fmtScheduleShow(input, 400));
+  input.addEventListener("mouseup", ()=> fmtScheduleShow(input, 40));
+  input.addEventListener("keyup", (e)=>{
+    if(input.isContentEditable && (e.key === "Shift" || e.key.startsWith("Arrow") || e.key === "a" && (e.ctrlKey || e.metaKey))){
+      fmtScheduleShow(input, 200);
+    }
+  });
 }
 
 function fmtScanAll(){
@@ -5597,9 +5664,92 @@ function fmtScanAll(){
   });
 }
 
+/* ---------- Copy / Cut helpers ---------- */
+async function fmtDoCopy(){
+  const input = fmtActiveInput;
+  if(!input) return;
+  let text = "";
+  if(input.isContentEditable){
+    const sel = window.getSelection();
+    text = sel ? sel.toString() : "";
+  } else {
+    text = input.value.slice(input.selectionStart, input.selectionEnd);
+  }
+  if(!text){ toast("Nothing selected", "ic-close"); return; }
+  const ok = await copyText(text);
+  toast(ok ? "Copied" : "Copy failed", ok ? "ic-check" : "ic-close");
+  fmtHide();
+}
+
+function fmtDoCut(){
+  const input = fmtActiveInput;
+  if(!input) return;
+  let text = "";
+  if(input.isContentEditable){
+    const sel = window.getSelection();
+    if(!sel || !sel.rangeCount || sel.isCollapsed){ fmtHide(); return; }
+    text = sel.toString();
+    if(!text){ fmtHide(); return; }
+    copyText(text);
+    sel.deleteFromDocument();
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    if(typeof updateSendBtnIcon === "function") updateSendBtnIcon();
+  } else {
+    const s = input.selectionStart, e = input.selectionEnd;
+    if(s === e){ fmtHide(); return; }
+    text = input.value.slice(s, e);
+    copyText(text);
+    input.value = input.value.slice(0, s) + input.value.slice(e);
+    try{ input.setSelectionRange(s, s); }catch(_){}
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  toast("Cut", "ic-check");
+  fmtHide();
+}
+
+function fmtDoSelectAll(){
+  const input = fmtActiveInput;
+  if(!input) return;
+  if(input.isContentEditable){
+    const range = document.createRange();
+    range.selectNodeContents(input);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else {
+    input.focus();
+    input.select();
+  }
+  fmtHide();
+}
+
+/* ---------- Wrap / Unwrap ---------- */
 function fmtApplyWrap(before, after){
   const input = fmtActiveInput;
   if(!input) return;
+
+  // --- Contenteditable ---
+  if(input.isContentEditable){
+    const sel = window.getSelection();
+    if(!sel || !sel.rangeCount || sel.isCollapsed){ fmtHide(); return; }
+    const range = sel.getRangeAt(0);
+    const inner = range.toString();
+    if(!inner){ fmtHide(); return; }
+    range.deleteContents();
+    const node = document.createTextNode(before + inner + after);
+    range.insertNode(node);
+    const newRange = document.createRange();
+    newRange.setStartAfter(node);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    if(typeof updateSendBtnIcon === "function") updateSendBtnIcon();
+    fmtHide();
+    return;
+  }
+
+  // --- Textarea ---
   const { start, end } = fmtSavedSel;
   const v = input.value;
   if(start === end || start > v.length || end > v.length) return;
@@ -5628,7 +5778,36 @@ function fmtApplyWrap(before, after){
 
 async function fmtCreateLink(){
   const input = fmtActiveInput;
-  if(!input) return;
+  if(!input){ return; }
+
+  // --- Contenteditable ---
+  if(input.isContentEditable){
+    const sel = window.getSelection();
+    if(!sel || !sel.rangeCount || sel.isCollapsed){ fmtHide(); return; }
+    const range = sel.getRangeAt(0);
+    const inner = range.toString();
+    if(!inner){ fmtHide(); return; }
+    const savedRange = range.cloneRange();
+    const url = await askText({ title:"Create link", placeholder:"https://example.com", max:500, okLabel:"Add link" });
+    if(!url){ fmtHide(); return; }
+    let u = url.trim();
+    if(!/^https?:\/\//i.test(u)) u = "https://" + u;
+    const wrapped = `[${inner}](${u})`;
+    savedRange.deleteContents();
+    const node = document.createTextNode(wrapped);
+    savedRange.insertNode(node);
+    const newRange = document.createRange();
+    newRange.setStartAfter(node);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    if(typeof updateSendBtnIcon === "function") updateSendBtnIcon();
+    fmtHide();
+    return;
+  }
+
+  // --- Textarea ---
   const { start, end } = fmtSavedSel;
   const v = input.value;
   if(start === end || start > v.length || end > v.length) return;
@@ -5660,7 +5839,10 @@ function initFmtToolbar(){
     e.preventDefault();
     e.stopPropagation();
     const fmt = btn.dataset.fmt;
-    if(fmt === "bold") fmtApplyWrap("**", "**");
+    if(fmt === "selectall") fmtDoSelectAll();
+    else if(fmt === "cut") fmtDoCut();
+    else if(fmt === "copy") fmtDoCopy();
+    else if(fmt === "bold") fmtApplyWrap("**", "**");
     else if(fmt === "italic") fmtApplyWrap("_", "_");
     else if(fmt === "mono") fmtApplyWrap("`", "`");
     else if(fmt === "spoiler") fmtApplyWrap("||", "||");
@@ -5669,11 +5851,20 @@ function initFmtToolbar(){
 
   document.addEventListener("selectionchange", ()=>{
     const el = document.activeElement;
-    if(!el || !FMT_IDS.includes(el.id)) return;
+    if(!el) return;
+    if(el.isContentEditable){
+      const sel = window.getSelection();
+      if(sel && sel.rangeCount && !sel.isCollapsed){
+        fmtActiveInput = el;
+        fmtScheduleShow(el, 200);
+      }
+      return;
+    }
+    if(!FMT_IDS.includes(el.id)) return;
     const s = el.selectionStart;
     const e2 = el.selectionEnd;
     if(s == null || e2 == null || s === e2) return;
-    fmtScheduleShow(el, 280);
+    fmtScheduleShow(el, 200);
   });
 
   document.addEventListener("scroll", ()=>{ if(fmtToolbar() && fmtToolbar().classList.contains("active")) fmtHide(); }, true);
@@ -5687,6 +5878,17 @@ function initFmtToolbar(){
     manualBtn.addEventListener("click", ()=>{
       const input = document.getElementById("pktg-input");
       if(!input) return;
+      if(input.isContentEditable){
+        const sel = window.getSelection();
+        if(!sel || !sel.rangeCount || sel.isCollapsed){
+          toast("Select text first", "ic-close");
+          input.focus();
+          return;
+        }
+        fmtActiveInput = input;
+        fmtTryShow(input);
+        return;
+      }
       const s = input.selectionStart, e = input.selectionEnd;
       if(s == null || e == null || s === e){
         toast("Select text first", "ic-close");
