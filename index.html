@@ -5936,7 +5936,13 @@ input.addEventListener("paste", e=>{
   const txt = (e.clipboardData || window.clipboardData).getData("text/plain");
   insertNodeAtCaret(input, document.createTextNode(txt));
 });
-  input.addEventListener("keydown", e=>{ if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); tgSendOrRecord(); } });
+  input.addEventListener("keydown", e=>{
+  // Ctrl+Enter or Cmd+Enter sends; plain Enter adds a new line
+  if(e.key === "Enter" && (e.ctrlKey || e.metaKey)){
+    e.preventDefault();
+    tgSendOrRecord();
+  }
+});
   P("pktg-send-btn").addEventListener("click", tgSendOrRecord);
   P("pktg-attach-btn").addEventListener("click", ()=>{
     const ch = state.channels.find(c=>c.id === state.tg.channelId);
