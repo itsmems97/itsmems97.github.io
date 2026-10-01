@@ -3022,7 +3022,7 @@ function openAppDetail(appId){
       </div>
       ${shots.length ? `<div class="screens-row">${shots.map(s=>`<img src="${s}" alt=""/>`).join("")}</div>` : ""}
     <div class="accordion">
-      <details class="accordion-item" open><summary>Description <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary><div class="body">${escapeHtml(desc)}</div></details>
+      <div class="accordion-item" open><summary>Description <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary><div class="body">${formatMessageText(desc)}</div></details>
       <details class="accordion-item"><summary>File info <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary><div class="body">Format: ${app.format||"APK"}${app.sizeLabel? " • "+app.sizeLabel:""}\nUploaded by: ${escapeHtml(up.name)}\nCategory: ${escapeHtml(app.category||"Uncategorized")}${createdMs? "\nUploaded: " + new Date(createdMs).toLocaleString() : ""}</div></details>
     </div>
     <div style="padding:12px 18px 6px">
@@ -3478,8 +3478,8 @@ function renderChatLog(){
     const who = `<div class="who">${avatarHtml(u.name, u.photo)}${escapeHtml(u.name)}${tick(u.verified)}</div>`;
     const quote = m.replyTo ? `<div class="quote" data-jump="${escapeHtml(m.replyTo.id||"")}"><b>${escapeHtml(m.replyTo.name||"")}</b>${escapeHtml(m.replyTo.text||"")}</div>` : "";
     const body = m.appId
-      ? `<div class="share-card" data-open-app="${escapeHtml(m.appId)}"><img alt="" src="${escapeHtml(safeImg(m.appThumb) || placeholderIcon(m.appName||"A"))}" /><div><b>${escapeHtml(m.appName||"App")}</b><small>Tap to view</small></div></div>`
-      : escapeHtml(m.text);
+  ? `<div class="share-card" data-open-app="${escapeHtml(m.appId)}"><img alt="" src="${escapeHtml(safeImg(m.appThumb) || placeholderIcon(m.appName||"A"))}" /><div><b>${escapeHtml(m.appName||"App")}</b><small>Tap to view</small></div></div>`
+  : formatMessageText(m.text);
     return `<div class="msg ${mine ? "me" : "other"}${canDel ? " has-del" : ""}" data-mid="${m.id}">${del}${who}${quote}${body}</div>`;
   }).join("");
   log.scrollTop = log.scrollHeight;
@@ -4094,7 +4094,7 @@ function openCommentsSheet(appId, appType, appName){
             <b style="font-size:13.5px;pointer-events:none;user-select:none">${escapeHtml(c.name || "Member")}${verified ? tick(true) : ""}</b>
             <small style="font-size:10.5px;color:var(--text-faint);font-family:ui-monospace,monospace;pointer-events:none;user-select:none">#${escapeHtml(shortId)}</small>
           </div>
-          <div style="font-size:13px;line-height:1.5;margin-top:4px;word-break:break-word;white-space:pre-wrap;color:var(--text)">${escapeHtml(c.text)}</div>
+          <div style="font-size:13px;line-height:1.5;margin-top:4px;word-break:break-word;color:var(--text)">${formatMessageText(c.text)}</div>
           <small style="font-size:10.5px;color:var(--text-faint);display:block;margin-top:5px">${time}</small>
         </div>
         ${canDel ? `<button class="icon-del" data-cmt-del="${c.id}" title="Delete" style="position:absolute;top:8px;right:6px"><svg width="14" height="14"><use href="#ic-trash"/></svg></button>` : ""}
@@ -4214,7 +4214,7 @@ function openDmPanel(otherId){
     log.innerHTML = msgs.map(m=>{
       const mine = m.from === state.uid;
       const canDel = mine || canDelAny;
-      return `<div class="msg ${mine ? "me" : "other"}${canDel ? " has-del" : ""}">${canDel ? `<button class="msg-del" data-del-dm="${m.id}" title="Delete"><svg><use href="#ic-trash"/></svg></button>` : ""}${escapeHtml(m.text)}<span class="dm-meta">${dmTickIcon(m, otherId, tid)}</span></div>`;
+      return `<div class="msg ${mine ? "me" : "other"}${canDel ? " has-del" : ""}">${canDel ? `<button class="msg-del" data-del-dm="${m.id}" title="Delete"><svg><use href="#ic-trash"/></svg></button>` : ""}${formatMessageText(m.text)}<span class="dm-meta">${dmTickIcon(m, otherId, tid)}</span></div>`;
     }).join("") || `<div class="empty-row">Say hello to ${escapeHtml(o.name)}.</div>`;
     log.scrollTop = log.scrollHeight; markSeen();
   };
@@ -5316,142 +5316,166 @@ P("pktg-unlock-bar").addEventListener("click", ()=>{
   initFmtToolbar();
 }
 /* =====================================================================
-   Inline formatting toolbar for the channel composer.
-   - Shows when the user selects text inside #pktg-input
-   - Applies markdown-ish formatting around the selection
-   - Create Link: prompts for URL, wraps selection as [text](url)
-   - Mono: wrapped as `text`
-   - Spoiler: wrapped as ||text||
+   GLOBAL FORMATTING TOOLBAR
+   Works for ALL registered textareas/inputs across the store:
+   - Channel composer (#pktg-input)
+   - Upload description (#app-desc-input)
+   - Channel edit description (#che-desc)
+   - File preview description (#pv-desc)
+   - Voice preview description (#voice-preview-desc)
+   - Private chat (#dm-input)
+   - Group chat (#chat-input)
+   - Comments (#cmt-input)
    ===================================================================== */
-function initFmtToolbar(){
-  const toolbar = document.getElementById("pktg-fmt-toolbar");
-  const input = document.getElementById("pktg-input");
-  if(!toolbar || !input) return;
+const FMT_IDS = [
+  "pktg-input",
+  "app-desc-input",
+  "che-desc",
+  "pv-desc",
+  "voice-preview-desc",
+  "dm-input",
+  "chat-input",
+  "cmt-input"
+];
 
-  let savedSel = { start: 0, end: 0 };
-  let lastSelection = { start: 0, end: 0 };
-  let hideTimer = null;
-  let pollingTimer = null;
+let fmtActiveInput = null;
+let fmtSavedSel = { start: 0, end: 0 };
+let fmtHideTimer = null;
 
-  const hide = ()=>{ toolbar.classList.remove("active"); };
-  const isToolbarActive = ()=> toolbar.classList.contains("active");
+function fmtToolbar(){
+  return document.getElementById("pktg-fmt-toolbar");
+}
 
-  const showAt = (x, y)=>{
-    toolbar.style.left = x + "px";
-    toolbar.style.top = y + "px";
-    toolbar.classList.add("active");
-    requestAnimationFrame(()=>{
-      const r = toolbar.getBoundingClientRect();
-      let nx = x, ny = y;
-      if(r.right > window.innerWidth - 8) nx = window.innerWidth - r.width - 8;
-      if(r.left < 8) nx = 8;
-      if(r.top < 60) ny = 60;
-      if(r.bottom > window.innerHeight - 8) ny = window.innerHeight - r.height - 8;
-      toolbar.style.left = nx + "px";
-      toolbar.style.top = ny + "px";
-    });
-  };
+function fmtHide(){
+  const t = fmtToolbar();
+  if(t) t.classList.remove("active");
+}
 
-  const tryShow = ()=>{
-    if(document.activeElement !== input) return;
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-    if(start == null || end == null || start === end) return;
-    savedSel = { start, end };
-    let rect = null;
+function fmtScheduleShow(input, delay){
+  if(!input || !document.body.contains(input)) return;
+  fmtActiveInput = input;
+  if(fmtHideTimer) clearTimeout(fmtHideTimer);
+  fmtHideTimer = setTimeout(()=> fmtTryShow(input), delay || 250);
+}
+
+function fmtTryShow(input){
+  if(!input || document.activeElement !== input) return;
+  const s = input.selectionStart;
+  const e = input.selectionEnd;
+  if(s == null || e == null || s === e) return;
+  fmtSavedSel = { start: s, end: e };
+
+  const toolbar = fmtToolbar();
+  if(!toolbar) return;
+
+  let rect = null;
+  if(input.tagName === "TEXTAREA"){
     try{
       const range = document.createRange();
-      range.setStart(input, Math.min(start, input.value.length));
-      range.setEnd(input, Math.min(end, input.value.length));
+      range.setStart(input, Math.min(s, input.value.length));
+      range.setEnd(input, Math.min(e, input.value.length));
       rect = range.getBoundingClientRect();
-    }catch(e){}
-    if(!rect || (rect.width === 0 && rect.height === 0)){
-      rect = input.getBoundingClientRect();
-    }
-    const cx = rect.left + rect.width / 2;
-    const topY = Math.max(70, rect.top - 52);
-    showAt(cx - 160, topY);
-  };
+    }catch(err){}
+  }
+  if(!rect || (rect.width === 0 && rect.height === 0)) rect = input.getBoundingClientRect();
 
-  // 1. selectionchange on document (most reliable — fires on all browsers)
-  document.addEventListener("selectionchange", ()=>{
-    if(document.activeElement !== input) return;
-    const s = input.selectionStart, e = input.selectionEnd;
-    if(s == null || e == null || s === e) return;
-    if(hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(tryShow, 300);
+  const cx = rect.left + rect.width / 2;
+  const topY = Math.max(70, rect.top - 52);
+
+  toolbar.style.left = cx + "px";
+  toolbar.style.top = topY + "px";
+  toolbar.classList.add("active");
+
+  requestAnimationFrame(()=>{
+    const r = toolbar.getBoundingClientRect();
+    let nx = cx - r.width / 2;
+    let ny = topY;
+    if(r.right > window.innerWidth - 8) nx = window.innerWidth - r.width - 8;
+    if(nx < 8) nx = 8;
+    if(ny + r.height > window.innerHeight - 8) ny = window.innerHeight - r.height - 8;
+    if(ny < 60) ny = 60;
+    toolbar.style.left = nx + "px";
+    toolbar.style.top = ny + "px";
   });
+}
 
-  // 2. select event on input
-  input.addEventListener("select", ()=>{
-    if(hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(tryShow, 250);
-  });
-
-  // 3. touchend — mobile delay for native selection to settle
-  input.addEventListener("touchend", ()=>{
-    if(hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(tryShow, 450);
-  });
-
-  // 4. mouseup for desktop
-  input.addEventListener("mouseup", ()=>{
-    if(hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(tryShow, 50);
-  });
-
-  // 5. Polling fallback — checks every 500ms
-  pollingTimer = setInterval(()=>{
-    if(document.activeElement !== input) return;
-    if(isToolbarActive()) return;
-    const s = input.selectionStart, e = input.selectionEnd;
-    if(s == null || e == null || s === e) return;
-    if(s === lastSelection.start && e === lastSelection.end) return;
-    lastSelection = { start: s, end: e };
-    tryShow();
-  }, 500);
-  window.__fmtPollingTimer = pollingTimer;
-
-  // Hide on scroll (capture phase)
-  document.addEventListener("scroll", ()=>{ if(isToolbarActive()) hide(); }, true);
-
-  // Hide when input loses focus
+function fmtAttachTo(input){
+  if(!input || input.__fmtAttached) return;
+  input.__fmtAttached = true;
+  input.addEventListener("focus", ()=>{ fmtActiveInput = input; });
   input.addEventListener("blur", ()=>{
     setTimeout(()=>{
-      if(!isToolbarActive()) return;
-      if(document.activeElement !== input) hide();
-    }, 200);
+      if(document.activeElement !== input) fmtHide();
+    }, 220);
   });
+  input.addEventListener("select", ()=> fmtScheduleShow(input, 220));
+  input.addEventListener("touchend", ()=> fmtScheduleShow(input, 450));
+  input.addEventListener("mouseup", ()=> fmtScheduleShow(input, 60));
+}
 
-  const applyWrap = (before, after)=>{
-    const { start, end } = savedSel;
-    const v = input.value;
-    if(start === end || start > v.length || end > v.length) return;
-    const inner = v.slice(start, end);
-    const alreadyWrapped = v.slice(Math.max(0, start - before.length), start) === before &&
-                           v.slice(end, end + after.length) === after;
-    let newStart = start, newEnd = end, newVal;
-    if(alreadyWrapped){
-      newVal = v.slice(0, start - before.length) + inner + v.slice(end + after.length);
-      newStart = start - before.length;
-      newEnd = newStart + inner.length;
-    } else {
-      newVal = v.slice(0, start) + before + inner + after + v.slice(end);
-      newStart = start + before.length;
-      newEnd = newStart + inner.length;
-    }
-    input.value = newVal;
-    input.focus();
-    try{ input.setSelectionRange(newStart, newEnd); }catch(e){}
-    savedSel = { start: newStart, end: newEnd };
-    lastSelection = { start: newStart, end: newEnd };
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    updateSendBtnIcon();
-    hide();
-  };
+function fmtScanAll(){
+  FMT_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) fmtAttachTo(el);
+  });
+}
 
-  // Prevent focus loss when tapping toolbar (without blocking clicks)
-toolbar.addEventListener("pointerdown", e=> e.preventDefault());
+function fmtApplyWrap(before, after){
+  const input = fmtActiveInput;
+  if(!input) return;
+  const { start, end } = fmtSavedSel;
+  const v = input.value;
+  if(start === end || start > v.length || end > v.length) return;
+  const inner = v.slice(start, end);
+  const alreadyWrapped =
+    v.slice(Math.max(0, start - before.length), start) === before &&
+    v.slice(end, end + after.length) === after;
+
+  let newStart, newEnd, newVal;
+  if(alreadyWrapped){
+    newVal = v.slice(0, start - before.length) + inner + v.slice(end + after.length);
+    newStart = start - before.length;
+    newEnd = newStart + inner.length;
+  } else {
+    newVal = v.slice(0, start) + before + inner + after + v.slice(end);
+    newStart = start + before.length;
+    newEnd = newStart + inner.length;
+  }
+  input.value = newVal;
+  input.focus();
+  try{ input.setSelectionRange(newStart, newEnd); }catch(e){}
+  fmtSavedSel = { start: newStart, end: newEnd };
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  fmtHide();
+}
+
+async function fmtCreateLink(){
+  const input = fmtActiveInput;
+  if(!input) return;
+  const { start, end } = fmtSavedSel;
+  const v = input.value;
+  if(start === end || start > v.length || end > v.length) return;
+  const inner = v.slice(start, end);
+  const url = await askText({ title:"Create link", placeholder:"https://example.com", max:500, okLabel:"Add link" });
+  if(!url) return;
+  let u = url.trim();
+  if(!/^https?:\/\//i.test(u)) u = "https://" + u;
+  const wrapped = `[${inner}](${u})`;
+  const newVal = v.slice(0, start) + wrapped + v.slice(end);
+  const newEnd = start + wrapped.length;
+  input.value = newVal;
+  input.focus();
+  try{ input.setSelectionRange(newEnd, newEnd); }catch(e){}
+  fmtSavedSel = { start: newEnd, end: newEnd };
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  fmtHide();
+}
+
+function initFmtToolbar(){
+  const toolbar = fmtToolbar();
+  if(!toolbar) return;
+
+  toolbar.addEventListener("pointerdown", e=> e.preventDefault());
 
   toolbar.addEventListener("click", async (e)=>{
     const btn = e.target.closest("[data-fmt]");
@@ -5459,48 +5483,42 @@ toolbar.addEventListener("pointerdown", e=> e.preventDefault());
     e.preventDefault();
     e.stopPropagation();
     const fmt = btn.dataset.fmt;
-    if(fmt === "bold") applyWrap("**", "**");
-    else if(fmt === "italic") applyWrap("_", "_");
-    else if(fmt === "mono") applyWrap("`", "`");
-    else if(fmt === "spoiler") applyWrap("||", "||");
-    else if(fmt === "link"){
-      const { start, end } = savedSel;
-      const v = input.value;
-      if(start === end || start > v.length || end > v.length) return;
-      const inner = v.slice(start, end);
-      const url = await askText({ title:"Create link", placeholder:"https://example.com", max:500, okLabel:"Add link" });
-      if(!url) return;
-      let u = url.trim();
-      if(!/^https?:\/\//i.test(u)) u = "https://" + u;
-      const wrapped = `[${inner}](${u})`;
-      const newVal = v.slice(0, start) + wrapped + v.slice(end);
-      const newEnd = start + wrapped.length;
-      input.value = newVal;
-      input.focus();
-      try{ input.setSelectionRange(newEnd, newEnd); }catch(e){}
-      savedSel = { start: newEnd, end: newEnd };
-      lastSelection = { start: newEnd, end: newEnd };
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      updateSendBtnIcon();
-      hide();
-    }
+    if(fmt === "bold") fmtApplyWrap("**", "**");
+    else if(fmt === "italic") fmtApplyWrap("_", "_");
+    else if(fmt === "mono") fmtApplyWrap("`", "`");
+    else if(fmt === "spoiler") fmtApplyWrap("||", "||");
+    else if(fmt === "link") await fmtCreateLink();
   });
 
-  // Manual fallback button (📝 in composer)
+  document.addEventListener("selectionchange", ()=>{
+    const el = document.activeElement;
+    if(!el || !FMT_IDS.includes(el.id)) return;
+    const s = el.selectionStart;
+    const e2 = el.selectionEnd;
+    if(s == null || e2 == null || s === e2) return;
+    fmtScheduleShow(el, 280);
+  });
+
+  document.addEventListener("scroll", ()=>{ if(fmtToolbar() && fmtToolbar().classList.contains("active")) fmtHide(); }, true);
+
+  fmtScanAll();
+  const obs = new MutationObserver(()=> fmtScanAll());
+  obs.observe(document.body, { childList: true, subtree: true });
+
   const manualBtn = document.getElementById("pktg-fmt-btn-manual");
   if(manualBtn){
     manualBtn.addEventListener("click", ()=>{
+      const input = document.getElementById("pktg-input");
+      if(!input) return;
       const s = input.selectionStart, e = input.selectionEnd;
       if(s == null || e == null || s === e){
         toast("Select text first", "ic-close");
         input.focus();
         return;
       }
-      savedSel = { start: s, end: e };
-      const rect = input.getBoundingClientRect();
-      const topY = Math.max(70, rect.top - 52);
-      const cx = rect.left + rect.width / 2;
-      showAt(cx - 160, topY);
+      fmtActiveInput = input;
+      fmtSavedSel = { start: s, end: e };
+      fmtTryShow(input);
     });
   }
 }
