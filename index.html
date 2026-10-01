@@ -734,27 +734,24 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
   z-index: 500;
   display: none;
   align-items: center;
-  gap: 1px;
-  padding: 5px 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 4px 4px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0,0,0,.55);
   animation: pktgFmtIn .16s ease;
   width: max-content;
-  max-width: calc(100vw - 12px);
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  max-width: calc(100vw - 10px);
 }
-.pktg-fmt-toolbar::-webkit-scrollbar{ display: none; }
 .pktg-fmt-toolbar.active{ display: flex; }
 @keyframes pktgFmtIn{ from{ opacity:0; transform: translateY(6px) scale(.96); } to{ opacity:1; transform: none; } }
 .pktg-fmt-btn{
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-width: 48px; height: 46px; padding: 3px 6px;
-  border-radius: 10px;
+  min-width: 40px; height: 44px; padding: 2px 4px;
+  border-radius: 9px;
   background: transparent; color: var(--text);
   font-weight: 700; gap: 1px; flex: 0 0 auto;
   transition: background .12s, transform .12s;
@@ -763,27 +760,28 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 }
 .pktg-fmt-btn:hover{ background: var(--surface-2); }
 .pktg-fmt-btn:active{ background: var(--surface-2); transform: scale(.94); }
-.pktg-fmt-btn svg{ width: 17px; height: 17px; }
+.pktg-fmt-btn svg{ width: 15px; height: 15px; }
 .pktg-fmt-btn > b,
 .pktg-fmt-btn > i,
 .pktg-fmt-btn > span:first-child{
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
   display: block;
 }
 .pktg-fmt-btn span:last-child{
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   color: var(--text-faint);
   line-height: 1;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 .pktg-fmt-sep{
   width: 1px;
-  height: 26px;
+  height: 24px;
   background: var(--border);
-  margin: 0 3px;
+  margin: 0 2px;
   flex: 0 0 auto;
+  align-self: center;
 }
 /* Mono tap-to-copy cursor */
 .pktg-mono{ cursor: pointer; }
