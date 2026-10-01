@@ -8118,8 +8118,123 @@ async function discSearchAndAppend(q){
       if(tryLoad()) obs.disconnect();
     });
     obs.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['hidden'] });
-    setTimeout(()=>{ obs.disconnect(); discoverLoadHome(); }, 15000);
+        setTimeout(()=>{ obs.disconnect(); discoverLoadHome(); }, 15000);
   }
+})();
+
+/* =====================================================================
+   HARDWARE BACK BUTTON HANDLER
+   Android back button → close open UI first, exit only on home page.
+   ===================================================================== */
+(function initBackButton(){
+  let backExitArmed = false;
+  let backExitTimer = null;
+
+  function closeTopUI(){
+    // 1. Sheets / dialogs (chat, app detail, user, comments, edit, etc.)
+    const sheets = document.querySelectorAll('.sheet-backdrop');
+    if(sheets.length){
+      sheets[sheets.length - 1].remove();
+      return true;
+    }
+
+    // 2. Full-screen image viewer
+    const viewer = document.getElementById('pktg-viewer');
+    if(viewer && viewer.classList.contains('active')){
+      viewer.classList.remove('active');
+      return true;
+    }
+
+    // 3. Long-press context menu
+    const ctx = document.getElementById('pktg-ctx');
+    if(ctx && ctx.classList.contains('active')){
+      ctx.classList.remove('active');
+      return true;
+    }
+
+    // 4. Emoji picker
+    const emoji = document.getElementById('pktg-emoji');
+    if(emoji && emoji.classList.contains('active')){
+      if(typeof closeTgEmoji === 'function') closeTgEmoji();
+      else emoji.classList.remove('active');
+      return true;
+    }
+
+    // 5. Attachment sheet (Telegram-style bottom sheet)
+    const tgsheet = document.getElementById('pktg-sheet');
+    if(tgsheet && tgsheet.classList.contains('active')){
+      if(typeof closeTgSheet === 'function') closeTgSheet();
+      else tgsheet.classList.remove('active');
+      return true;
+    }
+
+    // 6. Inline formatting toolbar
+    const fmt = document.getElementById('pktg-fmt-toolbar');
+    if(fmt && fmt.classList.contains('active')){
+      fmt.classList.remove('active');
+      return true;
+    }
+
+    // 7. Search panel
+    const sp = document.getElementById('search-panel');
+    if(sp && !sp.hidden){
+      if(typeof closeSearchPanel === 'function') closeSearchPanel();
+      else sp.hidden = true;
+      const si = document.getElementById('search-input');
+      if(si) si.value = '';
+      return true;
+    }
+
+    // 8. Channel is open → close it
+    const pktg = document.getElementById('pktg');
+    if(pktg && pktg.classList.contains('open')){
+      if(typeof closeTelegramChannel === 'function') closeTelegramChannel();
+      return true;
+    }
+
+    // 9. Not on home page → navigate to home
+    const activePage = document.querySelector('.page:not([hidden])');
+    if(activePage && activePage.id !== 'home-page'){
+      const homeBtn = document.querySelector('.nav-btn[data-page="home-page"]');
+      if(homeBtn) homeBtn.click();
+      else {
+        document.querySelectorAll('.page').forEach(p => p.hidden = true);
+        const hp = document.getElementById('home-page');
+        if(hp) hp.hidden = false;
+        document.querySelectorAll('.nav-btn').forEach(b =>
+          b.classList.toggle('active', b.dataset.page === 'home-page')
+        );
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  // Push a buffer entry so the first back press is interceptable
+  try{ history.pushState({ pika: 'buffer' }, ""); }catch(e){}
+
+  window.addEventListener('popstate', ()=>{
+    const closed = closeTopUI();
+    if(closed){
+      backExitArmed = false;
+      if(backExitTimer){ clearTimeout(backExitTimer); backExitTimer = null; }
+      try{ history.pushState({ pika: 'buffer' }, ""); }catch(e){}
+      return;
+    }
+
+    // Nothing to close — we're on home page
+    if(!backExitArmed){
+      backExitArmed = true;
+      if(typeof toast === 'function') toast("Press back again to exit", "ic-home");
+      if(backExitTimer) clearTimeout(backExitTimer);
+      backExitTimer = setTimeout(()=>{ backExitArmed = false; }, 2500);
+      try{ history.pushState({ pika: 'buffer' }, ""); }catch(e){}
+      return;
+    }
+
+    // Second press within 2.5s → allow exit (let browser handle it)
+  });
 })();
 </script>
 </body>
