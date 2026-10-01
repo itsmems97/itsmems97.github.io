@@ -1930,30 +1930,36 @@ async function downloadInsideStore(url, filename, onProgress, signal){
   const key = "dl_" + filename + "_" + url.slice(-40);
 
   // Step 1: HEAD request — check size + range support
-  let total = 0, acceptsRanges = false;
+  let total = 0, acceptsRanges = false, canFetch = true;
   try{
     const head = await fetch(url, { method: "HEAD", signal });
-    if(!head.ok) throw new Error("HEAD failed");
-    total = Number(head.headers.get("content-length")) || 0;
-    acceptsRanges = (head.headers.get("accept-ranges") || "").toLowerCase().includes("bytes");
+    if(head.ok){
+      total = Number(head.headers.get("content-length")) || 0;
+      acceptsRanges = (head.headers.get("accept-ranges") || "").toLowerCase().includes("bytes");
+    }
   }catch(e){
     if(e && e.name === "AbortError") throw e;
-    const err = new Error("CORS_BLOCKED");
-    err.code = "CORS_BLOCKED";
+    console.warn("HEAD blocked, falling back to direct download");
+    canFetch = false;
+  }
+
+  // Step 2: If fetch not possible → signal caller to use direct native download
+  if(!canFetch){
+    const err = new Error("DIRECT_DOWNLOAD");
+    err.code = "DIRECT_DOWNLOAD";
     throw err;
   }
 
-  // Step 2: RAM-based size limit
-  // 4GB phone → 1.5GB, 8GB phone → 3GB, etc.
+  // Step 3: RAM-based size limit
   const deviceMemGB = navigator.deviceMemory || 4;
-  const SIZE_LIMIT = Math.min(deviceMemGB * 0.4, 2) * 1024 * 1024 * 1024; // max 2GB
-  if(total > SIZE_LIMIT){
+  const SIZE_LIMIT = Math.min(deviceMemGB * 0.4, 2) * 1024 * 1024 * 1024;
+  if(total > 0 && total > SIZE_LIMIT){
     const err = new Error("FILE_TOO_LARGE");
     err.code = "FILE_TOO_LARGE";
     throw err;
   }
 
-  // Step 3: Check for existing partial download
+  // Step 4: Check for existing partial download
   let startByte = 0;
   let savedChunks = [];
   const existing = await idbGet(key).catch(()=>null);
@@ -1965,16 +1971,28 @@ async function downloadInsideStore(url, filename, onProgress, signal){
     await idbDelete(key).catch(()=>{});
   }
 
-  // Step 4: Fetch with Range header if resuming
+  // Step 5: Fetch with Range header if resuming
   const headers = {};
   if(startByte > 0) headers["Range"] = `bytes=${startByte}-`;
 
-  const res = await fetch(url, { headers, signal });
-  if(!res.ok && res.status !== 206) throw new Error(`Download failed (HTTP ${res.status})`);
+  let res;
+  try{
+    res = await fetch(url, { headers, signal });
+  }catch(e){
+    if(e && e.name === "AbortError") throw e;
+    const err = new Error("DIRECT_DOWNLOAD");
+    err.code = "DIRECT_DOWNLOAD";
+    throw err;
+  }
+  if(!res.ok && res.status !== 206){
+    const err = new Error(`HTTP ${res.status}`);
+    err.code = "HTTP_ERROR";
+    throw err;
+  }
 
   if(!total) total = Number(res.headers.get("content-length")) || 0;
 
-  // Step 5: Stream chunks with progress + save to IndexedDB
+  // Step 6: Stream chunks with progress + save to IndexedDB
   const chunks = [...savedChunks];
   let received = startByte;
 
@@ -1985,9 +2003,9 @@ async function downloadInsideStore(url, filename, onProgress, signal){
       if(done) break;
       chunks.push(value);
       received += value.length;
-      onProgress && onProgress(Math.min(99, Math.round((received / total) * 100)));
+      const pct = total > 0 ? Math.min(99, Math.round((received / total) * 100)) : null;
+      onProgress && onProgress(pct);
 
-      // Save progress every ~5MB (avoid too frequent writes)
       if(chunks.length % 20 === 0){
         await idbSet(key, { url, total, downloaded: received, chunks, filename, savedAt: Date.now() }).catch(()=>{});
       }
@@ -2002,18 +2020,19 @@ async function downloadInsideStore(url, filename, onProgress, signal){
   if(signal && signal.aborted){ const err = new Error("cancelled"); err.name = "AbortError"; throw err; }
   onProgress && onProgress(100);
 
-  // Step 6: Build blob and trigger save
+  // Step 7: Build blob and trigger save
   const blob = new Blob(chunks, { type: "application/octet-stream" });
   const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = blobUrl;
   a.download = filename;
   a.rel = "noopener";
+  a.style.display = "none";
   document.body.appendChild(a);
   a.click();
-  a.remove();
+  setTimeout(()=> a.remove(), 300);
 
-  // Step 7: Clean up IndexedDB after successful download
+  // Step 8: Clean up IndexedDB after successful download
   setTimeout(()=> idbDelete(key).catch(()=>{}), 5000);
 
   return { blob, blobUrl, filename, key };
@@ -3690,27 +3709,27 @@ function startDownloadJob(app){
   if(!url){ toast("No download link available", "ic-close"); return; }
   if(dlActive.has(app.id)){ toast("Already downloading"); return; }
   dlActive.add(app.id);
-  const controller = new AbortController();
-  const bubble = createDlBubble(app, ()=> controller.abort());
+
   const filename = `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`;
-  toast("Download started");
-  (async ()=>{
-    let cancelled = false;
-    try{
-      await downloadInsideStore(url, filename, pct=>{ bubble.set(pct); const b = $("#detail-dl-bar-top"); if(b && pct !== null) b.style.width = pct + "%"; }, controller.signal);
-      bubble.set(100);
-      toast(`"${app.name}" downloaded`);
-    }catch(err){
-      if(err && err.name === "AbortError"){ cancelled = true; toast("Download cancelled"); }
-      else {
-        const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener";
-        document.body.appendChild(a); a.click(); a.remove();
-        toast("Download opened in browser");
-      }
-    }
-    if(!cancelled && firebaseReady){ try{ await updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }); }catch(e){} }
-    bubble.remove(); dlActive.delete(app.id);
-  })();
+  toast(`Downloading "${app.name}"…`);
+
+  // Direct native download — server sends Content-Disposition with real name
+  try{
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=> a.remove(), 500);
+  }catch(e){ console.warn("Download failed", e); }
+
+  if(firebaseReady){
+    try{ updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }).catch(()=>{}); }catch(e){}
+  }
+
+  setTimeout(()=> dlActive.delete(app.id), 3000);
 }
 async function startDownload(app){ startDownloadJob(app); }
 async function loadJSZip(){
@@ -6918,54 +6937,30 @@ async function tgDownloadMessage(m){
   if(dlActive.has(m.id)){ toast("Already downloading"); return; }
   dlActive.add(m.id);
 
-  const filename = m.filename || "download";
-  const controller = new AbortController();
-  const fakeApp = { name: filename };
-  const bubble = createDlBubble(fakeApp, async ()=>{
-    // CANCELLED — abort fetch AND delete IndexedDB chunks
-    controller.abort();
-    await cancelDownload(url, filename);
-    toast("Download cancelled — file deleted");
-  });
-  toast("Download started");
+  // Clean filename: strip "file-1790860588975-" style prefixes
+  let filename = m.filename || "download";
+  filename = filename.replace(/^file-\d+-/, "").replace(/^[a-zA-Z]+-\d+-/, "");
+  if(!filename || filename.length < 2) filename = "download.zip";
 
+  toast(`Downloading "${filename}"…`);
+
+  // Direct native download — server sends Content-Disposition header,
+  // so browser uses the REAL filename. No blob, no popup, no re-download.
   try{
-    const result = await downloadInsideStore(
-      url,
-      filename,
-      pct => bubble.set(pct),
-      controller.signal
-    );
-    bubble.set(100);
-    toast(`"${filename}" downloaded`);
-
-    if(result && result.blob){
-      setTimeout(()=>{
-        try{ showDownloadCompletePopup(filename, result.blob, result.blobUrl); }
-        catch(e){ console.warn("popup failed", e); }
-      }, 600);
-      setTimeout(()=>{ try{ URL.revokeObjectURL(result.blobUrl); }catch(_){} }, 300000); // 5 min
-    }
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=> a.remove(), 500);
   }catch(e){
-  console.error(e);
-  if(e && e.name === "AbortError"){
-    // Already handled in cancel callback
-  } else if(e && e.code === "FILE_TOO_LARGE"){
-    bubble.remove();
-    toast("File too large for in-app download — using browser");
-    nativeDownload(url, filename);
-  } else if(!navigator.onLine || (e && e.message && /network|fetch|failed to fetch/i.test(e.message))){
-    // ✅ NEW: internet break — keep chunks in IndexedDB, don't fallback
-    bubble.remove();
-    toast("Connection lost. Tap again to resume.", "ic-close");
-  } else {
-    bubble.remove();
-    toast("Using browser download…");
-    nativeDownload(url, filename);
+    console.error("Native download failed:", e);
+    try{ window.location.href = url; }catch(_){}
   }
-}
-  bubble.remove();
-  dlActive.delete(m.id);
+
+  setTimeout(()=> dlActive.delete(m.id), 3000);
 }
 
 // Helper: clean native download without black screen
