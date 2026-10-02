@@ -6402,17 +6402,25 @@ function getTgInputText(){
 function serializeComposerNode(node){
   let out = "";
   node.childNodes.forEach(n => {
-    if(n.nodeType === 3){ out += n.nodeValue; }
-    else if(n.nodeType === 1){
+    if(n.nodeType === 3){
+      out += n.nodeValue;
+    } else if(n.nodeType === 1){
       if(n.tagName === "IMG" && n.classList.contains("pktg-ce")){
         out += `[[ce:${n.dataset.id}]]`;
       } else if(n.tagName === "BR"){
         out += "\n";
+      } else if(n.tagName === "DIV" || n.tagName === "P"){
+        // Block element — newline add karo (browser Enter dabane pe ye banata hai)
+        if(out && !out.endsWith("\n")) out += "\n";
+        out += serializeComposerNode(n);
+        if(!out.endsWith("\n")) out += "\n";
       } else {
         out += serializeComposerNode(n);
       }
     }
   });
+  // End me extra newlines hata do, aur consecutive blank lines ko 1 bana do
+  out = out.replace(/\n{3,}/g, "\n\n");
   return out;
 }
 function insertNodeAtCaret(el, node){
