@@ -1617,9 +1617,10 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
     <button class="nav-btn active" data-page="home-page"><svg><use href="#ic-home"/></svg>Home</button>
     <button class="nav-btn" data-page="channels-page"><svg><use href="#ic-channel"/></svg>Channels</button>
     <button class="nav-btn" data-page="users-page"><svg><use href="#ic-users"/></svg>Users</button>
-    <button class="nav-btn" data-page="upload-page"><svg><use href="#ic-upload"/></svg>Upload</button>
-    <button class="nav-btn" data-page="profile-page"><svg><use href="#ic-user"/></svg>Profile</button>
-  </nav>
+    <button class="nav-btn" data-page="__music" style="color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Music</button>
+  <button class="nav-btn" data-page="upload-page"><svg><use href="#ic-upload"/></svg>Upload</button>
+  <button class="nav-btn" data-page="profile-page"><svg><use href="#ic-user"/></svg>Profile</button>
+</nav>
   <button class="chat-fab" id="chat-fab-btn">
     <svg><use href="#ic-chat"/></svg>
     <span class="badge" id="chat-badge" hidden>0</span>
@@ -3188,8 +3189,12 @@ function initNav(){
   $$(".nav-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const target = btn.dataset.page;
-      if(target === "__categories"){ openCategoriesSheet(); return; }
-      if(target === "upload-page" && guestBlock("upload apps")) return;
+if(target === "__music"){
+  window.open("http://144.24.218.100:8080/music/music.html", "_blank", "noopener");
+  return;
+}
+if(target === "__categories"){ openCategoriesSheet(); return; }
+if(target === "upload-page" && guestBlock("upload apps")) return;
       $$(".nav-btn").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
       $$(".page").forEach(p=>p.hidden = true);
