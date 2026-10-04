@@ -1310,9 +1310,9 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 
   // Minimum display time: 4s (so animation completes fully)
   setTimeout(() => {
-    window.__pksCanExit = true;
-    if(window.__pksExitPending) doExit();
-  }, 4000);
+  window.__pksCanExit = true;
+  if(window.__pksExitPending) doExit();
+}, 1200);
 
   // Safety net: force exit after 15s
   setTimeout(doExit, 15000);
@@ -1617,7 +1617,7 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
     <button class="nav-btn active" data-page="home-page"><svg><use href="#ic-home"/></svg>Home</button>
     <button class="nav-btn" data-page="channels-page"><svg><use href="#ic-channel"/></svg>Channels</button>
     <button class="nav-btn" data-page="users-page"><svg><use href="#ic-users"/></svg>Users</button>
-    <button class="nav-btn" data-page="__music" style="color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Music</button>
+    <button class="nav-btn" data-page="__music"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Music</button>
   <button class="nav-btn" data-page="upload-page"><svg><use href="#ic-upload"/></svg>Upload</button>
   <button class="nav-btn" data-page="profile-page"><svg><use href="#ic-user"/></svg>Profile</button>
 </nav>
@@ -1826,7 +1826,11 @@ let auth = null;
 let firebaseReady = false;
 try{
   const fbApp = initializeApp(CONFIG.firebase);
-  db = initializeFirestore(fbApp, { experimentalForceLongPolling: true });
+  db = initializeFirestore(fbApp, {
+  experimentalAutoDetectLongPolling: true,
+  useFetchStreams: false,
+  ignoreUndefinedProperties: true
+});
   auth = getAuth(fbApp);
   auth.languageCode = "en";
   firebaseReady = true;
@@ -2689,15 +2693,26 @@ async function applyIdentity(user){
     return "ok";
   }
   state.isGuest = false;
-  let owner = await checkOwner();
+  
+  // ⚡ Parallel reads — sab ek saath chalao
+  const [ownerResult, bannedResult, verifiedResult] = await Promise.all([
+    checkOwner().catch(()=>false),
+    isBannedAccount(user.uid).catch(()=>false),
+    checkVerified().catch(()=>false)
+  ]);
+  
+  let owner = ownerResult;
   if(!owner && CONFIG.ownerEmail && user.emailVerified && String(user.email || "").toLowerCase() === CONFIG.ownerEmail.toLowerCase()){
-    try{ await setDoc(doc(db,"adminClaims",user.uid), { code:"google-owner", email:user.email, at: serverTimestamp() }); owner = await checkOwner(); }
+    try{ 
+      await setDoc(doc(db,"adminClaims",user.uid), { code:"google-owner", email:user.email, at: serverTimestamp() }); 
+      owner = await checkOwner(); 
+    }
     catch(e){ console.warn("Owner email claim refused", e); }
   }
   if(owner){ state.isOwner = true; state.verified = true; state.username = CONFIG.ownerPublicName; state.uid = "owner"; return "ok"; }
   state.isOwner = false;
-  if(await isBannedAccount(user.uid)) return "banned";
-  state.verified = await checkVerified();
+  if(bannedResult) return "banned";
+  state.verified = verifiedResult;
   state.username = googleDisplayName(user);
   return "ok";
 }
@@ -2754,6 +2769,7 @@ async function initAuth(){
   await processPendingInvite();
   enterStore();
 }
+
 function isStandalone(){
   return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true || String(document.referrer).startsWith("android-app://");
 }
@@ -3031,6 +3047,32 @@ function renderAccountDetails(){
   box.innerHTML = rows.map(([k,v])=> `<div class="row"><div class="row-left">${escapeHtml(k)}</div><span style="font-size:12px;color:var(--text-faint);word-break:break-all;text-align:right;max-width:62%">${escapeHtml(String(v))}</span></div>`).join("");
   box.hidden = false; title.hidden = false;
 }
+// ⚡ Auto-retry function — 3 baar try karega
+async function initAuthWithRetry(){
+  let attempts = 0;
+  const maxAttempts = 3;
+  while(attempts < maxAttempts){
+    attempts++;
+    try{
+      await initAuth();
+      return;
+    }catch(e){
+      console.warn("Auth attempt " + attempts + " failed:", e);
+      if(attempts < maxAttempts){
+        await new Promise(r => setTimeout(r, 1500));
+        try{ await disableNetwork(db); await enableNetwork(db); }catch(_){}
+      } else {
+        if(!document.getElementById("boot-stuck")){
+          document.body.insertAdjacentHTML("beforeend", `
+            <div id="boot-stuck" style="position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
+              <p style="margin:0;color:var(--text-dim);font-size:14px">Connection slow hai. Ek bar retry karo.</p>
+              <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+            </div>`);
+        }
+      }
+    }
+  }
+}
 function initOnboarding(){
   $("#gate-install-btn").addEventListener("click", installApp);
   $("#gate-live-btn").addEventListener("click", ()=> showGateStep("login"));
@@ -3052,8 +3094,8 @@ function initOnboarding(){
           </div>`);
       }
     }, 400);
-  }, 12000);
-  initAuth();
+  }, 30000);
+  initAuthWithRetry();
 }
 let booted = false;
 function boot(){
@@ -3185,12 +3227,44 @@ function initTheme(){
     });
   }
 }
+function openMusicPlayer(){
+  let overlay = document.getElementById("music-overlay");
+  if(!overlay){
+    document.body.insertAdjacentHTML("beforeend", `
+      <div id="music-overlay" style="display:none;position:fixed;inset:0;z-index:220;background:#0B0E14;flex-direction:column;">
+        <div style="display:flex;align-items:center;padding:calc(8px + env(safe-area-inset-top)) 8px 8px;background:var(--bg-elevated);border-bottom:1px solid var(--border);flex-shrink:0;">
+          <button id="music-close-btn" type="button" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text);background:transparent;border:none;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+          <div style="flex:1;text-align:center;font-weight:700;font-size:15px;color:var(--text);">Pika Music</div>
+          <div style="width:44px;"></div>
+        </div>
+        <iframe id="music-iframe" src="about:blank" allow="autoplay; encrypted-media; fullscreen; microphone" style="flex:1;width:100%;border:none;background:#0B0E14;"></iframe>
+      </div>
+    `);
+    overlay = document.getElementById("music-overlay");
+    document.getElementById("music-close-btn").addEventListener("click", closeMusicPlayer);
+  }
+  const iframe = document.getElementById("music-iframe");
+  if(iframe.dataset.loaded !== "1"){
+    iframe.src = "http://144.24.218.100:8080/music/music.html";
+    iframe.dataset.loaded = "1";
+  }
+  overlay.style.display = "flex";
+  document.body.style.overflow = "hidden";
+  try{ history.pushState({ music: true }, ""); }catch(e){}
+}
+function closeMusicPlayer(){
+  const overlay = document.getElementById("music-overlay");
+  if(overlay) overlay.style.display = "none";
+  document.body.style.overflow = "";
+}
 function initNav(){
   $$(".nav-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const target = btn.dataset.page;
 if(target === "__music"){
-  window.open("http://144.24.218.100:8080/music/music.html", "_blank", "noopener");
+  openMusicPlayer();
   return;
 }
 if(target === "__categories"){ openCategoriesSheet(); return; }
@@ -8199,12 +8273,19 @@ async function discSearchAndAppend(q){
       return true;
     }
 
-    // 8. Channel is open → close it
-    const pktg = document.getElementById('pktg');
-    if(pktg && pktg.classList.contains('open')){
-      if(typeof closeTelegramChannel === 'function') closeTelegramChannel();
-      return true;
-    }
+    // 8. Music player is open → close it
+const music = document.getElementById('music-overlay');
+if(music && music.style.display !== 'none'){
+  if(typeof closeMusicPlayer === 'function') closeMusicPlayer();
+  return true;
+}
+
+// 9. Channel is open → close it
+const pktg = document.getElementById('pktg');
+if(pktg && pktg.classList.contains('open')){
+  if(typeof closeTelegramChannel === 'function') closeTelegramChannel();
+  return true;
+}
 
     // 9. Not on home page → navigate to home
     const activePage = document.querySelector('.page:not([hidden])');
