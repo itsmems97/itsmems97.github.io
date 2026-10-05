@@ -425,7 +425,7 @@
 const CONFIG = {
   title:   "PIKA STORE",
   message: "Dear! User This App Under Maintenance Mode — Please Wait Until Maintenance Complete",
-  contactEmail: "support@example.com",
+  whatsappNumber: "923041891897",
   contactLabel: "✿ Contact us",
   autoCheck: true,
   autoCheckSeconds: 30
@@ -436,17 +436,20 @@ const $ = (sel) => document.querySelector(sel);
 document.title = "PIKA STORE — Maintenance";
 $("#title").textContent = CONFIG.title;
 
-/* ---- contact ---- */
-if (CONFIG.contactEmail) {
+/* ---- contact (WhatsApp) ---- */
+if (CONFIG.whatsappNumber) {
   const c = $("#contactBtn");
-  c.href = "mailto:" + CONFIG.contactEmail;
+  const msg = encodeURIComponent("How Much Long Maintenance Mode?");
+  c.href = "https://wa.me/" + CONFIG.whatsappNumber + "?text=" + msg;
+  c.target = "_blank";
+  c.rel = "noopener";
   c.textContent = CONFIG.contactLabel;
 } else {
   $("#contactBtn").hidden = true;
 }
 
 /* ---- retry ---- */
-$("#retryBtn").addEventListener("click", () => location.reload());
+$("#retryBtn").addEventListener("click", () => { location.href = "index.html"; });
 
 /* ============================================================
    APP FEEL — disable copy / long-press / drag / context menu
@@ -503,18 +506,29 @@ let reloading = false;
 
 async function checkIfBack() {
   try {
-    const res = await fetch(location.href, {
-      cache: "no-store",
-      headers: { "X-Requested-With": "maintenance-check" }
-    });
-    if (!res.ok) return;
-    const html = await res.text();
-    if (!html.includes(MARKER)) {
+    const url = "https://firestore.googleapis.com/v1/projects/pika-store-604d2/databases/(default)/documents/config/maintenance";
+    const res = await fetch(url + "?t=" + Date.now(), { cache: "no-store" });
+
+    // Doc doesn't exist → maintenance was never turned on → store is open
+    if (res.status === 404) {
       reloading = true;
       hintEl.textContent = "Back online — reloading… ♡";
-      location.reload();
+      location.href = "index.html";
+      return;
     }
-  } catch (e) {}
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const enabled = data?.fields?.enabled?.booleanValue === true;
+
+    if (!enabled) {
+      reloading = true;
+      hintEl.textContent = "Back online — reloading… ♡";
+      location.href = "index.html";
+    }
+  } catch (e) {
+    console.warn("maintenance check failed", e);
+  }
 }
 
 if (CONFIG.autoCheck) {
