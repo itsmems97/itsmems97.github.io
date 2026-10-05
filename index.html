@@ -1594,6 +1594,7 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
   <div class="row tap" id="row-change-photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Change profile photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
   <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
   <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
+  <div class="row tap" id="row-maintenance" hidden><div class="row-left"><svg><use href="#ic-lock"/></svg> Maintenance Mode</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="maintenance-label">OFF</span></div>
   <div class="row tap" id="row-verify"><div class="row-left"><svg><use href="#ic-verified"/></svg> Enter blue-tick code</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
   <div class="row tap" id="row-logout"><div class="row-left"><svg><use href="#ic-close"/></svg> Log out</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 </div>
@@ -2719,6 +2720,7 @@ async function applyIdentity(user){
 async function completeLogin(user){
   const r = await applyIdentity(user);
   if(r === "banned"){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
+  if(await maintenanceBlocksUser()){ redirectToMaintenance(); return; }
   if(state.isGuest){ await guestBoot(); return; }
   await startSession(); await ensureProfile();
   await processPendingInvite();
@@ -2736,6 +2738,25 @@ async function onGoogleUser(user){
 }
 async function initAuth(){
   const notice = sessionStorage.getItem("pika_notice"); sessionStorage.removeItem("pika_notice");
+  
+  // ⚡ NEW: Check maintenance BEFORE showing login gate
+  // Owner can bypass with ?owner=1 in URL (used from Maintenance.html)
+  const ownerBypass = new URLSearchParams(location.search).get("owner") === "1";
+  if(firebaseReady){
+    await loadMaintenanceStatus();
+    if(MAINTENANCE_MODE && !ownerBypass){
+      try{ await auth.authStateReady(); }catch(e){}
+      const cu = auth.currentUser;
+      const isOwnerUser = cu && !cu.isAnonymous
+                        && String(cu.email || "").toLowerCase() === CONFIG.ownerEmail.toLowerCase()
+                        && cu.emailVerified;
+      if(!isOwnerUser){
+        redirectToMaintenance();
+        return;
+      }
+    }
+  }
+  
   // ✅ FIX: capture invite from URL immediately, before login happens
   try{
   const inviteUid = new URLSearchParams(location.search).get("invite");
@@ -2756,9 +2777,10 @@ async function initAuth(){
   if(!user){ showGate(notice); return; }
   if(!user.isAnonymous && !isGoogleUser(user)){ try{ await signOut(auth); }catch(e){} showGate(notice); return; }
   const r = await applyIdentity(user);
-  if(r === "banned"){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
-  if(state.isGuest){ await guestBoot(); return; }
-  const key = state.isOwner ? "owner" : state.uid;
+if(r === "banned"){ try{ await signOut(auth); }catch(e){} showGate("banned"); return; }
+if(await maintenanceBlocksUser()){ redirectToMaintenance(); return; }
+if(state.isGuest){ await guestBoot(); return; }
+const key = state.isOwner ? "owner" : state.uid;
   const localSid = localStorage.getItem("pika_session");
   try{
     const s = await getDoc(doc(db,"sessions",key));
@@ -3010,8 +3032,9 @@ async function guestLogin(){
   showLoading("Opening as guest…");
   try{
     const cred = await signInAnonymously(auth);
-    await applyIdentity(cred.user);
-    await guestBoot();
+await applyIdentity(cred.user);
+if(await maintenanceBlocksUser()){ redirectToMaintenance(); return; }
+await guestBoot();
   }catch(e){ console.warn(e); authError(e); }
   finally{ hideLoading(); btn.removeAttribute("disabled"); }
 }
@@ -3103,7 +3126,7 @@ function boot(){
   renderProfile();
   initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); initTelegramUI(); initHomeCategories();
   if(!state.isGuest) loadMyPhone();
-  listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels();
+  listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance();
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: you can only download", "ic-lock"); }
@@ -3206,6 +3229,83 @@ async function migrateChannelMessageMedia(){
     if(moved > 0) console.log(`Migrated ${moved} channel message(s) to private media collection`);
   }catch(e){ console.warn("channel message media migration", e); }
 }
+
+/* ================= MAINTENANCE MODE ================= */
+let MAINTENANCE_MODE = false;
+
+async function loadMaintenanceStatus(){
+  if(!firebaseReady){ MAINTENANCE_MODE = false; return false; }
+  try{
+    const s = await getDoc(doc(db, "config", "maintenance"));
+    MAINTENANCE_MODE = s.exists() ? !!s.data().enabled : false;
+  }catch(e){
+    console.warn("maintenance read failed", e);
+    MAINTENANCE_MODE = false;
+  }
+  return MAINTENANCE_MODE;
+}
+
+function redirectToMaintenance(){
+  if(!location.pathname.toLowerCase().includes("maintenance")){
+    try{ location.replace("Maintenance.html"); }catch(e){}
+  }
+}
+
+async function maintenanceBlocksUser(){
+  await loadMaintenanceStatus();
+  return MAINTENANCE_MODE && !state.isOwner;
+}
+
+function listenMaintenance(){
+  if(!firebaseReady) return;
+  onSnapshot(doc(db, "config", "maintenance"), s=>{
+    MAINTENANCE_MODE = s.exists() ? !!s.data().enabled : false;
+    updateMaintenanceUI();
+    // If owner just turned ON maintenance, kick non-owner users out
+    if(MAINTENANCE_MODE && state.uid && !state.isOwner && !state.isGuest){
+      redirectToMaintenance();
+    }
+  }, err=> console.warn("maintenance listener", err));
+}
+
+function updateMaintenanceUI(){
+  const row = document.getElementById("row-maintenance");
+  if(!row) return;
+  if(state.isOwner){
+    row.hidden = false;
+    const lbl = document.getElementById("maintenance-label");
+    if(lbl){
+      lbl.textContent = MAINTENANCE_MODE ? "ON" : "OFF";
+      lbl.style.color = MAINTENANCE_MODE ? "var(--danger)" : "var(--text-faint)";
+    }
+  } else {
+    row.hidden = true;
+  }
+}
+
+async function toggleMaintenance(){
+  if(!state.isOwner) return;
+  const next = !MAINTENANCE_MODE;
+  const ok = await confirmSheet(
+    next ? "Turn ON Maintenance Mode?" : "Turn OFF Maintenance Mode?",
+    next ? "All non-owner users will be redirected to the maintenance page." : "Users will be able to use the app normally again.",
+    next ? "Enable" : "Disable"
+  );
+  if(!ok) return;
+  try{
+    await setDoc(doc(db, "config", "maintenance"), {
+      enabled: next,
+      updatedAt: serverTimestamp(),
+      updatedBy: state.authUid || state.uid
+    }, { merge: true });
+    MAINTENANCE_MODE = next;
+    updateMaintenanceUI();
+    toast(next ? "Maintenance mode ON" : "Maintenance mode OFF");
+  }catch(e){
+    toast("Failed: " + (e.code||e.message), "ic-close");
+  }
+}
+/* ================= /MAINTENANCE MODE ================= */
 
 function initTheme(){
   const saved = localStorage.getItem("pika_theme") || "dark";
@@ -4337,8 +4437,9 @@ function renderProfile(){
   $("#row-phone").hidden = g; $("#row-change-photo").hidden = g; $(".profile-stats").hidden = g;
   $("#guest-card").hidden = !g; $("#my-uploads-title").hidden = g; $("#my-uploads-list").hidden = g;
   if(g) mountProfileGoogle();
-  renderInviteCard();
-  renderAccountDetails();
+renderInviteCard();
+renderAccountDetails();
+updateMaintenanceUI();
   const list = state.isOwner ? state.apps : mine;
   $("#my-uploads-title").textContent = state.isOwner ? "All uploads (Owner)" : "My uploads";
   $("#my-uploads-list").innerHTML = list.length ? list.map(a=>{
@@ -4961,6 +5062,8 @@ async function createCategoryQuick(){
 }
 function initProfileActions(){
   $("#row-change-photo").addEventListener("click", ()=> $("#profile-photo-input").click());
+  const _maintRow = document.getElementById("row-maintenance");
+  if(_maintRow) _maintRow.addEventListener("click", toggleMaintenance);
   $("#profile-avatar").addEventListener("click", ()=> $("#profile-photo-input").click());
   $("#profile-photo-input").addEventListener("change", e=>{ changeMyPhoto(e.target.files[0]); e.target.value = ""; });
   $("#row-rename").addEventListener("click", renameMyself);
