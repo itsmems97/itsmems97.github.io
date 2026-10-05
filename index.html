@@ -370,6 +370,10 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
   animation: installLogoPop .8s cubic-bezier(.34,1.56,.64,1);
   overflow:hidden;
 }
+.install-logo img{
+  width:100%; height:100%;
+  object-fit:cover; display:block;
+}
 @keyframes installLogoPop{
   0%{ transform:scale(.4) rotate(-15deg); opacity:0; }
   60%{ opacity:1; }
@@ -3091,8 +3095,10 @@ async function installApp(){
   document.body.insertAdjacentHTML("beforeend", `
     <div id="install-anim">
       <div class="install-card">
-        <div class="install-logo">P</div>
-        <h3 class="install-title">Installing Pika Store</h3>
+  <div class="install-logo">
+    <img alt="Pika Store" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
+  </div>
+  <h3 class="install-title">Installing Pika Store</h3>
         <p class="install-sub">Please wait a moment…</p>
         <div class="install-bar"><i></i></div>
         <div class="install-pct" id="install-pct">0%</div>
