@@ -2846,6 +2846,20 @@ async function onGoogleUser(user){
 async function initAuth(){
   const notice = sessionStorage.getItem("pika_notice"); sessionStorage.removeItem("pika_notice");
   
+  // ⚡ PWA Shortcut handler — capture action from URL (safe: only saves, doesn't navigate)
+  try{
+    const action = new URLSearchParams(location.search).get("action");
+    if(action === "upload" || action === "profile" || action === "channels" || action === "search"){
+      sessionStorage.setItem("pika_pending_action", action);
+    }
+    if(action){
+      const u = new URL(location.href);
+      u.searchParams.delete("action");
+      u.searchParams.delete("source");
+      history.replaceState(null, "", u.pathname + (u.search ? u.search : ""));
+    }
+  }catch(e){}
+  
   // ⚡ NEW: Check maintenance BEFORE showing login gate
   // Owner can bypass with ?owner=1 in URL (used from Maintenance.html)
   const ownerBypass = new URLSearchParams(location.search).get("owner") === "1";
@@ -3233,11 +3247,43 @@ function boot(){
   renderProfile();
   initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); initTelegramUI(); initHomeCategories();
   if(!state.isGuest) loadMyPhone();
-  listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance(); listenOwnerMessages();
+  listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance();
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: you can only download", "ic-lock"); }
   if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelMembers(); migrateChannelMessageMedia(); toast("Owner control enabled", "ic-check"); }
+  
+  // ⚡ PWA Shortcut trigger — safe navigation after boot
+  setTimeout(()=>{
+    try{
+      const action = sessionStorage.getItem("pika_pending_action");
+      if(!action) return;
+      sessionStorage.removeItem("pika_pending_action");
+      
+      if(action === "upload"){
+        // Guest ko upload nahi karne dena — guestBlock handles it
+        if(state.isGuest){
+          if(guestBlock("upload apps")) return;
+        }
+        const btn = document.querySelector('.nav-btn[data-page="upload-page"]');
+        if(btn) btn.click();
+      }
+      else if(action === "profile"){
+        const btn = document.querySelector('.nav-btn[data-page="profile-page"]');
+        if(btn) btn.click();
+      }
+      else if(action === "channels"){
+        const btn = document.querySelector('.nav-btn[data-page="channels-page"]');
+        if(btn) btn.click();
+      }
+      else if(action === "search"){
+        setTimeout(()=>{
+          const si = document.getElementById("search-input");
+          if(si){ si.focus(); }
+        }, 300);
+      }
+    }catch(e){ console.warn("shortcut action failed", e); }
+  }, 400);
 }
 function listenSession(){
   if(!firebaseReady) return;
