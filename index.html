@@ -325,6 +325,112 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .rules-banner .nb-x{ float:right; width:24px; height:24px; padding:0; color:var(--text-faint); }
 #loading-overlay p{ margin:0; font-size:13px; color:var(--text-dim); }
 
+/* ============ INSTALLING ANIMATION ============ */
+#install-anim{
+  position:fixed; inset:0; z-index:105;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.5);
+  backdrop-filter:blur(10px) saturate(160%);
+  -webkit-backdrop-filter:blur(10px) saturate(160%);
+  animation: installFadeIn .3s ease-out;
+}
+@keyframes installFadeIn{ from{opacity:0} to{opacity:1} }
+#install-anim.out{ animation: installFadeOut .35s ease-in forwards; }
+@keyframes installFadeOut{ to{opacity:0} }
+
+.install-card{
+  width:100%; max-width:300px; margin:0 20px;
+  padding:32px 24px 26px;
+  border-radius:28px;
+  background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:
+    0 20px 50px rgba(0,0,0,.5),
+    inset 0 1px 1px rgba(255,255,255,.4);
+  backdrop-filter:blur(30px) saturate(190%);
+  -webkit-backdrop-filter:blur(30px) saturate(190%);
+  text-align:center; color:#fff;
+  animation: installCardIn .5s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes installCardIn{
+  from{ transform:scale(.85) translateY(20px); opacity:0; }
+  to{ transform:scale(1) translateY(0); opacity:1; }
+}
+
+.install-logo{
+  position:relative;
+  width:84px; height:84px; margin:0 auto 18px;
+  border-radius:22px;
+  background:linear-gradient(135deg,#FFC61A,#FFA800);
+  display:grid; place-items:center;
+  box-shadow:
+    0 12px 30px rgba(255,168,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.5);
+  font-size:42px; font-weight:900; color:#111;
+  animation: installLogoPop .8s cubic-bezier(.34,1.56,.64,1);
+  overflow:hidden;
+}
+@keyframes installLogoPop{
+  0%{ transform:scale(.4) rotate(-15deg); opacity:0; }
+  60%{ opacity:1; }
+  100%{ transform:scale(1) rotate(0); opacity:1; }
+}
+.install-logo::after{
+  content:""; position:absolute; inset:0;
+  background: linear-gradient(115deg,
+    transparent 40%, rgba(255,255,255,.7) 50%, transparent 60%);
+  transform: translateX(-150%) skewX(-15deg);
+  animation: installLogoShine 1.8s ease-in-out 0.4s infinite;
+}
+@keyframes installLogoShine{
+  0%   { transform: translateX(-150%) skewX(-15deg); }
+  100% { transform: translateX(150%) skewX(-15deg); }
+}
+
+.install-title{
+  font-size:17px; font-weight:700; margin:0 0 6px;
+  color:#fff; letter-spacing:-.2px;
+}
+.install-sub{
+  font-size:12.5px; color:rgba(255,255,255,.65);
+  margin:0 0 22px; letter-spacing:.02em;
+}
+.install-bar{
+  width:100%; height:6px; border-radius:6px;
+  background:rgba(255,255,255,.15);
+  overflow:hidden; position:relative;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.15);
+}
+.install-bar i{
+  display:block; height:100%; width:0%;
+  border-radius:6px;
+  background:linear-gradient(90deg,#FFC61A,#FFA800,#33E0C1);
+  background-size:200% 100%;
+  box-shadow: 0 0 12px rgba(255,198,26,.6);
+  animation: installProgress 2s cubic-bezier(.4,0,.2,1) forwards,
+             installBarShimmer 1.4s linear infinite;
+}
+@keyframes installProgress{
+  0%   { width:0%; }
+  30%  { width:42%; }
+  65%  { width:78%; }
+  100% { width:100%; }
+}
+@keyframes installBarShimmer{
+  0%   { background-position:0% 0; }
+  100% { background-position:200% 0; }
+}
+
+.install-pct{
+  font-size:11.5px; font-weight:700;
+  color:rgba(255,255,255,.75);
+  margin-top:12px;
+  letter-spacing:.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============ /INSTALLING ANIMATION ============ */
+
 /* ============ PREMIUM SPLASH SCREEN ============ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
@@ -2976,16 +3082,51 @@ function installInstructions(){
 }
 async function installApp(){
   if(isStandalone()){ await infoSheet("Already installed", "Pika Store is already installed.", "OK"); return; }
-  if(deferredInstall){
-    try{
-      deferredInstall.prompt();
-      const c = await deferredInstall.userChoice;
-      deferredInstall = null;
-      if(c && c.outcome === "accepted"){ await infoSheet("Pika Store installed", "The app was added to your home screen.", "Got it"); }
-    }catch(e){ console.warn(e); }
+  if(!deferredInstall){
+    await infoSheet("Install Pika Store", installInstructions(), "OK");
     return;
   }
-  await infoSheet("Install Pika Store", installInstructions(), "OK");
+
+  // 🎬 Show installing animation
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="install-anim">
+      <div class="install-card">
+        <div class="install-logo">P</div>
+        <h3 class="install-title">Installing Pika Store</h3>
+        <p class="install-sub">Please wait a moment…</p>
+        <div class="install-bar"><i></i></div>
+        <div class="install-pct" id="install-pct">0%</div>
+      </div>
+    </div>`);
+
+  const animEl = document.getElementById("install-anim");
+  const pctEl = document.getElementById("install-pct");
+
+  // Animate percentage counter
+  let pct = 0;
+  const pctTimer = setInterval(()=>{
+    pct = Math.min(100, pct + Math.floor(Math.random() * 6) + 3);
+    if(pctEl) pctEl.textContent = pct + "%";
+    if(pct >= 100) clearInterval(pctTimer);
+  }, 60);
+
+  // Wait for animation to complete (2 seconds)
+  await new Promise(r => setTimeout(r, 2000));
+
+  // 🎬 Fade out animation
+  if(animEl) animEl.classList.add("out");
+  await new Promise(r => setTimeout(r, 350));
+  if(animEl) animEl.remove();
+
+  // 🚀 Now trigger the native install prompt
+  try{
+    deferredInstall.prompt();
+    const c = await deferredInstall.userChoice;
+    deferredInstall = null;
+    if(c && c.outcome === "accepted"){
+      await infoSheet("Pika Store installed", "The app was added to your home screen.", "Got it");
+    }
+  }catch(e){ console.warn(e); }
 }
 function showGateStep(step){
   $("#gate-step-welcome").hidden = step !== "welcome";
