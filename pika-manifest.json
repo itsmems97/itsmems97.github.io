@@ -47,15 +47,6 @@
     { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
     { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "monochrome" }
   ],
-  "screenshots": [
-    {
-      "src": "pika.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Pika Store Home"
-    }
-  ],
   "shortcuts": [
     {
       "name": "Upload App",
