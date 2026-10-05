@@ -7459,34 +7459,63 @@ async function tgDownloadMessage(m){
   const controller = new AbortController();
   const bubble = createDlBubble({ name: filename }, ()=> controller.abort());
 
-  downloadInsideStore(url, filename, pct => bubble.set(pct), controller.signal)
-    .then(()=>{
-      bubble.set(100);
-      toast(`"${filename}" downloaded`);
-    })
-    .catch(err=>{
-      if(err && err.name === 'AbortError'){ toast('Download cancelled'); }
-      else {
-        // Server ne CORS block kiya ya fetch fail hua → native download fallback
-        try{
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          a.rel = "noopener";
-          a.style.display = "none";
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(()=> a.remove(), 500);
-        }catch(e){
-          console.error("Native download failed:", e);
-          try{ window.location.href = url; }catch(_){}
-        }
+  // ⚡ Show spinner immediately
+  bubble.set(null);
+
+  let usedStreaming = false;
+  try{
+    await downloadInsideStore(url, filename, pct => {
+      usedStreaming = true;
+      bubble.set(pct);
+    }, controller.signal);
+    bubble.set(100);
+    toast(`"${filename}" downloaded`);
+  }catch(err){
+    if(err && err.name === 'AbortError'){
+      toast('Download cancelled');
+    } else {
+      // 🚀 Streaming failed (CORS) → use native download but keep bubble visible
+      console.warn("Streaming blocked, using native download:", err && err.message);
+
+      // Trigger native download
+      try{
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.rel = "noopener";
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(()=> a.remove(), 500);
+      } catch(e){
+        console.error("Native download failed:", e);
+        try{ window.location.href = url; }catch(_){}
       }
-    })
-    .finally(()=>{
+
+      // 🎯 Keep bubble visible for at least 2 seconds with a fake progress
+      let fakePct = 0;
+      const fakeInterval = setInterval(()=>{
+        fakePct += 6;
+        if(fakePct >= 100){
+          fakePct = 100;
+          clearInterval(fakeInterval);
+          bubble.set(100);
+        } else {
+          bubble.set(fakePct);
+        }
+      }, 100);
+
+      // Wait 2 seconds before removing bubble
+      await new Promise(r => setTimeout(r, 2000));
+      clearInterval(fakeInterval);
+    }
+  } finally {
+    // Small delay so user sees 100%
+    setTimeout(()=>{
       bubble.remove();
-      setTimeout(()=> dlActive.delete(m.id), 3000);
-    });
+      setTimeout(()=> dlActive.delete(m.id), 1500);
+    }, 400);
+  }
 }
 
 // Helper: clean native download without black screen
