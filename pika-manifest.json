@@ -1,18 +1,68 @@
 {
   "id": "/",
   "name": "Pika Store",
-  "short_name": "Pika Store",
+  "short_name": "Pika",
   "description": "Pika Store - download apps, share files and chat with the community.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#0B0E14",
   "theme_color": "#0B0E14",
-  "categories": ["utilities", "social"],
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["utilities", "social", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     { "src": "pika-icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
     { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+    { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "pika.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "72x72", "type": "image/png", "purpose": "any" }
+  ],
+  "screenshots": [
+    {
+      "src": "pika.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Pika Store Home"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Upload App",
+      "short_name": "Upload",
+      "description": "Upload a new app to Pika Store",
+      "url": "/?action=upload",
+      "icons": [{ "src": "pika-icon-256.png", "sizes": "256x256" }]
+    },
+    {
+      "name": "My Profile",
+      "short_name": "Profile",
+      "description": "Open your profile page",
+      "url": "/?action=profile",
+      "icons": [{ "src": "pika-icon-256.png", "sizes": "256x256" }]
+    },
+    {
+      "name": "Channels",
+      "short_name": "Channels",
+      "description": "Open channels list",
+      "url": "/?action=channels",
+      "icons": [{ "src": "pika-icon-256.png", "sizes": "256x256" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }
