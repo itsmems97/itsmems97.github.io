@@ -1050,6 +1050,112 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
   object-fit: contain;
   pointer-events: none;
 }
+
+/* ============ OWNER BROADCAST POPUP ============ */
+#broadcast-backdrop{
+  position:fixed; inset:0; z-index:150;
+  display:none; align-items:flex-start; justify-content:center;
+  padding:calc(16px + var(--safe-top)) 16px 0;
+  pointer-events:none;
+}
+#broadcast-backdrop.show{ display:flex; }
+.broadcast-card{
+  pointer-events:auto;
+  width:100%; max-width:420px;
+  background:linear-gradient(155deg, #1a2340 0%, #0f1424 100%);
+  border:1px solid rgba(255,198,26,.35);
+  border-radius:24px;
+  padding:20px 20px 18px;
+  color:#F4F5F7;
+  box-shadow:
+    0 24px 60px rgba(0,0,0,.55),
+    0 0 0 1px rgba(255,198,26,.15),
+    inset 0 1px 0 rgba(255,255,255,.08);
+  position:relative;
+  overflow:hidden;
+  transform:translateY(-20px) scale(.96); opacity:0;
+  animation:broadcastIn .6s cubic-bezier(.22,1.4,.36,1) forwards;
+}
+@keyframes broadcastIn{
+  0%   { transform:translateY(-30px) scale(.9); opacity:0; }
+  60%  { transform:translateY(4px) scale(1.02); opacity:1; }
+  100% { transform:translateY(0) scale(1); opacity:1; }
+}
+.broadcast-card::before{
+  content:""; position:absolute; top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg, #FFC61A, #FFA800, #33E0C1, #FFC61A);
+  background-size:200% 100%;
+  animation:broadcastShine 3s linear infinite;
+}
+@keyframes broadcastShine{
+  0%{ background-position:0% 0; }
+  100%{ background-position:200% 0; }
+}
+.broadcast-card::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(circle at 100% 0%, rgba(255,198,26,.18), transparent 55%),
+              radial-gradient(circle at 0% 100%, rgba(51,224,193,.15), transparent 55%);
+}
+.broadcast-head{
+  display:flex; align-items:center; gap:10px; margin-bottom:12px;
+  position:relative; z-index:2;
+}
+.broadcast-head .bc-icon{
+  width:40px; height:40px; border-radius:12px;
+  background:linear-gradient(135deg, #FFC61A, #FFA800);
+  display:grid; place-items:center; flex-shrink:0;
+  box-shadow: 0 6px 16px rgba(255,168,0,.4);
+  animation:broadcastPulse 2s ease-in-out infinite;
+}
+@keyframes broadcastPulse{
+  0%,100%{ transform:scale(1); box-shadow:0 6px 16px rgba(255,168,0,.4); }
+  50%    { transform:scale(1.08); box-shadow:0 8px 22px rgba(255,168,0,.7); }
+}
+.broadcast-head .bc-icon svg{ width:22px; height:22px; color:#171200; }
+.broadcast-head .bc-title{ flex:1; min-width:0; }
+.broadcast-head .bc-title b{ display:block; font-size:15px; font-weight:800; letter-spacing:-.01em; }
+.broadcast-head .bc-title small{ display:block; font-size:11px; color:rgba(244,245,247,.55); margin-top:2px; }
+.broadcast-close{
+  width:30px; height:30px; border-radius:50%;
+  background:rgba(255,255,255,.08); color:#F4F5F7;
+  display:grid; place-items:center; flex-shrink:0;
+  transition:transform .15s, background .15s;
+  position:relative; z-index:3;
+}
+.broadcast-close:active{ transform:scale(.9); background:rgba(255,255,255,.16); }
+.broadcast-body{
+  position:relative; z-index:2;
+  font-size:14px; line-height:1.55; color:#F4F5F7;
+  white-space:pre-wrap; word-break:break-word;
+  padding:12px 14px; border-radius:14px;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
+}
+.broadcast-foot{
+  position:relative; z-index:2;
+  display:flex; align-items:center; justify-content:space-between;
+  margin-top:12px; font-size:11px; color:rgba(244,245,247,.5);
+}
+.broadcast-progress{
+  flex:1; height:3px; border-radius:3px; margin-left:10px;
+  background:rgba(255,255,255,.08); overflow:hidden;
+  position:relative;
+}
+.broadcast-progress i{
+  display:block; height:100%; width:100%;
+  background:linear-gradient(90deg, #FFC61A, #33E0C1);
+  transform-origin:left;
+  animation:broadcastCountdown 9s linear forwards;
+}
+@keyframes broadcastCountdown{
+  0%   { transform:scaleX(1); }
+  100% { transform:scaleX(0); }
+}
+.broadcast-card.out{
+  animation:broadcastOut .35s cubic-bezier(.4,0,1,1) forwards;
+}
+@keyframes broadcastOut{
+  to{ transform:translateY(-30px) scale(.9); opacity:0; }
+}
 </style>
 </head>
 <body>
@@ -1595,6 +1701,7 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
   <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
   <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
   <div class="row tap" id="row-maintenance" hidden><div class="row-left"><svg><use href="#ic-lock"/></svg> Maintenance Mode</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="maintenance-label">OFF</span></div>
+<div class="row tap" id="row-send-messages" hidden><div class="row-left"><svg><use href="#ic-chat"/></svg> Send Messages</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
   <div class="row tap" id="row-verify"><div class="row-left"><svg><use href="#ic-verified"/></svg> Enter blue-tick code</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
   <div class="row tap" id="row-logout"><div class="row-left"><svg><use href="#ic-close"/></svg> Log out</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 </div>
@@ -3126,7 +3233,7 @@ function boot(){
   renderProfile();
   initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); initTelegramUI(); initHomeCategories();
   if(!state.isGuest) loadMyPhone();
-  listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance();
+  listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance(); listenOwnerMessages();
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: you can only download", "ic-lock"); }
@@ -3306,6 +3413,195 @@ async function toggleMaintenance(){
   }
 }
 /* ================= /MAINTENANCE MODE ================= */
+
+/* ================= OWNER BROADCAST MESSAGES ================= */
+let broadcastTimer = null;
+const OWNER_MSG_SEEN_KEY = "pika_owner_msg_seen";
+
+function updateSendMessagesUI(){
+  const row = document.getElementById("row-send-messages");
+  if(!row) return;
+  row.hidden = !state.isOwner;
+}
+
+async function openSendMessagesSheet(){
+  if(!state.isOwner) return;
+
+  document.body.insertAdjacentHTML("beforeend", `
+  <div class="sheet-backdrop" id="smsg-backdrop"><div class="sheet" style="max-height:88vh;display:flex;flex-direction:column">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+      <h3 style="padding:22px 18px 6px;margin:0;font-size:17px">Send Messages</h3>
+      <p class="hint-p" style="margin-bottom:12px">Yeh message har user ko app open karne par floating popup mein 9 second ke liye dikhega.</p>
+
+      <div style="padding:0 18px 14px;">
+        <textarea id="smsg-input" rows="4" placeholder="Type your message for all users…"
+          style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;resize:vertical;min-height:90px;max-height:220px;outline:none;-webkit-user-select:text;user-select:text;"></textarea>
+        <button class="btn btn-primary btn-block" id="smsg-send" style="margin-top:10px;padding:13px">Send to All Users</button>
+      </div>
+
+      <div style="padding:6px 18px 4px;display:flex;align-items:center;justify-content:space-between">
+        <b style="font-size:13.5px;color:var(--text-dim)">History</b>
+        <button class="mini-btn" id="smsg-clear" type="button" style="color:var(--danger)">Clear all</button>
+      </div>
+
+      <div class="settings-list" id="smsg-history" style="margin:8px 18px 20px;overflow-y:auto;max-height:40vh">
+        <div class="mini-row" style="color:var(--text-faint)">Loading…</div>
+      </div>
+  </div></div>`);
+
+  const wrap = document.getElementById("smsg-backdrop");
+  const input = document.getElementById("smsg-input");
+  const sendBtn = document.getElementById("smsg-send");
+  const historyBox = document.getElementById("smsg-history");
+
+  const renderHistory = (items)=>{
+    if(!items.length){
+      historyBox.innerHTML = `<div class="mini-row" style="color:var(--text-faint)">No messages sent yet.</div>`;
+      return;
+    }
+    historyBox.innerHTML = items.map(m=>{
+      const time = new Date(m.createdAtMs || Date.now()).toLocaleString([], { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
+      return `<div class="mini-row" style="align-items:flex-start;padding:12px 14px;position:relative">
+        <div class="mini-main" style="min-width:0">
+          <div style="font-size:13px;line-height:1.5;word-break:break-word;color:var(--text)">${formatMessageText(m.text || "")}</div>
+          <small style="font-size:10.5px;color:var(--text-faint);display:block;margin-top:5px">${time}</small>
+        </div>
+        <button class="icon-del" data-smsg-del="${m.id}" title="Delete" style="position:absolute;top:6px;right:6px"><svg width="14" height="14"><use href="#ic-trash"/></svg></button>
+      </div>`;
+    }).join("");
+  };
+
+  const loadHistory = async ()=>{
+    try{
+      const snap = await getDocs(collection(db, "ownerMessages"));
+      const items = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
+      renderHistory(items);
+    }catch(e){
+      console.warn("history load failed", e);
+      historyBox.innerHTML = `<div class="mini-row" style="color:var(--danger)">Failed to load history.</div>`;
+    }
+  };
+  loadHistory();
+
+  const close = ()=> wrap.remove();
+  wrap.addEventListener("click", e=>{
+    if(e.target === wrap || e.target.closest("[data-close]")){ close(); return; }
+
+    const del = e.target.closest("[data-smsg-del]");
+    if(del){
+      const id = del.dataset.smsgDel;
+      confirmSheet("Delete message?", "This will be removed from history.", "Delete").then(ok=>{
+        if(!ok) return;
+        deleteDoc(doc(db, "ownerMessages", id)).then(()=>{ toast("Message deleted"); loadHistory(); }).catch(err=> toast("Delete failed", "ic-close"));
+      });
+      return;
+    }
+
+    if(e.target.closest("#smsg-clear")){
+      confirmSheet("Clear all messages?", "Poori history delete ho jayegi aur users ke popup bhi band ho jayenge.", "Clear all").then(async ok=>{
+        if(!ok) return;
+        try{
+          const snap = await getDocs(collection(db, "ownerMessages"));
+          await Promise.all(snap.docs.map(d => deleteDoc(d.ref).catch(()=>{})));
+          toast("All messages cleared");
+          loadHistory();
+        }catch(err){ toast("Clear failed", "ic-close"); }
+      });
+      return;
+    }
+  });
+
+  sendBtn.addEventListener("click", async ()=>{
+    const text = (input.value || "").trim();
+    if(!text){ toast("Type a message first", "ic-close"); return; }
+    if(text.length > 500){ toast("Message is too long (max 500)", "ic-close"); return; }
+    sendBtn.disabled = true; sendBtn.textContent = "Sending…";
+    try{
+      const snap = await getDocs(collection(db, "ownerMessages"));
+      await Promise.all(snap.docs.map(d => deleteDoc(d.ref).catch(()=>{})));
+
+      await addDoc(collection(db, "ownerMessages"), {
+        text: text,
+        createdAt: serverTimestamp(),
+        createdAtMs: Date.now(),
+        sentBy: state.authUid || state.uid,
+        sentByName: state.username || "Owner"
+      });
+      input.value = "";
+      toast("Message sent to all users");
+      loadHistory();
+    }catch(e){
+      console.warn(e);
+      if((e.code||"").includes("permission-denied")){
+        rulesBanner("ownerMessages needs write access for admin.");
+      }
+      toast("Send failed: " + (e.code||e.message), "ic-close");
+    }finally{
+      sendBtn.disabled = false; sendBtn.textContent = "Send to All Users";
+    }
+  });
+}
+
+function showOwnerMessagePopup(msg){
+  const existing = document.getElementById("broadcast-backdrop");
+  if(existing) existing.remove();
+  if(broadcastTimer){ clearTimeout(broadcastTimer); broadcastTimer = null; }
+
+  const seenKey = OWNER_MSG_SEEN_KEY + "_" + state.uid;
+  try{ localStorage.setItem(seenKey, String(msg.createdAtMs || msg.id)); }catch(e){}
+
+  document.body.insertAdjacentHTML("beforeend", `
+  <div id="broadcast-backdrop" class="show">
+    <div class="broadcast-card" id="broadcast-card">
+      <div class="broadcast-head">
+        <div class="bc-icon"><svg><use href="#ic-chat"/></svg></div>
+        <div class="bc-title">
+          <b>Pika Store</b>
+          <small>Message from owner</small>
+        </div>
+        <button class="broadcast-close" id="broadcast-close" type="button" aria-label="Close">
+          <svg width="14" height="14"><use href="#ic-close"/></svg>
+        </button>
+      </div>
+      <div class="broadcast-body">${formatMessageText(msg.text || "")}</div>
+      <div class="broadcast-foot">
+        <span>Auto-close</span>
+        <span class="broadcast-progress"><i></i></span>
+      </div>
+    </div>
+  </div>`);
+
+  const backdrop = document.getElementById("broadcast-backdrop");
+  const closeBtn = document.getElementById("broadcast-close");
+  const card = document.getElementById("broadcast-card");
+
+  const dismiss = ()=>{
+    if(broadcastTimer){ clearTimeout(broadcastTimer); broadcastTimer = null; }
+    card.classList.add("out");
+    setTimeout(()=>{ if(backdrop && backdrop.parentNode) backdrop.remove(); }, 320);
+  };
+
+  closeBtn.addEventListener("click", dismiss);
+  broadcastTimer = setTimeout(dismiss, 9000);
+}
+
+function listenOwnerMessages(){
+  if(!firebaseReady) return;
+  if(state.isOwner) return; // owner ko apna message popup nahi chahiye
+  onSnapshot(collection(db, "ownerMessages"), snap=>{
+    const items = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
+    if(!items.length) return;
+    const latest = items[0];
+    const seenKey = OWNER_MSG_SEEN_KEY + "_" + state.uid;
+    const seen = localStorage.getItem(seenKey);
+    const latestStamp = String(latest.createdAtMs || latest.id);
+    if(seen !== latestStamp){
+      showOwnerMessagePopup(latest);
+    }
+  }, err=> console.warn("ownerMessages listener", err));
+}
+/* ================= /OWNER BROADCAST MESSAGES ================= */
 
 function initTheme(){
   const saved = localStorage.getItem("pika_theme") || "dark";
@@ -4457,6 +4753,7 @@ function renderProfile(){
 renderInviteCard();
 renderAccountDetails();
 updateMaintenanceUI();
+updateSendMessagesUI();
   const list = state.isOwner ? state.apps : mine;
   $("#my-uploads-title").textContent = state.isOwner ? "All uploads (Owner)" : "My uploads";
   $("#my-uploads-list").innerHTML = list.length ? list.map(a=>{
@@ -5081,6 +5378,8 @@ function initProfileActions(){
   $("#row-change-photo").addEventListener("click", ()=> $("#profile-photo-input").click());
   const _maintRow = document.getElementById("row-maintenance");
   if(_maintRow) _maintRow.addEventListener("click", toggleMaintenance);
+  const _sendMsgRow = document.getElementById("row-send-messages");
+  if(_sendMsgRow) _sendMsgRow.addEventListener("click", openSendMessagesSheet);
   $("#profile-avatar").addEventListener("click", ()=> $("#profile-photo-input").click());
   $("#profile-photo-input").addEventListener("change", e=>{ changeMyPhoto(e.target.files[0]); e.target.value = ""; });
   $("#row-rename").addEventListener("click", renameMyself);
@@ -7157,23 +7456,37 @@ async function tgDownloadMessage(m){
 
   toast(`Downloading "${filename}"…`);
 
-  // Direct native download — server sends Content-Disposition header,
-  // so browser uses the REAL filename. No blob, no popup, no re-download.
-  try{
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.rel = "noopener";
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=> a.remove(), 500);
-  }catch(e){
-    console.error("Native download failed:", e);
-    try{ window.location.href = url; }catch(_){}
-  }
+  const controller = new AbortController();
+  const bubble = createDlBubble({ name: filename }, ()=> controller.abort());
 
-  setTimeout(()=> dlActive.delete(m.id), 3000);
+  downloadInsideStore(url, filename, pct => bubble.set(pct), controller.signal)
+    .then(()=>{
+      bubble.set(100);
+      toast(`"${filename}" downloaded`);
+    })
+    .catch(err=>{
+      if(err && err.name === 'AbortError'){ toast('Download cancelled'); }
+      else {
+        // Server ne CORS block kiya ya fetch fail hua → native download fallback
+        try{
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          a.rel = "noopener";
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(()=> a.remove(), 500);
+        }catch(e){
+          console.error("Native download failed:", e);
+          try{ window.location.href = url; }catch(_){}
+        }
+      }
+    })
+    .finally(()=>{
+      bubble.remove();
+      setTimeout(()=> dlActive.delete(m.id), 3000);
+    });
 }
 
 // Helper: clean native download without black screen
