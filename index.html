@@ -3892,23 +3892,40 @@ function startDownloadJob(app){
   const filename = `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`;
   toast(`Downloading "${app.name}"…`);
 
-  // Direct native download — server sends Content-Disposition with real name
-  try{
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.rel = "noopener";
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=> a.remove(), 500);
-  }catch(e){ console.warn("Download failed", e); }
+  const controller = new AbortController();
+  const bubble = createDlBubble({ name: app.name }, ()=> controller.abort());
 
-  if(firebaseReady){
-    try{ updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }).catch(()=>{}); }catch(e){}
-  }
-
-  setTimeout(()=> dlActive.delete(app.id), 3000);
+  downloadInsideStore(url, filename, pct => bubble.set(pct), controller.signal)
+    .then(()=>{
+      bubble.set(100);
+      toast(`"${app.name}" downloaded`);
+      if(firebaseReady){
+        try{ updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }).catch(()=>{}); }catch(e){}
+      }
+    })
+    .catch(err=>{
+      if(err && err.name === 'AbortError'){ toast('Download cancelled'); }
+      else {
+        // Server ne CORS block kiya ya fetch fail hua → native download fallback
+        try{
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          a.rel = "noopener";
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(()=> a.remove(), 500);
+        }catch(e){ console.warn("Fallback download failed", e); }
+        if(firebaseReady){
+          try{ updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }).catch(()=>{}); }catch(e){}
+        }
+      }
+    })
+    .finally(()=>{
+      bubble.remove();
+      setTimeout(()=> dlActive.delete(app.id), 3000);
+    });
 }
 async function startDownload(app){ startDownloadJob(app); }
 async function loadJSZip(){
