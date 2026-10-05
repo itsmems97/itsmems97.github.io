@@ -325,112 +325,175 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .rules-banner .nb-x{ float:right; width:24px; height:24px; padding:0; color:var(--text-faint); }
 #loading-overlay p{ margin:0; font-size:13px; color:var(--text-dim); }
 
-/* ============ INSTALLING ANIMATION ============ */
+/* ============ INSTALLING ANIMATION (CONTINUITY FLOW) ============ */
 #install-anim{
   position:fixed; inset:0; z-index:105;
   display:flex; align-items:center; justify-content:center;
-  background:rgba(0,0,0,.5);
-  backdrop-filter:blur(10px) saturate(160%);
-  -webkit-backdrop-filter:blur(10px) saturate(160%);
-  animation: installFadeIn .3s ease-out;
+  background:rgba(0,0,0,.72);
+  backdrop-filter:blur(14px) saturate(160%);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  padding:20px;
+  animation: installFadeIn .35s ease-out;
 }
 @keyframes installFadeIn{ from{opacity:0} to{opacity:1} }
 #install-anim.out{ animation: installFadeOut .35s ease-in forwards; }
 @keyframes installFadeOut{ to{opacity:0} }
 
 .install-card{
-  width:100%; max-width:300px; margin:0 20px;
-  padding:32px 24px 26px;
+  position:relative;
+  width:100%; max-width:320px;
+  padding:32px 24px 28px;
   border-radius:28px;
-  background:rgba(255,255,255,.14);
-  border:1px solid rgba(255,255,255,.22);
+  background:linear-gradient(155deg, #1a2340 0%, #0f1424 100%);
+  border:1px solid rgba(255,198,26,.35);
   box-shadow:
-    0 20px 50px rgba(0,0,0,.5),
-    inset 0 1px 1px rgba(255,255,255,.4);
-  backdrop-filter:blur(30px) saturate(190%);
-  -webkit-backdrop-filter:blur(30px) saturate(190%);
-  text-align:center; color:#fff;
-  animation: installCardIn .5s cubic-bezier(.175,.885,.32,1.275);
+    0 30px 80px rgba(0,0,0,.7),
+    0 0 0 1px rgba(255,198,26,.12),
+    inset 0 1px 0 rgba(255,255,255,.08);
+  text-align:center; color:#F4F5F7;
+  overflow:hidden;
+  animation: installCardIn .55s cubic-bezier(.34,1.4,.64,1);
 }
 @keyframes installCardIn{
-  from{ transform:scale(.85) translateY(20px); opacity:0; }
-  to{ transform:scale(1) translateY(0); opacity:1; }
+  from{ transform:scale(.85) translateY(30px); opacity:0; }
+  to  { transform:scale(1) translateY(0); opacity:1; }
+}
+.install-card::before{
+  content:""; position:absolute; top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg,#FFC61A,#FFA800,#33E0C1,#FFC61A);
+  background-size:200% 100%;
+  animation: installShimmerBar 2s linear infinite;
+}
+@keyframes installShimmerBar{
+  0%{ background-position:0% 0; }
+  100%{ background-position:200% 0; }
+}
+.install-card::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(circle at 100% 0%, rgba(255,198,26,.15), transparent 55%),
+              radial-gradient(circle at 0% 100%, rgba(51,224,193,.12), transparent 55%);
 }
 
 .install-logo{
-  position:relative;
-  width:84px; height:84px; margin:0 auto 18px;
-  border-radius:22px;
+  position:relative; z-index:2;
+  width:88px; height:88px; margin:0 auto 18px;
+  border-radius:24px; overflow:hidden;
   background:linear-gradient(135deg,#FFC61A,#FFA800);
-  display:grid; place-items:center;
   box-shadow:
-    0 12px 30px rgba(255,168,0,.45),
+    0 14px 34px rgba(255,168,0,.5),
+    0 0 60px rgba(255,198,26,.35),
     inset 0 1px 0 rgba(255,255,255,.5);
-  font-size:42px; font-weight:900; color:#111;
-  animation: installLogoPop .8s cubic-bezier(.34,1.56,.64,1);
-  overflow:hidden;
-}
-.install-logo img{
-  width:100%; height:100%;
-  object-fit:cover; display:block;
+  animation: installLogoPop .8s cubic-bezier(.34,1.56,.64,1),
+             installLogoPulse 2.5s ease-in-out 1s infinite;
 }
 @keyframes installLogoPop{
   0%{ transform:scale(.4) rotate(-15deg); opacity:0; }
   60%{ opacity:1; }
   100%{ transform:scale(1) rotate(0); opacity:1; }
 }
-.install-logo::after{
-  content:""; position:absolute; inset:0;
-  background: linear-gradient(115deg,
-    transparent 40%, rgba(255,255,255,.7) 50%, transparent 60%);
-  transform: translateX(-150%) skewX(-15deg);
-  animation: installLogoShine 1.8s ease-in-out 0.4s infinite;
+@keyframes installLogoPulse{
+  0%,100%{ transform:scale(1); }
+  50%    { transform:scale(1.05); }
+}
+.install-logo img{
+  width:100%; height:100%; object-fit:cover; display:block;
+  position:relative; z-index:2;
+}
+.install-logo .shine{
+  position:absolute; inset:0; z-index:3;
+  background:linear-gradient(115deg,
+    transparent 35%, rgba(255,255,255,.7) 48%,
+    rgba(255,255,255,1) 50%, rgba(255,255,255,.7) 52%,
+    transparent 65%);
+  transform:translateX(-150%) skewX(-15deg);
+  animation: installLogoShine 2.5s ease-in-out infinite;
+  mix-blend-mode:screen;
 }
 @keyframes installLogoShine{
-  0%   { transform: translateX(-150%) skewX(-15deg); }
-  100% { transform: translateX(150%) skewX(-15deg); }
+  0%   { transform:translateX(-150%) skewX(-15deg); }
+  100% { transform:translateX(150%) skewX(-15deg); }
 }
 
 .install-title{
-  font-size:17px; font-weight:700; margin:0 0 6px;
-  color:#fff; letter-spacing:-.2px;
+  position:relative; z-index:2;
+  font-size:17px; font-weight:800; margin:0 0 6px;
+  color:#F4F5F7; letter-spacing:-.01em;
 }
 .install-sub{
-  font-size:12.5px; color:rgba(255,255,255,.65);
-  margin:0 0 22px; letter-spacing:.02em;
+  position:relative; z-index:2;
+  font-size:12.5px; color:rgba(244,245,247,.6);
+  margin:0 0 22px;
 }
 .install-bar{
-  width:100%; height:6px; border-radius:6px;
-  background:rgba(255,255,255,.15);
-  overflow:hidden; position:relative;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,.15);
+  position:relative; z-index:2;
+  width:100%; height:6px;
+  border-radius:6px;
+  background:rgba(255,255,255,.1);
+  overflow:hidden;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
 }
 .install-bar i{
   display:block; height:100%; width:0%;
   border-radius:6px;
   background:linear-gradient(90deg,#FFC61A,#FFA800,#33E0C1);
   background-size:200% 100%;
-  box-shadow: 0 0 12px rgba(255,198,26,.6);
-  animation: installProgress 2s cubic-bezier(.4,0,.2,1) forwards,
-             installBarShimmer 1.4s linear infinite;
-}
-@keyframes installProgress{
-  0%   { width:0%; }
-  30%  { width:42%; }
-  65%  { width:78%; }
-  100% { width:100%; }
+  box-shadow:0 0 14px rgba(255,198,26,.7);
+  transition:width .3s cubic-bezier(.4,0,.2,1);
+  animation: installBarShimmer 1.5s linear infinite;
 }
 @keyframes installBarShimmer{
-  0%   { background-position:0% 0; }
-  100% { background-position:200% 0; }
+  0%{ background-position:0% 0; }
+  100%{ background-position:200% 0; }
 }
-
 .install-pct{
+  position:relative; z-index:2;
   font-size:11.5px; font-weight:700;
-  color:rgba(255,255,255,.75);
+  color:rgba(244,245,247,.7);
   margin-top:12px;
   letter-spacing:.08em;
   font-variant-numeric: tabular-nums;
+}
+
+.install-success-check{
+  position:relative; z-index:2;
+  width:88px; height:88px; margin:0 auto 18px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#33E0C1,#1FB89C);
+  display:grid; place-items:center;
+  box-shadow:
+    0 14px 34px rgba(51,224,193,.5),
+    0 0 60px rgba(51,224,193,.35);
+  animation: installSuccessPop .7s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes installSuccessPop{
+  0%   { transform:scale(0) rotate(-180deg); opacity:0; }
+  60%  { opacity:1; }
+  100% { transform:scale(1) rotate(0); opacity:1; }
+}
+.install-success-check svg{
+  width:48px; height:48px;
+  stroke:#fff; stroke-width:3.5;
+  fill:none;
+  stroke-dasharray:50;
+  stroke-dashoffset:50;
+  animation: installCheckDraw .6s ease-out .5s forwards;
+}
+@keyframes installCheckDraw{
+  to{ stroke-dashoffset:0; }
+}
+
+.install-ripple{
+  position:absolute; top:50%; left:50%;
+  width:20px; height:20px;
+  border-radius:50%;
+  transform:translate(-50%,-50%) scale(0);
+  background:radial-gradient(circle, rgba(255,198,26,.5), transparent 70%);
+  pointer-events:none; z-index:1;
+  animation: installRippleOut .9s cubic-bezier(.22,1,.36,1) forwards;
+}
+@keyframes installRippleOut{
+  0%   { transform:translate(-50%,-50%) scale(0); opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(40); opacity:0; }
 }
 
 /* ============ /INSTALLING ANIMATION ============ */
@@ -3091,48 +3154,105 @@ async function installApp(){
     return;
   }
 
-  // 🎬 Show installing animation
+  const LOGO = "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png";
+
+  // ============ STAGE 1: PREPARING (custom) ============
   document.body.insertAdjacentHTML("beforeend", `
     <div id="install-anim">
       <div class="install-card">
-  <div class="install-logo">
-    <img alt="Pika Store" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
-  </div>
-  <h3 class="install-title">Installing Pika Store</h3>
-        <p class="install-sub">Please wait a moment…</p>
-        <div class="install-bar"><i></i></div>
-        <div class="install-pct" id="install-pct">0%</div>
+        <div class="install-logo">
+          <img alt="Pika Store" src="${LOGO}" />
+          <div class="shine"></div>
+        </div>
+        <h3 class="install-title">Preparing to install…</h3>
+        <p class="install-sub">Getting things ready</p>
+        <div class="install-bar"><i id="install-bar-1"></i></div>
+        <div class="install-pct" id="install-pct-1">0%</div>
       </div>
     </div>`);
 
-  const animEl = document.getElementById("install-anim");
-  const pctEl = document.getElementById("install-pct");
+  const animEl1 = document.getElementById("install-anim");
+  const bar1 = document.getElementById("install-bar-1");
+  const pct1 = document.getElementById("install-pct-1");
 
-  // Animate percentage counter
-  let pct = 0;
-  const pctTimer = setInterval(()=>{
-    pct = Math.min(100, pct + Math.floor(Math.random() * 6) + 3);
-    if(pctEl) pctEl.textContent = pct + "%";
-    if(pct >= 100) clearInterval(pctTimer);
-  }, 60);
+  // Animate stage 1 progress
+  await new Promise(resolve=>{
+    let pct = 0;
+    const t = setInterval(()=>{
+      pct = Math.min(100, pct + Math.floor(Math.random()*8) + 4);
+      if(bar1) bar1.style.width = pct + "%";
+      if(pct1) pct1.textContent = pct + "%";
+      if(pct >= 100){ clearInterval(t); setTimeout(resolve, 250); }
+    }, 90);
+  });
 
-  // Wait for animation to complete (2 seconds)
-  await new Promise(r => setTimeout(r, 2000));
-
-  // 🎬 Fade out animation
-  if(animEl) animEl.classList.add("out");
+  // Fade out stage 1
+  if(animEl1) animEl1.classList.add("out");
   await new Promise(r => setTimeout(r, 350));
-  if(animEl) animEl.remove();
+  if(animEl1) animEl1.remove();
 
-  // 🚀 Now trigger the native install prompt
+  // ============ STAGE 2: NATIVE PROMPT ============
+  let accepted = false;
   try{
     deferredInstall.prompt();
     const c = await deferredInstall.userChoice;
     deferredInstall = null;
-    if(c && c.outcome === "accepted"){
-      await infoSheet("Pika Store installed", "The app was added to your home screen.", "Got it");
-    }
+    accepted = !!(c && c.outcome === "accepted");
   }catch(e){ console.warn(e); }
+
+  if(!accepted){
+    // User cancelled — nothing more to do
+    return;
+  }
+
+  // ============ STAGE 3: INSTALLING (custom) ============
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="install-anim">
+      <div class="install-card">
+        <div class="install-logo">
+          <img alt="Pika Store" src="${LOGO}" />
+          <div class="shine"></div>
+        </div>
+        <h3 class="install-title">Installing Pika Store</h3>
+        <p class="install-sub">Almost done…</p>
+        <div class="install-bar"><i id="install-bar-3" style="width:30%"></i></div>
+        <div class="install-pct" id="install-pct-3">30%</div>
+      </div>
+    </div>`);
+
+  const animEl3 = document.getElementById("install-anim");
+  const bar3 = document.getElementById("install-bar-3");
+  const pct3 = document.getElementById("install-pct-3");
+
+  await new Promise(resolve=>{
+    let pct = 30;
+    const t = setInterval(()=>{
+      pct = Math.min(100, pct + Math.floor(Math.random()*10) + 4);
+      if(bar3) bar3.style.width = pct + "%";
+      if(pct3) pct3.textContent = pct + "%";
+      if(pct >= 100){ clearInterval(t); setTimeout(resolve, 400); }
+    }, 120);
+  });
+
+  // ============ STAGE 4: SUCCESS (custom) ============
+  if(animEl3){
+    animEl3.querySelector(".install-card").innerHTML = `
+      <div class="install-ripple"></div>
+      <div class="install-success-check">
+        <svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>
+      </div>
+      <h3 class="install-title" style="font-size:19px">Ready to launch!</h3>
+      <p class="install-sub" style="margin-bottom:0">Pika Store is installed on your device</p>
+    `;
+  }
+
+  // Wait 2 seconds on success screen
+  await new Promise(r => setTimeout(r, 2200));
+
+  // Fade out
+  if(animEl3) animEl3.classList.add("out");
+  await new Promise(r => setTimeout(r, 350));
+  if(animEl3) animEl3.remove();
 }
 function showGateStep(step){
   $("#gate-step-welcome").hidden = step !== "welcome";
