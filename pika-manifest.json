@@ -6,22 +6,46 @@
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
-  "orientation": "portrait",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
+  "orientation": "portrait-primary",
   "background_color": "#0B0E14",
   "theme_color": "#0B0E14",
   "lang": "en",
   "dir": "ltr",
   "categories": ["utilities", "social", "productivity"],
   "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "/pika-manifest.json"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": ["focus-existing", "auto"]
+  },
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "application/vnd.android.package-archive": [".apk"],
+        "application/zip": [".zip"],
+        "application/x-rar-compressed": [".rar"],
+        "application/vnd.rar": [".rar"]
+      }
+    }
+  ],
   "icons": [
-    { "src": "pika-icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "72x72", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "pika.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
     { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "pika.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "72x72", "type": "image/png", "purpose": "any" }
+    { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "monochrome" }
   ],
   "screenshots": [
     {
@@ -38,21 +62,28 @@
       "short_name": "Upload",
       "description": "Upload a new app to Pika Store",
       "url": "/?action=upload",
-      "icons": [{ "src": "pika-icon-256.png", "sizes": "256x256" }]
+      "icons": [{ "src": "pika.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "My Profile",
       "short_name": "Profile",
       "description": "Open your profile page",
       "url": "/?action=profile",
-      "icons": [{ "src": "pika-icon-256.png", "sizes": "256x256" }]
+      "icons": [{ "src": "pika.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "Channels",
       "short_name": "Channels",
       "description": "Open channels list",
       "url": "/?action=channels",
-      "icons": [{ "src": "pika-icon-256.png", "sizes": "256x256" }]
+      "icons": [{ "src": "pika.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Search Apps",
+      "short_name": "Search",
+      "description": "Search apps in Pika Store",
+      "url": "/?action=search",
+      "icons": [{ "src": "pika.png", "sizes": "96x96", "type": "image/png" }]
     }
   ],
   "share_target": {
