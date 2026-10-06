@@ -1680,6 +1680,42 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
   font-size:50px; font-weight:800; color:#171200;
   background:linear-gradient(135deg,#FFE066,#FFA800);
 }
+/* ============ OWNER CONSOLE DETECTOR ============ */
+#owner-console-btn {
+  position: fixed; left: 12px; bottom: calc(96px + var(--safe-bottom));
+  z-index: 1000; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border);
+  display: none; align-items: center; justify-content: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4); color: var(--danger);
+  cursor: pointer; transition: transform 0.2s;
+}
+#owner-console-btn:active { transform: scale(0.9); }
+#owner-console-btn svg { width: 20px; height: 20px; }
+#owner-console-btn.has-errors { animation: pulseRed 2s infinite; }
+@keyframes pulseRed {
+  0%, 100% { box-shadow: 0 8px 24px rgba(255,92,108,0.4); }
+  50% { box-shadow: 0 8px 32px rgba(255,92,108,0.9); }
+}
+#owner-console-modal {
+  position: fixed; inset: 0; z-index: 1001; background: rgba(0,0,0,0.7);
+  display: none; align-items: flex-end; justify-content: center;
+}
+#owner-console-modal.active { display: flex; }
+.owner-console-sheet {
+  width: 100%; max-width: 600px; max-height: 80vh;
+  background: var(--bg-elevated); border-radius: 22px 22px 0 0;
+  padding: 20px; display: flex; flex-direction: column;
+  animation: slideUp 0.3s var(--ease-spring);
+}
+.owner-console-sheet h3 { margin: 0 0 14px; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+.owner-console-log {
+  flex: 1; overflow-y: auto; background: #0B0E14; border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px; font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px; line-height: 1.5; color: #F4F5F7; margin-bottom: 14px;
+  white-space: pre-wrap; word-break: break-all;
+}
+.owner-console-log .error-line { color: #FF5C6C; }
+.owner-console-log .warn-line { color: #FFC61A; }
 .gh-empty-btn{
   margin-top:18px; padding:12px 24px; border:0; border-radius:14px;
   background:linear-gradient(135deg,#FFC107,#FF9800); color:#3a2400;
@@ -2282,6 +2318,21 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
     <span class="badge" id="chat-badge" hidden>0</span>
   </button>
   <div id="toast-container"></div>
+  <!-- Owner Console Detector -->
+<button id="owner-console-btn" title="Console Errors">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<div id="owner-console-modal">
+  <div class="owner-console-sheet">
+    <h3><svg width="18" height="18" style="color:var(--danger)"><use href="#ic-close"/></svg> Console Errors</h3>
+    <div class="owner-console-log" id="owner-console-log">No errors detected.</div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1" id="owner-console-clear" type="button">Clear</button>
+      <button class="btn btn-primary" style="flex:1" id="owner-console-copy" type="button"><svg><use href="#ic-copy"/></svg> Copy All</button>
+      <button class="btn btn-ghost" style="width:50px;padding:0" id="owner-console-close" type="button"><svg><use href="#ic-close"/></svg></button>
+    </div>
+  </div>
+</div>
 </div>
 
 <div id="pktg">
@@ -3525,9 +3576,43 @@ function installInstructions(){
 async function installApp(){
   if(isStandalone()){ await infoSheet("Already installed", "Pika Store is already installed.", "OK"); return; }
   if(!deferredInstall){
-    await infoSheet("Install Pika Store", installInstructions(), "OK");
-    return;
-  }
+  // Agar browser ne automatic prompt nahi diya, toh custom animation dikhao
+  // aur phir manual instructions de do.
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="install-anim">
+      <div class="install-card">
+        <div class="install-logo">
+          <img alt="Pika Store" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
+          <div class="shine"></div>
+        </div>
+        <h3 class="install-title">Preparing to install…</h3>
+        <p class="install-sub">Getting things ready</p>
+        <div class="install-bar"><i id="install-bar-manual"></i></div>
+        <div class="install-pct" id="install-pct-manual">0%</div>
+      </div>
+    </div>`);
+
+  const animEl = document.getElementById("install-anim");
+  const bar = document.getElementById("install-bar-manual");
+  const pct = document.getElementById("install-pct-manual");
+
+  await new Promise(resolve=>{
+    let p = 0;
+    const t = setInterval(()=>{
+      p = Math.min(100, p + Math.floor(Math.random()*8) + 4);
+      if(bar) bar.style.width = p + "%";
+      if(pct) pct.textContent = p + "%";
+      if(p >= 100){ clearInterval(t); setTimeout(resolve, 250); }
+    }, 90);
+  });
+
+  if(animEl) animEl.classList.add("out");
+  await new Promise(r => setTimeout(r, 350));
+  if(animEl) animEl.remove();
+
+  await infoSheet("Install Pika Store", installInstructions(), "OK");
+  return;
+}
 
   const LOGO = "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png";
 
@@ -3902,9 +3987,11 @@ setTimeout(()=>{
 initAuthWithRetry();
 }
 let booted = false;
+
 function boot(){
   if(booted) return; booted = true;
   renderProfile();
+  initOwnerConsole();
   initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); initTelegramUI(); initHomeCategories();
   if(!state.isGuest) loadMyPhone();
   listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance();
@@ -3912,16 +3999,15 @@ function boot(){
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: you can only download", "ic-lock"); }
   if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelMembers(); migrateChannelMessageMedia(); toast("Owner control enabled", "ic-check"); }
-  
+
   // ⚡ PWA Shortcut trigger — safe navigation after boot
   setTimeout(()=>{
     try{
       const action = sessionStorage.getItem("pika_pending_action");
       if(!action) return;
       sessionStorage.removeItem("pika_pending_action");
-      
+
       if(action === "upload"){
-        // Guest ko upload nahi karne dena — guestBlock handles it
         if(state.isGuest){
           if(guestBlock("upload apps")) return;
         }
@@ -3944,6 +4030,80 @@ function boot(){
       }
     }catch(e){ console.warn("shortcut action failed", e); }
   }, 400);
+}
+
+function initOwnerConsole(){
+  if(!state.isOwner) return; // Sirf owner ke liye
+
+  const btn = document.getElementById("owner-console-btn");
+  const modal = document.getElementById("owner-console-modal");
+  const logBox = document.getElementById("owner-console-log");
+
+  if(!btn || !modal) return;
+
+  btn.style.display = "flex";
+  let errors = [];
+
+  const addLog = (type, msg) => {
+    const time = new Date().toLocaleTimeString();
+    errors.push(`[${time}] [${type}] ${msg}`);
+    if(errors.length > 100) errors.shift();
+    logBox.innerHTML = errors.map(e => {
+      const cls = e.includes("[ERROR]") ? "error-line" : "warn-line";
+      return `<div class="${cls}">${escapeHtml(e)}</div>`;
+    }).join("");
+    logBox.scrollTop = logBox.scrollHeight;
+    btn.classList.add("has-errors");
+  };
+
+  const originalError = console.error;
+  console.error = function(...args){
+    originalError.apply(console, args);
+    addLog("ERROR", args.map(a => {
+      if(a instanceof Error) return a.message + "\n" + (a.stack || "");
+      if(typeof a === "object") return JSON.stringify(a);
+      return String(a);
+    }).join(" "));
+  };
+
+  const originalWarn = console.warn;
+  console.warn = function(...args){
+    originalWarn.apply(console, args);
+    addLog("WARN", args.map(a => {
+      if(a instanceof Error) return a.message;
+      if(typeof a === "object") return JSON.stringify(a);
+      return String(a);
+    }).join(" "));
+  };
+
+  window.addEventListener("error", (e) => {
+    addLog("ERROR", `${e.message} at ${e.filename}:${e.lineno}:${e.colno}`);
+  });
+
+  window.addEventListener("unhandledrejection", (e) => {
+    addLog("ERROR", `Unhandled Promise: ${e.reason}`);
+  });
+
+  btn.addEventListener("click", () => {
+    modal.classList.add("active");
+    btn.classList.remove("has-errors");
+  });
+
+  document.getElementById("owner-console-close").addEventListener("click", () => {
+    modal.classList.remove("active");
+  });
+
+  document.getElementById("owner-console-clear").addEventListener("click", () => {
+    errors = [];
+    logBox.innerHTML = "No errors detected.";
+    btn.classList.remove("has-errors");
+  });
+
+  document.getElementById("owner-console-copy").addEventListener("click", async () => {
+    const text = errors.length ? errors.join("\n") : "No errors.";
+    const ok = await copyText(text);
+    toast(ok ? "Console log copied" : "Copy failed", ok ? "ic-check" : "ic-close");
+  });
 }
 function listenSession(){
   if(!firebaseReady) return;
@@ -4515,7 +4675,8 @@ const ghState = {
   rActive: 0,
   built: false,
   builtSig: '',
-  slidesData: []
+  slidesData: [],
+  largeAppIndices: []   // Naya: har slide ka large index track karega
 };
 
 function ghBuildOrbiters(){
@@ -4535,11 +4696,12 @@ function ghBuildOrbiters(){
   ghState.rowLayers = [document.getElementById('gh-rowA'), document.getElementById('gh-rowB')];
 
   const allApps = ghGetCurrentApps();
+  
+  // Fixed positions for 3 apps
   const positions = [
-    { x: 15, y: 22, s: 0.50 },
-    { x: 44, y: 38, s: 0.58 },
-    { x: 71, y: 31, s: 0.50 },
-    { x: 82, y: 49, s: 0.52 }
+    { x: 20, y: 30 }, // Left
+    { x: 50, y: 50 }, // Center
+    { x: 80, y: 30 }  // Right
   ];
 
   // Agar koi app nahi hai → purane decorative SVG objects (fallback)
@@ -4547,6 +4709,7 @@ function ghBuildOrbiters(){
     GH_SLIDES.forEach((slide, si) => {
       const list = [];
       slide.objs().forEach((o, oi) => {
+        if(oi >= 3) return; // Sirf 3 objects
         const orb = document.createElement('div'); orb.className = 'gh-orbiter';
         orb.style.setProperty('--rot', '-22deg');
         const obj = document.createElement('div'); obj.className = 'gh-obj';
@@ -4563,41 +4726,47 @@ function ghBuildOrbiters(){
     return;
   }
 
-  // Apps hain — app icons ko floating objects banao
+  // Apps hain — app icons ko floating objects banao (sirf 3)
   GH_SLIDES.forEach((slide, si) => {
     const list = [];
-    const slideApps = si === 0
-      ? [...allApps].sort((a,b) => (b.downloadCount||0) - (a.downloadCount||0)).slice(0, 4)
-      : (si === 1
-        ? [...allApps].filter(a => !a.__discover).sort((a,b) => (b.createdAtMs||0) - (a.createdAtMs||0)).slice(0, 4)
-        : [...allApps].sort(() => Math.random() - 0.5).slice(0, 4));
+    let slideApps = [];
+    
+    if (si === 0) {
+      slideApps = [...allApps].sort((a,b) => (b.downloadCount||0) - (a.downloadCount||0)).slice(0, 3);
+    } else if (si === 1) {
+      slideApps = [...allApps].filter(a => !a.__discover).sort((a,b) => (b.createdAtMs||0) - (a.createdAtMs||0)).slice(0, 3);
+    } else {
+      slideApps = [...allApps].sort(() => Math.random() - 0.5).slice(0, 3);
+    }
 
-    // Agar kisi slide me apps kam hain to fallback bhi mix kar do
-    const fallbackObjs = slide.objs();
-    const total = Math.max(slideApps.length, 3);
+    // Randomly select one index to be "large" (0, 1, or 2)
+const largeIndex = Math.floor(Math.random() * slideApps.length);
 
-    for (let oi = 0; oi < total; oi++){
+// Track which app is large for THIS slide's single line
+ghState.largeAppIndices[si] = largeIndex;
+ghState.slidesData[si] = slideApps; // Store for the single line
+
+    for (let oi = 0; oi < slideApps.length; oi++){
+      const app = slideApps[oi];
       const o = positions[oi] || positions[0];
+      
+      // Assign size: large one gets 0.75, others get 0.45
+      const sizeScale = (oi === largeIndex) ? 0.75 : 0.45;
+
       const orb = document.createElement('div'); orb.className = 'gh-orbiter';
       orb.style.setProperty('--rot', '-22deg');
       const obj = document.createElement('div'); obj.className = 'gh-obj';
       obj.style.left = o.x + '%'; obj.style.top = o.y + '%';
-      obj.style.setProperty('--s', o.s);
+      obj.style.setProperty('--s', sizeScale);
       const fl = document.createElement('div'); fl.className = 'gh-float';
       fl.style.animationDelay = (-(oi * 0.53 + si * 0.31)).toFixed(2) + 's';
 
-      if (oi < slideApps.length){
-        const app = slideApps[oi];
-        const iconUrl = (app.thumbUrl || '').replace(/'/g, '%27').replace(/"/g, '%22');
-        if (iconUrl){
-          fl.innerHTML = `<div class="gh-app-obj" style="background-image:url('${iconUrl}')"></div>`;
-        } else {
-          const letter = (app.name || 'A').trim().charAt(0).toUpperCase();
-          fl.innerHTML = `<div class="gh-app-obj gh-app-obj-fallback">${letter}</div>`;
-        }
+      const iconUrl = (app.thumbUrl || '').replace(/'/g, '%27').replace(/"/g, '%22');
+      if (iconUrl){
+        fl.innerHTML = `<div class="gh-app-obj" style="background-image:url('${iconUrl}')"></div>`;
       } else {
-        const fo = fallbackObjs[oi % fallbackObjs.length];
-        fl.innerHTML = fo.svg;
+        const letter = (app.name || 'A').trim().charAt(0).toUpperCase();
+        fl.innerHTML = `<div class="gh-app-obj gh-app-obj-fallback">${letter}</div>`;
       }
 
       obj.appendChild(fl); orb.appendChild(obj); box.appendChild(orb);
@@ -4639,16 +4808,22 @@ function ghCrossFade(layers, activeIdx, html){
 }
 
 function ghRowsHTML(apps){
-  if (!apps.length) {
-    return [0,1,2].map(i => `<div class="gh-prow" style="--i:${i}"><span class="gh-pname" style="opacity:.4">— No app yet —</span></div>`).join('');
+  // Sirf 1 line dikhani hai, aur wo sabse bade app ki honi chahiye
+  if (!apps || !apps.length) {
+    return `<div class="gh-prow" style="--i:0"><span class="gh-pname" style="opacity:.4">— No app yet —</span></div>`;
   }
-  return apps.slice(0,3).map((a, i) => `
-    <div class="gh-prow" style="--i:${i}" data-gh-app="${escapeHtml(a.id)}">
+  
+  const si = ghState.current >= 0 ? ghState.current : 0;
+  const largeIndex = ghState.largeAppIndices[si] || 0;
+  const a = apps[largeIndex] || apps[0]; // Us slide ka sabse bada app uthao
+  
+  return `
+    <div class="gh-prow" style="--i:0">
       <span class="gh-pname">${escapeHtml(a.name)}</span>
       <span class="gh-psize">${escapeHtml(a.sizeLabel || '—')}</span>
       <span class="gh-pthumb" style="background-image:url('${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}')"></span>
       <span class="gh-pplus">+</span>
-    </div>`).join('');
+    </div>`;
 }
 
 function ghGoTo(si, animate){
@@ -4667,12 +4842,6 @@ function ghGoTo(si, animate){
   ghState.tActive = ghCrossFade(ghState.titleLayers, ghState.tActive, GH_SLIDES[si].title);
   const apps = ghState.slidesData[si] || [];
   ghState.rActive = ghCrossFade(ghState.rowLayers, ghState.rActive, ghRowsHTML(apps));
-  document.querySelectorAll('#gh-hero .gh-prow[data-gh-app]').forEach(r => {
-    r.addEventListener('click', () => {
-      const id = r.dataset.ghApp;
-      if (id && state.apps.some(a => a.id === id)) openAppDetail(id);
-    });
-  });
 }
 
 function ghStartLoop(){
@@ -5213,8 +5382,16 @@ function openAppDetail(appId){
   document.body.insertAdjacentHTML("beforeend", html);
 const wrap = $("#detail-backdrop");
 
+// Agar pehle se koi detail page khula hai, toh use hata do (multiple stuck hone se bachne ke liye)
+const existingDetail = document.querySelectorAll("#detail-backdrop");
+if (existingDetail.length > 1) {
+  existingDetail[0].remove();
+}
+
 // Stuck hone ki problem fix karne ke liye direct close function
-const closeDetail = () => { if(wrap) wrap.remove(); };
+const closeDetail = () => { 
+  if(wrap) wrap.remove(); 
+};
 
 wrap.addEventListener("click", e => {
   if(e.target === wrap || e.target.closest("[data-close]")) closeDetail();
