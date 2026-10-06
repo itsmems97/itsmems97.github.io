@@ -1664,6 +1664,20 @@ html[data-theme="dark"] .gh-adl{ background:rgba(106,77,230,.2); }
   padding:60px 24px; text-align:center; color:#16161c;
 }
 html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
+.gh-app-obj{
+  width:80px; height:80px;
+  border-radius:22px;
+  background-size:cover; background-position:center;
+  background-color:#fff;
+  border:2px solid rgba(255,255,255,.85);
+  box-shadow:0 16px 32px rgba(30,24,70,.45), 0 4px 10px rgba(30,24,70,.22), inset 0 2px 0 rgba(255,255,255,.55);
+  filter:drop-shadow(0 12px 18px rgba(30,24,70,.35));
+}
+.gh-app-obj-fallback{
+  display:grid; place-items:center;
+  font-size:34px; font-weight:800; color:#171200;
+  background:linear-gradient(135deg,#FFE066,#FFA800);
+}
 .gh-empty-btn{
   margin-top:18px; padding:12px 24px; border:0; border-radius:14px;
   background:linear-gradient(135deg,#FFC107,#FF9800); color:#3a2400;
@@ -4474,17 +4488,80 @@ const ghState = {
   tActive: 0,
   rActive: 0,
   built: false,
+  builtSig: '',
+  slidesData: []
+};
+  current: -1,
+  timers: [],
+  loopId: null,
+  titleLayers: [null, null],
+  rowLayers: [null, null],
+  tActive: 0,
+  rActive: 0,
+  built: false,
   slidesData: []
 };
 
 function ghBuildOrbiters(){
   const box = document.getElementById('gh-objects');
-  if (!box || ghState.built) return;
+  if (!box) return;
+
+  // Apps ki list ka signature — agar badla nahi to rebuild mat karo
+  const apps = state.apps || [];
+  const sig = apps.length + '|' + apps.slice(0,12).map(a => a.id).join(',');
+  if (ghState.built && ghState.builtSig === sig) return;
+  ghState.built = true;
+  ghState.builtSig = sig;
+
+  box.innerHTML = '';
+  ghState.orbiters = [];
   ghState.titleLayers = [document.getElementById('gh-titleA'), document.getElementById('gh-titleB')];
   ghState.rowLayers = [document.getElementById('gh-rowA'), document.getElementById('gh-rowB')];
+
+  const allApps = ghGetCurrentApps();
+  const positions = [
+    { x: 15, y: 22, s: 0.50 },
+    { x: 44, y: 38, s: 0.58 },
+    { x: 71, y: 31, s: 0.50 },
+    { x: 82, y: 49, s: 0.52 }
+  ];
+
+  // Agar koi app nahi hai → purane decorative SVG objects (fallback)
+  if (allApps.length === 0){
+    GH_SLIDES.forEach((slide, si) => {
+      const list = [];
+      slide.objs().forEach((o, oi) => {
+        const orb = document.createElement('div'); orb.className = 'gh-orbiter';
+        orb.style.setProperty('--rot', '-22deg');
+        const obj = document.createElement('div'); obj.className = 'gh-obj';
+        obj.style.left = o.x + '%'; obj.style.top = o.y + '%';
+        obj.style.setProperty('--s', o.s);
+        const fl = document.createElement('div'); fl.className = 'gh-float';
+        fl.style.animationDelay = (-(oi * 0.53 + si * 0.31)).toFixed(2) + 's';
+        fl.innerHTML = o.svg;
+        obj.appendChild(fl); orb.appendChild(obj); box.appendChild(orb);
+        list.push({ orb, obj });
+      });
+      ghState.orbiters.push(list);
+    });
+    return;
+  }
+
+  // Apps hain — app icons ko floating objects banao
   GH_SLIDES.forEach((slide, si) => {
     const list = [];
-    slide.objs().forEach((o, oi) => {
+    const slideApps = si === 0
+      ? [...allApps].sort((a,b) => (b.downloadCount||0) - (a.downloadCount||0)).slice(0, 4)
+      : (si === 1
+        ? [...allApps].filter(a => !a.__discover).sort((a,b) => (b.createdAtMs||0) - (a.createdAtMs||0)).slice(0, 4)
+        : [...allApps].sort(() => Math.random() - 0.5).slice(0, 4));
+
+    // Agar kisi slide me apps kam hain to fallback bhi mix kar do
+    const fallbackObjs = slide.objs();
+    const total = Math.max(slideApps.length, 3);
+
+    for (let oi = 0; oi < total; oi++){
+      const o = positions[oi] || positions[0];
       const orb = document.createElement('div'); orb.className = 'gh-orbiter';
       orb.style.setProperty('--rot', '-22deg');
       const obj = document.createElement('div'); obj.className = 'gh-obj';
@@ -4492,13 +4569,26 @@ function ghBuildOrbiters(){
       obj.style.setProperty('--s', o.s);
       const fl = document.createElement('div'); fl.className = 'gh-float';
       fl.style.animationDelay = (-(oi * 0.53 + si * 0.31)).toFixed(2) + 's';
-      fl.innerHTML = o.svg;
+
+      if (oi < slideApps.length){
+        const app = slideApps[oi];
+        const iconUrl = (app.thumbUrl || '').replace(/'/g, '%27').replace(/"/g, '%22');
+        if (iconUrl){
+          fl.innerHTML = `<div class="gh-app-obj" style="background-image:url('${iconUrl}')"></div>`;
+        } else {
+          const letter = (app.name || 'A').trim().charAt(0).toUpperCase();
+          fl.innerHTML = `<div class="gh-app-obj gh-app-obj-fallback">${letter}</div>`;
+        }
+      } else {
+        const fo = fallbackObjs[oi % fallbackObjs.length];
+        fl.innerHTML = fo.svg;
+      }
+
       obj.appendChild(fl); orb.appendChild(obj); box.appendChild(orb);
       list.push({ orb, obj });
-    });
+    }
     ghState.orbiters.push(list);
   });
-  ghState.built = true;
 }
 
 function ghSetObj(item, state, animate){
@@ -5091,7 +5181,7 @@ function openAppDetail(appId){
       </div>
       ${shots.length ? `<div class="screens-row">${shots.map(s=>`<img src="${s}" alt=""/>`).join("")}</div>` : ""}
     <div class="accordion">
-      <div class="accordion-item" open><summary>Description <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary><div class="body">${formatMessageText(desc)}</div></details>
+      <details class="accordion-item" open><summary>Description <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary><div class="body">${formatMessageText(desc)}</div></details>
       <details class="accordion-item"><summary>File info <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary><div class="body">Format: ${app.format||"APK"}${app.sizeLabel? " • "+app.sizeLabel:""}\nUploaded by: ${escapeHtml(up.name)}\nCategory: ${escapeHtml(app.category||"Uncategorized")}${createdMs? "\nUploaded: " + new Date(createdMs).toLocaleString() : ""}</div></details>
     </div>
     <div style="padding:12px 18px 6px">
