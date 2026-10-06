@@ -1535,8 +1535,8 @@ html[data-theme="dark"] .gh-hero{ background:#12161f; box-shadow:0 26px 44px -22
 }
 html[data-theme="dark"] .gh-prow{ color:#eef1f6; }
 .gh-prow + .gh-prow{ margin-top:6px; }
-.gh-prow:nth-child(odd){ background:#f4f5f8; }
-html[data-theme="dark"] .gh-prow:nth-child(odd){ background:rgba(255,255,255,.05); }
+.gh-prow{ background:#f4f5f8; }
+html[data-theme="dark"] .gh-prow{ background:rgba(255,255,255,.05); }
 .gh-pname{ flex:1 1 auto; min-width:0; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .gh-psize{ flex:none; font-size:9.5px; color:#a8a8b4; }
 .gh-pthumb{
@@ -1667,17 +1667,17 @@ html[data-theme="dark"] .gh-adl{ background:rgba(106,77,230,.2); }
 }
 html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
 .gh-app-obj{
-  width:80px; height:80px;
-  border-radius:22px;
+  width:120px; height:120px; /* Size bada kar diya */
+  border-radius:30px;
   background-size:cover; background-position:center;
   background-color:#fff;
-  border:2px solid rgba(255,255,255,.85);
-  box-shadow:0 16px 32px rgba(30,24,70,.45), 0 4px 10px rgba(30,24,70,.22), inset 0 2px 0 rgba(255,255,255,.55);
-  filter:drop-shadow(0 12px 18px rgba(30,24,70,.35));
+  border:3px solid rgba(255,255,255,.85);
+  box-shadow:0 20px 40px rgba(30,24,70,.45), 0 6px 14px rgba(30,24,70,.22), inset 0 2px 0 rgba(255,255,255,.55);
+  filter:drop-shadow(0 16px 24px rgba(30,24,70,.35));
 }
 .gh-app-obj-fallback{
   display:grid; place-items:center;
-  font-size:34px; font-weight:800; color:#171200;
+  font-size:50px; font-weight:800; color:#171200;
   background:linear-gradient(135deg,#FFE066,#FFA800);
 }
 .gh-empty-btn{
@@ -4836,14 +4836,17 @@ function renderHome(){
   }
 
   const hero = document.getElementById('gh-hero');
-  if (hero && !hero.__clickBound){
-    hero.__clickBound = true;
-    hero.addEventListener('click', () => {
-      ghState.timers.forEach(clearTimeout); ghState.timers = [];
-      ghGoTo((ghState.current + 1) % GH_SLIDES.length, true);
-      ghStartLoop();
-    });
-  }
+if (hero && !hero.__clickBound){
+  hero.__clickBound = true;
+  /* Hero banner ka touch event band kar diya hai taaki galti se app change na ho */
+  /*
+  hero.addEventListener('click', () => {
+    ghState.timers.forEach(clearTimeout); ghState.timers = [];
+    ghGoTo((ghState.current + 1) % GH_SLIDES.length, true);
+    ghStartLoop();
+  });
+  */
+}
 }
 
 (function ghBind(){
@@ -5208,9 +5211,25 @@ function openAppDetail(appId){
     <div style="height:20px"></div>
 </div></div>`;
   document.body.insertAdjacentHTML("beforeend", html);
-  const wrap = $("#detail-backdrop");
-  wrap.addEventListener("click", e=>{ if(e.target===wrap || e.target.closest("[data-close]")) wrap.remove(); });
-  $("#detail-copy-btn").addEventListener("click", async ()=>{ await shareApp(app, up); });
+const wrap = $("#detail-backdrop");
+
+// Stuck hone ki problem fix karne ke liye direct close function
+const closeDetail = () => { if(wrap) wrap.remove(); };
+
+wrap.addEventListener("click", e => {
+  if(e.target === wrap || e.target.closest("[data-close]")) closeDetail();
+});
+
+// X button pe direct click listener lagaya hai taaki wo 100% kaam kare
+const closeBtnDirect = wrap.querySelector(".sheet-close");
+if(closeBtnDirect) {
+  closeBtnDirect.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeDetail();
+  });
+}
+
+$("#detail-copy-btn").addEventListener("click", async ()=>{ await shareApp(app, up); });
   const cmtBtn = $("#detail-comments-btn");
 if(cmtBtn) cmtBtn.addEventListener("click", ()=> openCommentsSheet(app.id, "pika", app.name));
   const delBtn = $("#detail-delete-btn");
