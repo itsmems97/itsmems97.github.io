@@ -1,318 +1,2183 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#000000">
-<title>Pika Movie</title>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000" id="meta-theme-color">
+<meta name="description" content="PIKA MOVIE - a Liquid Glass movie streaming web app">
+<link rel="icon" href="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png">
+<title>PIKA MOVIE</title>
 <style>
-:root{--red:#e50914;--bg:#000;--mut:#a8a8a8;--card:#1a1a1a;--sa:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:#fff;font-family:Roboto,system-ui,sans-serif;overflow-x:hidden;padding-bottom:calc(66px + var(--sb));user-select:none}
-button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-#splash{position:fixed;inset:0;background:#000;z-index:99;display:grid;place-items:center;transition:opacity .5s}
-#splash b{font:900 15vw/1 Impact,'Arial Black',sans-serif;color:var(--red);letter-spacing:.04em;animation:z 1.4s ease-out}
-#splash.off{opacity:0;pointer-events:none}
-@keyframes z{from{transform:scale(2.4);opacity:0}to{transform:scale(1);opacity:1}}
-header{position:fixed;top:0;left:0;right:0;z-index:10;padding:calc(10px + var(--sa)) 14px 8px;background:linear-gradient(#000e,#0000);transition:background .3s}
-header.s{background:#000}
-.top{display:flex;justify-content:space-between;align-items:center}
-.logo{font:900 26px Impact,'Arial Black',sans-serif;color:var(--red);letter-spacing:.03em}
-.chips{display:flex;gap:8px;overflow-x:auto;padding-top:8px;scrollbar-width:none}
-.chip{border:1px solid #fff8;border-radius:20px;padding:5px 14px;font-size:14px;white-space:nowrap}
-.chip.on{background:#fff;color:#000;border-color:#fff}
-.hero{height:68vh;min-height:420px;position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding:0 16px 18px;background-size:cover;background-position:center top}
-.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(#0006,#0000 30%,#000 96%)}
-.hero>*{position:relative;z-index:1}
-.hero h1{font:900 34px/1.05 Impact,'Arial Black',sans-serif;text-align:center;letter-spacing:.02em;text-shadow:0 2px 12px #000}
-.hero p{font-size:13px;color:#ddd;margin:8px 0 14px}
-.acts{display:flex;gap:10px;width:100%;max-width:420px}
-.btn{flex:1;display:flex;gap:6px;align-items:center;justify-content:center;padding:11px;border-radius:5px;font-weight:700;font-size:16px}
-.btn.w{background:#fff;color:#000}.btn.g{background:#6d6d6eb3}
-h2{font-size:17px;margin:20px 14px 10px}
-.row{display:flex;gap:8px;overflow-x:auto;padding:0 14px;scrollbar-width:none;scroll-snap-type:x proximity}
-.card{flex:0 0 112px;aspect-ratio:2/3;border-radius:4px;position:relative;overflow:hidden;scroll-snap-align:start;background-size:cover}
-.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.card span{position:absolute;left:6px;right:6px;bottom:8px;font:700 13px/1.1 Roboto,sans-serif;text-shadow:0 1px 4px #000}
-.card i{position:absolute;left:0;bottom:0;height:3px;background:var(--red)}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px}
-.grid .card{flex:none}
-.pad{padding-top:calc(70px + var(--sa))}
-.sb{display:flex;gap:8px;align-items:center;background:#333;margin:0 14px 14px;border-radius:6px;padding:0 12px}
-.sb input{flex:1;background:none;border:0;outline:0;color:#fff;font-size:16px;padding:12px 0;user-select:text}
-.empty{color:var(--mut);text-align:center;padding:60px 30px;line-height:1.5}
-nav{position:fixed;bottom:0;left:0;right:0;z-index:10;background:#0c0c0c;border-top:1px solid #222;display:flex;padding-bottom:var(--sb)}
-nav button{flex:1;padding:9px 0 7px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px}
-nav button.on{color:#fff}
-nav svg,.ic{width:24px;height:24px;fill:currentColor}
-#sh{position:fixed;inset:0;z-index:20;background:#000a;display:none}
-#sh.on{display:block}
-.sheet{position:absolute;left:0;right:0;bottom:0;top:6vh;background:#141414;border-radius:14px 14px 0 0;overflow-y:auto;animation:up .28s ease-out}
-@keyframes up{from{transform:translateY(100%)}}
-.bd{height:230px;background-size:cover;background-position:center;position:relative}
-.bd:after{content:"";position:absolute;inset:0;background:linear-gradient(#0000 50%,#141414)}
-.x{position:absolute;top:10px;right:10px;z-index:2;width:34px;height:34px;border-radius:50%;background:#000b;font-size:20px}
-.inf{padding:0 16px 30px}
-.inf h1{font-size:24px;margin-top:-10px;position:relative;z-index:1}
-.meta{display:flex;gap:10px;align-items:center;color:var(--mut);font-size:13px;margin:8px 0 14px}
-.meta b{border:1px solid #666;padding:0 5px;border-radius:3px;font-size:11px;color:#ddd}
-.meta em{color:#46d369;font-style:normal;font-weight:700}
-.inf .btn{margin-bottom:10px;flex:none;width:100%}
-.inf p{font-size:14px;line-height:1.45;color:#ddd;margin:12px 0}
-#pl{position:fixed;inset:0;z-index:50;background:#000;display:none;flex-direction:column}
-#pl.on{display:flex}
-#pl .pbar{display:flex;align-items:center;gap:10px;padding:calc(10px + var(--sa)) 14px 10px;background:#000;border-bottom:1px solid #222}
-#pl .pbar button{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:#1a1a1a}
-#pl .pbar span{flex:1;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#pl .pframe{flex:1;position:relative;background:#000}
-#pl iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-#psrc{display:none;gap:6px;overflow-x:auto;padding:6px 10px;background:#0a0a0a;border-top:1px solid #222}
-#psrc.on{display:flex}
-#psrc button{flex:0 0 auto;font-size:12px;padding:6px 12px;border-radius:14px;border:1px solid #444;color:#ccc;background:#111;font-weight:700}
-#psrc button.on{background:#fff;color:#000;border-color:#fff}
-#toast{position:fixed;left:50%;bottom:calc(84px + var(--sb));transform:translateX(-50%);background:#fff;color:#000;padding:9px 16px;border-radius:20px;font-size:14px;font-weight:700;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none}
-#toast.on{opacity:1}
-</style></head><body>
-<div id="splash"><b>PIKA MOVIE</b></div>
-<header id="hd"><div class="top"><span class="logo">PIKA MOVIE</span></div><div class="chips" id="chips"></div></header>
-<main id="app"></main>
-<nav id="nav"></nav>
-<div id="sh"><div class="sheet" id="shc"></div></div>
-<div id="pl">
-  <div class="pbar">
-    <button onclick="stop()" aria-label="Back"><svg class="ic" viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg></button>
-    <span id="pt"></span>
-    <button onclick="openExternal()" aria-label="Open externally" style="width:auto;padding:0 12px;height:36px;border-radius:18px;background:#1a1a1a;font-weight:700;font-size:12px">OPEN ↗</button>
+/* ==========================================================
+   PIKA MOVIE — iOS "Liquid Glass" design system
+   ========================================================== */
+:root {
+  --accent: #e50914;
+  --accent-soft: rgba(229, 9, 20, 0.18);
+  --accent-glow: rgba(229, 9, 20, 0.45);
+  --bg: #000000;
+  --bg-glow-1: rgba(229, 9, 20, 0.22);
+  --bg-glow-2: rgba(120, 20, 60, 0.18);
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-strong: rgba(255, 255, 255, 0.11);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.22);
+  --text: #ffffff;
+  --text-2: #a8a8a8;
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(229, 9, 20, 0.06);
+  --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.7), 0 4px 24px rgba(229, 9, 20, 0.1);
+  --skeleton-a: rgba(255, 255, 255, 0.05);
+  --skeleton-b: rgba(255, 255, 255, 0.14);
+  --blob-1: #e50914;
+  --blob-2: #6a11cb;
+  --blob-3: #ff5a36;
+  --blob-opacity: 0.32;
+  --nav-bg: rgba(20, 20, 22, 0.55);
+  --sheet-bg: rgba(18, 18, 20, 0.78);
+  --input-bg: rgba(255, 255, 255, 0.08);
+  --radius-sm: 16px;
+  --radius: 24px;
+  --radius-lg: 32px;
+  --radius-xl: 40px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-h: 76px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Naskh Arabic", "Noto Nastaliq Urdu", Tahoma, sans-serif;
+  --font-display: Impact, "Haettenschweiler", "Arial Narrow Bold", "Anton", sans-serif;
+}
+
+html[data-theme="light"] {
+  --bg: #f5f5f7;
+  --bg-glow-1: rgba(255, 255, 255, 0.95);
+  --bg-glow-2: rgba(229, 9, 20, 0.08);
+  --glass: rgba(255, 255, 255, 0.65);
+  --glass-strong: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.95);
+  --text: #0a0a0a;
+  --text-2: #6b6b6b;
+  --shadow: 0 10px 40px rgba(20, 20, 40, 0.12), 0 2px 10px rgba(229, 9, 20, 0.05);
+  --shadow-lg: 0 24px 80px rgba(20, 20, 40, 0.2), 0 4px 24px rgba(229, 9, 20, 0.08);
+  --skeleton-a: rgba(0, 0, 0, 0.05);
+  --skeleton-b: rgba(0, 0, 0, 0.12);
+  --blob-opacity: 0.22;
+  --nav-bg: rgba(255, 255, 255, 0.7);
+  --sheet-bg: rgba(250, 250, 252, 0.85);
+  --input-bg: rgba(0, 0, 0, 0.05);
+}
+
+*, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; height: 100%; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s var(--ease-std), color 0.4s var(--ease-std);
+}
+body.no-scroll { overflow: hidden; }
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -3;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% -10%, var(--bg-glow-1), transparent 70%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, var(--bg-glow-2), transparent 70%),
+    var(--bg);
+  transition: background 0.4s var(--ease-std);
+}
+h1, h2, h3, h4, p { margin: 0; }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
+input, select { font: inherit; color: inherit; }
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+svg { display: block; flex-shrink: 0; }
+ul { list-style: none; margin: 0; padding: 0; }
+
+*, *::before, *::after { transition-property: background-color, border-color, color, fill, stroke, box-shadow, opacity, transform; transition-duration: 0.4s; transition-timing-function: var(--ease-std); }
+.no-trans, .no-trans * { transition: none !important; }
+
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 12px; }
+::selection { background: var(--accent); color: #fff; }
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ---------- Urdu / RTL layout ---------- */
+html[dir="rtl"] .theme-toggle { right: auto; left: 14px; }
+html[dir="rtl"] .brand-pill { left: auto; right: 14px; padding: 0 8px 0 16px; }
+html[dir="rtl"] .hero-dots { right: auto; left: 20px; }
+html[dir="rtl"] .select-wrap select { padding: 0 16px 0 38px; }
+html[dir="rtl"] .select-wrap .chev { right: auto; left: 12px; }
+html[dir="rtl"] .see-all svg { transform: scaleX(-1); }
+html[dir="rtl"] .setting-row > svg { transform: scaleX(-1); }
+html[dir="rtl"] #player-back svg { transform: scaleX(-1); }
+html[dir="rtl"] .col-head .icon-btn svg { transform: scaleX(-1); }
+html[dir="rtl"] .hero-title, html[dir="rtl"] .splash-svg { direction: ltr; }
+html[dir="rtl"] body { line-height: 1.6; }
+
+/* ---------- Background blobs & noise ---------- */
+.blobs { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+.blob {
+  position: absolute; width: 55vmax; height: 55vmax; border-radius: 50%;
+  filter: blur(80px); opacity: var(--blob-opacity); will-change: transform;
+}
+.blob.b1 { background: radial-gradient(circle at 30% 30%, var(--blob-1), transparent 65%); top: -20vmax; left: -15vmax; animation: blobMove1 26s ease-in-out infinite alternate; }
+.blob.b2 { background: radial-gradient(circle at 60% 40%, var(--blob-2), transparent 65%); bottom: -25vmax; right: -20vmax; animation: blobMove2 32s ease-in-out infinite alternate; }
+.blob.b3 { background: radial-gradient(circle at 50% 50%, var(--blob-3), transparent 65%); top: 35%; left: 40%; width: 40vmax; height: 40vmax; animation: blobMove3 38s ease-in-out infinite alternate; }
+@keyframes blobMove1 { 0% { transform: translate(0,0) scale(1); border-radius: 50% 45% 55% 50%; } 50% { transform: translate(18vmax, 12vmax) scale(1.2); border-radius: 40% 60% 45% 55%; } 100% { transform: translate(6vmax, 26vmax) scale(0.95); border-radius: 55% 45% 60% 40%; } }
+@keyframes blobMove2 { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(-20vmax, -14vmax) scale(1.15); border-radius: 45% 55% 40% 60%; } 100% { transform: translate(-8vmax, -28vmax) scale(1.05); } }
+@keyframes blobMove3 { 0% { transform: translate(-10vmax, 0) scale(0.9); } 50% { transform: translate(12vmax, -10vmax) scale(1.25); } 100% { transform: translate(-6vmax, 14vmax) scale(1); } }
+.noise {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.05; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* ---------- Glass primitives ---------- */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--glass-highlight);
+}
+.glass-strong { background: var(--glass-strong); }
+.btn {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; min-width: 44px; padding: 0 22px;
+  border-radius: 999px; font-weight: 700; font-size: 15px; letter-spacing: 0.2px;
+  transition: transform 0.4s var(--ease-spring), background 0.3s, box-shadow 0.4s;
+  user-select: none; -webkit-user-select: none;
+}
+.btn:hover { transform: translateY(-2px) scale(1.02); }
+.btn:active { transform: scale(0.95); }
+.btn-primary { background: #fff; color: #000; box-shadow: 0 8px 30px rgba(255,255,255,0.18); }
+html[data-theme="light"] .btn-primary { background: #0a0a0a; color: #fff; box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
+.btn-accent { background: var(--accent); color: #fff; box-shadow: 0 8px 30px var(--accent-glow); }
+.btn-glass { background: var(--glass); border: 1px solid var(--glass-border); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); box-shadow: inset 0 1px 0 var(--glass-highlight); }
+.btn-round { width: 46px; height: 46px; padding: 0; border-radius: 50%; }
+.btn-sm { min-height: 36px; padding: 0 14px; font-size: 13px; }
+.hero .btn-glass { color: #fff; background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.25); }
+.ripple-circle {
+  position: absolute; border-radius: 50%; pointer-events: none; z-index: -1;
+  background: rgba(255,255,255,0.45); transform: scale(0);
+  animation: rippleAnim 0.7s var(--ease-out) forwards;
+}
+html[data-theme="light"] .btn-primary .ripple-circle { background: rgba(255,255,255,0.35); }
+@keyframes rippleAnim { to { transform: scale(1); opacity: 0; } }
+.icon-btn {
+  position: relative; overflow: hidden; display: grid; place-items: center;
+  width: 44px; height: 44px; border-radius: 50%;
+  transition: transform 0.4s var(--ease-spring), background 0.3s;
+}
+.icon-btn:active { transform: scale(0.88); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 16px;
+  border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  transition: transform 0.35s var(--ease-spring), background 0.3s, color 0.3s;
+}
+.chip:active { transform: scale(0.94); }
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 6px 22px var(--accent-glow); }
+.chip .x { opacity: 0.6; display: grid; place-items: center; width: 22px; height: 22px; margin-right: -8px; border-radius: 50%; }
+.chip .x:hover { opacity: 1; background: var(--glass-strong); }
+
+.select-wrap { position: relative; display: inline-flex; align-items: center; }
+.select-wrap select {
+  appearance: none; -webkit-appearance: none; min-height: 40px; padding: 0 38px 0 16px;
+  border-radius: 999px; font-weight: 600; font-size: 13px; cursor: pointer;
+  background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+}
+.select-wrap select option { color: #000; background: #fff; }
+.select-wrap .chev { position: absolute; right: 12px; pointer-events: none; opacity: 0.7; }
+
+/* ---------- Splash ---------- */
+#splash {
+  position: fixed; inset: 0; z-index: 9999; background: #000;
+  display: grid; place-items: center; overflow: hidden;
+  transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out), visibility 0.8s;
+}
+#splash::before {
+  content: ""; position: absolute; width: 90vmax; height: 90vmax; border-radius: 50%;
+  background: radial-gradient(circle, rgba(229,9,20,0.35), transparent 60%);
+  animation: splashGlow 3s ease-in-out infinite alternate;
+}
+@keyframes splashGlow { from { transform: scale(0.8); opacity: 0.5; } to { transform: scale(1.1); opacity: 1; } }
+#splash.hide { opacity: 0; transform: scale(1.25); visibility: hidden; pointer-events: none; }
+.splash-inner { position: relative; display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 20px; text-align: center; }
+.splash-logo-img {
+  width: min(52vw, 240px); height: auto; border-radius: 28%;
+  filter: drop-shadow(0 0 40px rgba(229,9,20,0.6));
+  opacity: 0; transform: scale(0.3);
+  animation: logoZoom 0.9s var(--ease-spring) 0.1s forwards;
+}
+@keyframes logoZoom { to { opacity: 1; transform: scale(1); } }
+.splash-svg { width: min(86vw, 520px); height: auto; overflow: visible; }
+.splash-svg text {
+  font-family: var(--font-display); font-size: 74px; letter-spacing: 6px; fill: #fff;
+  opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(0.2);
+  animation: letterZoom 0.6s var(--ease-spring) forwards;
+}
+.splash-svg text.red { fill: var(--accent); }
+@keyframes letterZoom { 0% { opacity: 0; transform: scale(0.2); } 100% { opacity: 1; transform: scale(1); } }
+.splash-sub { color: #a8a8a8; letter-spacing: 6px; font-size: 11px; text-transform: uppercase; opacity: 0; animation: fadeIn 0.8s ease 1.1s forwards; }
+@keyframes fadeIn { to { opacity: 1; } }
+
+/* ---------- App shell ---------- */
+#app { min-height: 100vh; min-height: 100dvh; position: relative; }
+.theme-toggle {
+  position: fixed; z-index: 800; top: calc(14px + var(--safe-top)); right: 14px;
+  width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; overflow: hidden;
+}
+.theme-toggle .ico { position: absolute; transition: transform 0.6s var(--ease-spring), opacity 0.4s; }
+html[data-theme="dark"] .theme-toggle .ico-sun { transform: rotate(-90deg) scale(0); opacity: 0; }
+html[data-theme="light"] .theme-toggle .ico-moon { transform: rotate(90deg) scale(0); opacity: 0; }
+.brand-pill {
+  position: fixed; z-index: 800; top: calc(14px + var(--safe-top)); left: 14px;
+  height: 48px; padding: 0 16px 0 8px; border-radius: 999px; display: flex; align-items: center; gap: 8px;
+}
+.brand-pill img { width: 32px; height: 32px; border-radius: 10px; object-fit: cover; }
+.brand-pill span { font-family: var(--font-display); letter-spacing: 2px; font-size: 18px; }
+.brand-pill span b { color: var(--accent); font-weight: 400; }
+
+main { position: relative; padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 40px); }
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: block; animation: screenIn 0.5s var(--ease-out) both; }
+@keyframes screenIn { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: translateY(0); } }
+.screen-pad { padding: calc(86px + var(--safe-top)) 16px 20px; max-width: 1400px; margin: 0 auto; }
+.screen-title { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+.screen-sub { color: var(--text-2); font-size: 14px; margin-bottom: 18px; }
+
+/* ---------- Bottom navigation ---------- */
+.bottom-nav {
+  position: fixed; z-index: 700; left: 50%; transform: translateX(-50%);
+  bottom: calc(14px + var(--safe-bottom)); width: min(calc(100% - 28px), 460px);
+  height: 68px; border-radius: 999px; padding: 6px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+  background: var(--nav-bg); border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(34px) saturate(190%); backdrop-filter: blur(34px) saturate(190%);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--glass-highlight);
+}
+.nav-btn {
+  position: relative; overflow: hidden; border-radius: 999px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px; color: var(--text-2);
+  font-size: 10.5px; font-weight: 700; min-height: 44px;
+  transition: color 0.3s, background 0.4s, transform 0.4s var(--ease-spring);
+}
+.nav-btn:active { transform: scale(0.9); }
+.nav-btn.active { color: var(--text); background: var(--glass-strong); box-shadow: inset 0 1px 0 var(--glass-highlight), 0 4px 18px rgba(0,0,0,0.2); }
+.nav-btn.active svg { color: var(--accent); transform: translateY(-1px) scale(1.12); }
+.nav-btn svg { transition: transform 0.4s var(--ease-spring), color 0.3s; }
+
+/* ---------- Hero ---------- */
+.hero { position: relative; width: 100%; height: min(86vh, 760px); min-height: 520px; overflow: hidden; color: #fff; border-radius: 0 0 var(--radius-xl) var(--radius-xl); }
+.hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center top; opacity: 0; transform: scale(1.08); transition: opacity 1.2s var(--ease-std), transform 9s linear; }
+.hero-bg.active { opacity: 1; transform: scale(1); }
+.hero::after {
+  content: ""; position: absolute; inset: 0; z-index: 1;
+  background:
+    linear-gradient(to top, var(--bg) 0%, rgba(0,0,0,0.0) 45%),
+    linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.45) 100%);
+}
+html[data-theme="light"] .hero::after { background: linear-gradient(to top, var(--bg) 0%, rgba(0,0,0,0) 35%), linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 55%, rgba(0,0,0,0.4) 100%); }
+.hero-content {
+  position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; padding: 0 20px 56px; max-width: 900px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.hero-content.swap { animation: heroSwap 0.8s var(--ease-out); }
+@keyframes heroSwap { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+.hero-badge { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; font-weight: 700; border-radius: 999px; letter-spacing: 1px; text-transform: uppercase; }
+.hero-title { font-family: var(--font-display); font-size: clamp(44px, 11vw, 96px); line-height: 0.95; letter-spacing: 1.5px; text-transform: uppercase; text-shadow: 0 6px 40px rgba(0,0,0,0.6); }
+.hero-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.88); }
+.hero-meta .dot { opacity: 0.6; }
+.hero-meta .rate { display: inline-flex; align-items: center; gap: 4px; color: #ffd54a; }
+.hero-desc { font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.8); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-width: 620px; }
+.hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.hero-dots { position: absolute; z-index: 3; bottom: 24px; right: 20px; display: flex; gap: 6px; }
+.hero-dot { width: 8px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.35); transition: width 0.5s var(--ease-spring), background 0.3s; }
+.hero-dot.active { width: 26px; background: #fff; }
+
+/* ---------- Rows & cards ---------- */
+.row { margin-top: 28px; }
+.row-head { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; margin-bottom: 12px; max-width: 1400px; margin-left: auto; margin-right: auto; }
+.row-title { font-size: 21px; font-weight: 800; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; }
+.row-title svg { color: var(--accent); }
+.see-all { font-size: 13px; font-weight: 700; color: var(--text-2); display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 6px; border-radius: 999px; }
+.see-all:hover { color: var(--accent); }
+.row-scroll { display: flex; gap: 14px; overflow-x: auto; padding: 8px 16px 22px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.row-scroll > * { scroll-snap-align: start; }
+.row-scroll::after { content: ""; flex: 0 0 4px; }
+
+.card {
+  position: relative; flex: 0 0 auto; width: 138px; aspect-ratio: 2/3; border-radius: var(--radius);
+  overflow: hidden; cursor: pointer; background: var(--glass);
+  border: 1px solid var(--glass-border); box-shadow: var(--shadow);
+  transition: transform 0.5s var(--ease-spring), box-shadow 0.5s var(--ease-out);
+  -webkit-user-select: none; user-select: none;
+}
+.grid .card { width: 100%; }
+.card:hover { transform: scale(1.05); box-shadow: var(--shadow-lg), 0 0 0 1px var(--glass-highlight); z-index: 2; }
+.card:active { transform: scale(0.97); }
+.card img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.6s var(--ease-std), transform 0.8s var(--ease-out); }
+.card img.loaded { opacity: 1; }
+.card:hover img { transform: scale(1.06); }
+.card::before { content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: 3; pointer-events: none; box-shadow: inset 0 1px 0 var(--glass-highlight), inset 0 0 0 1px rgba(255,255,255,0.06); }
+.card-fade { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 10px 10px; z-index: 2; background: linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.55) 55%, transparent); color: #fff; }
+.card-title { font-size: 12.5px; font-weight: 700; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-sub { font-size: 10.5px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+.badge-rate { position: absolute; z-index: 4; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #fff; background: rgba(0,0,0,0.45); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.18); }
+.badge-rate svg { color: #ffd54a; }
+.badge-type { position: absolute; z-index: 4; top: 8px; left: 8px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.6px; color: #fff; background: var(--accent); display: grid; place-items: center; }
+.card-progress { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.22); }
+.card-progress i { display: block; height: 100%; background: var(--accent); width: 0; border-radius: 0 4px 4px 0; box-shadow: 0 0 10px var(--accent-glow); transition: width 1s var(--ease-out); }
+.card-trash { position: absolute; z-index: 6; bottom: 10px; right: 8px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(0,0,0,0.55); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.2); transition: transform 0.4s var(--ease-spring), background 0.3s; }
+.card-trash:hover { background: var(--accent); transform: scale(1.1); }
+.card-trash:active { transform: scale(0.85); }
+.card.wide { width: 250px; aspect-ratio: 16/9; }
+.card.removing { transform: scale(0.6) !important; opacity: 0; }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (min-width: 640px) { .grid { grid-template-columns: repeat(4, 1fr); gap: 16px; } .card { width: 160px; } }
+@media (min-width: 1024px) { .grid { grid-template-columns: repeat(6, 1fr); gap: 20px; } .card { width: 180px; } .screen-pad { padding-left: 32px; padding-right: 32px; } .row-head, .row-scroll { padding-left: 32px; padding-right: 32px; } }
+
+/* ---------- Skeletons ---------- */
+.skeleton { position: relative; overflow: hidden; background: var(--skeleton-a); border-radius: var(--radius); }
+.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--skeleton-b), transparent); animation: shimmer 1.4s infinite; }
+@keyframes shimmer { to { transform: translateX(100%); } }
+.skel-card { flex: 0 0 auto; width: 138px; aspect-ratio: 2/3; }
+.grid .skel-card { width: 100%; }
+.skel-line { height: 14px; border-radius: 8px; margin: 8px 0; }
+.skel-hero { height: min(86vh, 760px); min-height: 520px; border-radius: 0 0 var(--radius-xl) var(--radius-xl); }
+
+/* ---------- Search ---------- */
+.search-bar { position: relative; display: flex; align-items: center; height: 60px; border-radius: 999px; padding: 0 8px 0 22px; gap: 12px; }
+.search-bar:focus-within { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+.search-bar input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; font-size: 17px; font-weight: 500; height: 100%; color: var(--text); }
+.search-bar input::placeholder { color: var(--text-2); }
+.search-clear { width: 44px; height: 44px; border-radius: 50%; display: none; place-items: center; background: var(--glass-strong); }
+.search-clear.show { display: grid; animation: popIn 0.4s var(--ease-spring); }
+@keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+.filter-bar { display: flex; gap: 10px; align-items: center; overflow-x: auto; padding: 16px 0 6px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; margin: 22px 0 12px; }
+.section-head h2 { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.section-head h2 svg { color: var(--accent); }
+.link-btn { font-size: 13px; font-weight: 700; color: var(--accent); min-height: 44px; padding: 0 8px; border-radius: 12px; }
+.chip-wrap { display: flex; flex-wrap: wrap; gap: 10px; }
+.trend-list { display: flex; flex-direction: column; gap: 10px; }
+.trend-item { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 18px; border-radius: var(--radius-sm); font-weight: 600; text-align: left; transition: transform 0.4s var(--ease-spring); }
+.trend-item:active { transform: scale(0.97); }
+.trend-item .num { color: var(--accent); font-family: var(--font-display); font-size: 22px; width: 26px; }
+.trend-item .fire { margin-left: auto; color: var(--accent); opacity: 0.8; }
+.empty-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 50px 20px; }
+.empty-state svg { width: 180px; height: 180px; margin-bottom: 8px; }
+.empty-state h3 { font-size: 20px; font-weight: 800; }
+.empty-state p { color: var(--text-2); max-width: 320px; font-size: 14px; line-height: 1.5; }
+.results-count { font-size: 13px; color: var(--text-2); margin: 14px 2px 12px; }
+
+/* ---------- My list toolbar ---------- */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 18px; }
+.toolbar .spacer { flex: 1; }
+
+/* ---------- Profile ---------- */
+.profile-head { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
+.avatar { width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 10px 40px var(--accent-glow); }
+.profile-name { font-size: 26px; font-weight: 800; }
+.profile-mail { color: var(--text-2); font-size: 14px; margin-top: 2px; }
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (min-width: 720px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+.stat-card { border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden; }
+.stat-card .stat-ico { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); margin-bottom: 4px; }
+.stat-card .val { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+.stat-card .lbl { font-size: 12px; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; }
+.history-list { display: flex; flex-direction: column; gap: 10px; }
+.history-item { display: flex; align-items: center; gap: 14px; padding: 10px; border-radius: var(--radius); cursor: pointer; transition: transform 0.4s var(--ease-spring); }
+.history-item:active { transform: scale(0.98); }
+.history-item img { width: 60px; height: 88px; border-radius: 14px; object-fit: cover; flex-shrink: 0; background: var(--skeleton-a); }
+.history-info { flex: 1; min-width: 0; }
+.history-title { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-time { font-size: 12px; color: var(--text-2); margin: 3px 0 8px; }
+.bar { height: 5px; border-radius: 999px; background: var(--glass-strong); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #ff5a36); transition: width 1.1s var(--ease-out); }
+.settings-list { display: flex; flex-direction: column; gap: 10px; }
+.setting-row { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 12px 16px; border-radius: var(--radius); width: 100%; text-align: left; }
+button.setting-row { transition: transform 0.4s var(--ease-spring); }
+button.setting-row:active { transform: scale(0.98); }
+.setting-ico { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
+.setting-text { flex: 1; min-width: 0; }
+.setting-label { font-weight: 700; font-size: 15px; }
+.setting-desc { font-size: 12.5px; color: var(--text-2); margin-top: 2px; line-height: 1.35; }
+.switch { position: relative; width: 54px; height: 32px; border-radius: 999px; background: var(--glass-strong); border: 1px solid var(--glass-border); flex-shrink: 0; transition: background 0.4s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 3px 10px rgba(0,0,0,0.35); transition: transform 0.45s var(--ease-spring); }
+.switch.on { background: var(--accent); border-color: var(--accent); }
+.switch.on::after { transform: translateX(22px); }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--glass-strong); border: 1px solid var(--glass-border); }
+.seg button { min-height: 34px; min-width: 56px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--text-2); transition: background 0.35s, color 0.35s; }
+.seg button.active { background: var(--accent); color: #fff; box-shadow: 0 4px 14px var(--accent-glow); }
+.danger .setting-ico { background: rgba(255,69,58,0.15); color: #ff453a; }
+.about-card { border-radius: var(--radius); padding: 22px; text-align: center; margin-top: 12px; }
+.about-card img { width: 72px; height: 72px; margin: 0 auto 10px; border-radius: 22px; }
+.about-card p { color: var(--text-2); font-size: 13px; line-height: 1.5; }
+
+/* ---------- Bottom sheet (detail) ---------- */
+#sheet-backdrop {
+  position: fixed; inset: 0; z-index: 900; background: rgba(0,0,0,0.55);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  opacity: 0; visibility: hidden; transition: opacity 0.5s var(--ease-std), visibility 0.5s;
+}
+#sheet-backdrop.open { opacity: 1; visibility: visible; }
+#sheet {
+  position: fixed; z-index: 910; left: 50%; bottom: 0; width: min(100%, 860px); max-height: 94vh; max-height: 94dvh;
+  transform: translate(-50%, 105%); overflow-y: auto; overflow-x: hidden;
+  background: var(--sheet-bg); border: 1px solid var(--glass-border); border-bottom: 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  -webkit-backdrop-filter: blur(40px) saturate(190%); backdrop-filter: blur(40px) saturate(190%);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--glass-highlight);
+  transition: transform 0.6s cubic-bezier(0.34, 1.35, 0.64, 1);
+  overscroll-behavior: contain;
+}
+#sheet.open { transform: translate(-50%, 0); }
+.sheet-grab { position: absolute; z-index: 5; top: 8px; left: 50%; transform: translateX(-50%); width: 44px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.5); }
+.sheet-close { position: absolute; z-index: 6; top: 16px; right: 16px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(0,0,0,0.4); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.22); }
+.sheet-hero { position: relative; height: 330px; overflow: hidden; background: var(--skeleton-a); }
+.sheet-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sheet-hero iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; opacity: 0; transition: opacity 1s; }
+.sheet-hero iframe.on { opacity: 1; }
+.sheet-hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to top, var(--sheet-bg-solid, var(--bg)) 0%, rgba(0,0,0,0.0) 70%), linear-gradient(to top, rgba(0,0,0,0.35), transparent 50%); }
+html[data-theme="light"] .sheet-hero::after { background: linear-gradient(to top, #fafafc 2%, rgba(250,250,252,0) 70%); }
+html[data-theme="dark"] .sheet-hero::after { background: linear-gradient(to top, #121214 2%, rgba(18,18,20,0) 75%); }
+.sheet-body { position: relative; z-index: 2; margin-top: -70px; padding: 0 20px calc(40px + var(--safe-bottom)); }
+.sheet-title { font-size: 30px; font-weight: 900; letter-spacing: -0.6px; line-height: 1.1; }
+.sheet-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0 18px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+.sheet-meta .rate { display: inline-flex; align-items: center; gap: 4px; color: #f5b301; font-weight: 800; }
+.hd-badge { padding: 2px 8px; border-radius: 8px; border: 1.5px solid var(--text-2); font-size: 11px; font-weight: 800; letter-spacing: 0.5px; }
+.sheet-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: center; }
+.sheet-actions .btn-primary { flex: 1 1 140px; }
+.sheet-desc { font-size: 15px; line-height: 1.65; color: var(--text); opacity: 0.88; margin-bottom: 20px; }
+.sheet-h { font-size: 17px; font-weight: 800; margin: 24px 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cast-row { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 6px; }
+.cast-item { flex: 0 0 auto; width: 76px; text-align: center; }
+.cast-avatar { width: 68px; height: 68px; border-radius: 50%; margin: 0 auto 8px; display: grid; place-items: center; font-weight: 800; font-size: 20px; color: #fff; overflow: hidden; border: 2px solid var(--glass-border); }
+.cast-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.cast-name { font-size: 11.5px; font-weight: 600; line-height: 1.25; }
+.muted { color: var(--text-2); font-size: 13px; }
+.genre-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.genre-row .chip { min-height: 32px; font-size: 12px; }
+.sheet-more .row-scroll { padding-left: 0; padding-right: 0; }
+.sheet-more .card { width: 118px; }
+.sheet-more .card .card-fade { display: none; }
+
+/* ---------- Episodes ---------- */
+.ep-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 24px 0 14px; }
+.ep-head h3 { font-size: 17px; font-weight: 800; }
+.ep-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 640px) { .ep-grid { grid-template-columns: repeat(2, 1fr); } }
+.ep-card { display: flex; gap: 12px; padding: 10px; border-radius: var(--radius); cursor: pointer; align-items: center; transition: transform 0.4s var(--ease-spring); }
+.ep-card:active { transform: scale(0.97); }
+.ep-thumb { position: relative; width: 120px; aspect-ratio: 16/9; border-radius: 16px; overflow: hidden; flex-shrink: 0; background: var(--skeleton-b); }
+.ep-thumb img { width: 100%; height: 100%; object-fit: cover; filter: saturate(1.1); }
+.ep-thumb .num { position: absolute; left: 8px; top: 6px; font-family: var(--font-display); font-size: 20px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+.ep-thumb .play-ov { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.3); color: #fff; opacity: 0; transition: opacity 0.3s; }
+.ep-card:hover .play-ov { opacity: 1; }
+.ep-thumb .bar { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 0; height: 4px; }
+.ep-info { flex: 1; min-width: 0; }
+.ep-title { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ep-dur { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.ep-play { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; flex-shrink: 0; box-shadow: 0 6px 20px var(--accent-glow); }
+
+/* ---------- Player ---------- */
+#player {
+  position: fixed; inset: 0; z-index: 1000; background: #000; color: #fff;
+  display: flex; flex-direction: column; opacity: 0; visibility: hidden; transform: scale(1.04);
+  transition: opacity 0.5s var(--ease-out), transform 0.6s var(--ease-out), visibility 0.5s;
+}
+#player.open { opacity: 1; visibility: visible; transform: scale(1); }
+.player-top { display: flex; align-items: center; gap: 12px; padding: calc(10px + var(--safe-top)) 12px 10px; background: linear-gradient(to bottom, rgba(0,0,0,0.85), rgba(0,0,0,0.0)); z-index: 3; position: relative; }
+.player-top .title { flex: 1; min-width: 0; font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-top .title small { display: block; font-weight: 500; font-size: 12px; opacity: 0.65; margin-top: 1px; }
+.btn-open { background: rgba(229,9,20,0.45); border: 1px solid rgba(255,90,90,0.55); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: #fff; min-height: 44px; padding: 0 16px; font-size: 13px; letter-spacing: 0.8px; box-shadow: 0 6px 24px var(--accent-glow); }
+.player-frame { position: relative; flex: 1; background: #050505; overflow: hidden; }
+.player-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+.player-loading { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: radial-gradient(circle, rgba(229,9,20,0.15), #000 70%); transition: opacity 0.6s, visibility 0.6s; }
+.player-loading.done { opacity: 0; visibility: hidden; pointer-events: none; }
+.spinner { width: 58px; height: 58px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 15%, var(--accent) 100%); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.player-loading p { font-size: 13px; opacity: 0.7; letter-spacing: 1px; }
+.player-bottom { display: flex; align-items: center; gap: 10px; padding: 10px 12px calc(12px + var(--safe-bottom)); background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0)); z-index: 3; position: relative; }
+.provider-row { flex: 1; display: flex; gap: 8px; overflow-x: auto; min-width: 0; padding: 2px; }
+.provider-row .chip { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.18); color: #fff; }
+.player-bottom .icon-btn { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: #fff; }
+.player-top .icon-btn { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: #fff; }
+#ep-drawer { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; max-height: 72%; overflow-y: auto; padding: 20px 16px calc(24px + var(--safe-bottom)); border-radius: var(--radius-xl) var(--radius-xl) 0 0; background: rgba(20,20,22,0.82); -webkit-backdrop-filter: blur(40px) saturate(190%); backdrop-filter: blur(40px) saturate(190%); border-top: 1px solid var(--glass-border); transform: translateY(105%); transition: transform 0.6s cubic-bezier(0.34, 1.35, 0.64, 1); color: #fff; }
+#ep-drawer.open { transform: translateY(0); }
+#ep-drawer .ep-title { color: #fff; }
+
+/* ---------- Toast & particles ---------- */
+#toast-wrap { position: fixed; z-index: 2000; left: 0; right: 0; bottom: calc(100px + var(--safe-bottom)); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; padding: 0 16px; }
+.toast { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px; border-radius: 999px; font-size: 14px; font-weight: 600; max-width: 100%; background: var(--nav-bg); animation: toastIn 0.55s var(--ease-spring) both; }
+.toast svg { color: var(--accent); }
+.toast.out { animation: toastOut 0.4s var(--ease-std) forwards; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(40px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes toastOut { to { opacity: 0; transform: translateY(24px) scale(0.95); } }
+.particle { position: fixed; z-index: 3000; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; background: var(--accent); animation: particle 0.8s var(--ease-out) forwards; }
+@keyframes particle { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+.pop { animation: heartPop 0.6s var(--ease-spring); }
+@keyframes heartPop { 0% { transform: scale(1); } 40% { transform: scale(1.5); } 100% { transform: scale(1); } }
+.is-fav { color: var(--accent); }
+.is-saved { color: var(--accent); }
+
+/* ---------- Misc ---------- */
+.fade-up { animation: screenIn 0.6s var(--ease-out) both; }
+.hidden { display: none !important; }
+.error-box { margin: 20px 16px; padding: 22px; border-radius: var(--radius); text-align: center; }
+.error-box p { color: var(--text-2); margin: 8px 0 16px; font-size: 14px; }
+.col-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.col-head h1 { font-size: 26px; font-weight: 800; }
+.footer-note { text-align: center; color: var(--text-2); font-size: 12px; padding: 30px 16px 10px; }
+
+@media (min-width: 900px) {
+  .hero-content { padding-left: 48px; padding-bottom: 80px; }
+  .hero-dots { right: 48px; }
+  .card:hover { z-index: 3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  .blob { animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="blobs" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div class="noise" aria-hidden="true"></div>
+
+<!-- Splash -->
+<div id="splash" role="presentation">
+  <div class="splash-inner">
+    <img class="splash-logo-img" id="splash-logo" alt="PIKA MOVIE logo" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png" onerror="this.style.display='none'">
+    <svg class="splash-svg" id="splash-svg" viewBox="0 0 560 100" role="img" aria-label="PIKA MOVIE"></svg>
+    <div class="splash-sub">Unlimited Movies &amp; Shows</div>
   </div>
-  <div class="pframe" id="pf"></div>
-  <div id="psrc"></div>
 </div>
-<div id="toast"></div>
-<script>
-/* ===== Pika Movie — TMDB Powered ===== */
-const API = "https://144-24-218-100.nip.io/movies-api";
-const $ = s => document.querySelector(s);
-const ld = (k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
-const sv = (k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-let LIST = ld("pm_list",[]);
-let PROG = ld("pm_prog",{});
-let tab="home", q="", cur=null, heroI=0, C=[];
-let providers = [];
-let curProv = 0;
-let externalUrl = "";
-const ICO = {home:"M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z",search:"M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z",list:"M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z",me:"M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3 0-8 1.5-8 4v2h16v-2c0-2.5-5-4-8-4z"};
-const NAV = [["home","Home"],["search","Search"],["list","My List"],["me","Profile"]];
 
-function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e.t);e.t=setTimeout(()=>e.classList.remove("on"),1800)}
-const inList = id => LIST.indexOf(id) !== -1;
-const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]);
+<div id="app">
+  <div class="brand-pill glass" aria-label="PIKA MOVIE">
+    <img src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png" alt="" onerror="this.style.display='none'">
+    <span>PIKA <b>MOVIE</b></span>
+  </div>
+  <button class="theme-toggle glass ripple" id="theme-toggle" aria-label="Toggle light and dark theme">
+    <span class="ico ico-sun" data-icon="sun" data-size="22"></span>
+    <span class="ico ico-moon" data-icon="moon" data-size="22"></span>
+  </button>
 
-async function apiGet(path){
-  const r = await fetch(API + path);
-  if(!r.ok) throw new Error("HTTP " + r.status);
-  return r.json();
-}
+  <main id="main">
+    <!-- HOME -->
+    <section id="screen-home" class="screen" aria-label="Home">
+      <div id="hero-wrap"></div>
+      <div id="home-rows"></div>
+    </section>
 
-function nav(){$("#nav").innerHTML = NAV.map(([k,l])=>`<button class="${tab==k?"on":""}" onclick="go('${k}')"><svg viewBox="0 0 24 24"><path d="${ICO[k]}"/></svg>${l}</button>`).join("")}
-function go(t){tab=t;scrollTo(0,0);render()}
-function chips(){$("#chips").style.display="none"}
-
-function card(m){
-  const title = esc(m.title);
-  const img = m.poster ? `<img loading="lazy" src="${esc(m.poster)}" alt="" onerror="this.remove()">` : "";
-  const prog = PROG[m.id] ? `<i style="width:${Math.min(100, PROG[m.id].t/PROG[m.id].d*100)}%"></i>` : "";
-  return `<div class="card" data-id="${esc(m.id)}" data-type="${esc(m.mediaType||'movie')}" onclick="openD('${esc(m.id)}','${esc(m.mediaType||'movie')}')">${img}<span>${title}</span>${prog}</div>`;
-}
-function row(t, arr){ return arr.length ? `<h2>${t}</h2><div class="row">${arr.map(card).join("")}</div>` : ""; }
-
-function render(){
-  nav(); chips();
-  const a = $("#app");
-  if(tab=="home") a.innerHTML = homeV();
-  else if(tab=="search") a.innerHTML = searchV();
-  else if(tab=="list"){
-    const l = C.filter(m => inList(m.id));
-    a.innerHTML = `<div class="pad"><h2 style="margin-top:0">My List</h2>${l.length?`<div class="grid">${l.map(card).join("")}</div>`:`<div class="empty">Your list is empty.<br>Tap "My List" on any title to save it here.</div>`}</div>`;
-  } else {
-    a.innerHTML = `<div class="pad"><h2 style="margin-top:0">Profile</h2><div class="empty" style="padding:20px 30px">Saved titles: ${LIST.length}<br>Titles in progress: ${Object.keys(PROG).length}</div><div style="padding:0 14px;display:grid;gap:10px"><button class="btn g" onclick="PROG={};sv('pm_prog',PROG);toast('History cleared');render()">Clear watch history</button><button class="btn g" onclick="LIST=[];sv('pm_list',LIST);toast('My List cleared');render()">Clear My List</button></div><div class="empty">Pika Movie v2.0 — TMDB</div></div>`;
-  }
-}
-function homeV(){
-  if(!C.length) return `<div class="pad"><div class="empty">Loading movies…</div></div>`;
-  const h = C[heroI % C.length];
-  if(!h) return `<div class="pad"><div class="empty">No content</div></div>`;
-  const heroImg = h.backdrop || h.poster;
-  const meta = [h.year, h.type].filter(Boolean).join(" • ");
-  return `<div class="hero" style="background-image:url('${esc(heroImg)}')">
-    <h1>${esc(h.title)}</h1>
-    <p>${esc(meta)}</p>
-    <div class="acts">
-      <button class="btn w" onclick="play('${esc(h.id)}','${esc(h.mediaType||'movie')}')">▶ Play</button>
-      <button class="btn g" onclick="tg('${esc(h.id)}')">${inList(h.id)?"✓ My List":"＋ My List"}</button>
-      <button class="btn g" style="flex:0 0 48px" onclick="openD('${esc(h.id)}','${esc(h.mediaType||'movie')}')">ⓘ</button>
-    </div>
-  </div>`
-  + row("Trending Now", C.slice(0, 20))
-  + row("More from TMDB", C.slice(20, 60));
-}
-function searchV(){
-  return `<div class="pad"><div class="sb">
-    <svg class="ic" viewBox="0 0 24 24" style="fill:#aaa"><path d="${ICO.search}"/></svg>
-    <input id="qi" value="${esc(q)}" placeholder="Search movies, TV shows…" oninput="onSearch(this.value)">
-  </div><div id="res">${resV(C)}</div></div>`;
-}
-function resV(arr){
-  if(!q) return `<h2 style="margin-top:0">Trending</h2><div class="grid">${arr.slice(0,12).map(card).join("")}</div>`;
-  return arr.length ? `<div class="grid">${arr.map(card).join("")}</div>` : `<div class="empty">No results for "${esc(q)}".<br>Try a different title.</div>`;
-}
-let searchTimer = null;
-async function onSearch(v){
-  q = v;
-  clearTimeout(searchTimer);
-  const r = $("#res");
-  if(r) r.innerHTML = `<div class="empty">Searching…</div>`;
-  searchTimer = setTimeout(async ()=>{
-    try{
-      const data = await apiGet("/search?q=" + encodeURIComponent(q));
-      C = data.items || [];
-      const rr = $("#res");
-      if(rr) rr.innerHTML = resV(C);
-    }catch(e){
-      const rr = $("#res");
-      if(rr) rr.innerHTML = `<div class="empty">Search failed</div>`;
-    }
-  }, 400);
-}
-
-function tg(id){
-  const i = LIST.indexOf(id);
-  if(i < 0) LIST.push(id); else LIST.splice(i, 1);
-  sv("pm_list", LIST);
-  toast(i < 0 ? "Added to My List" : "Removed");
-  const y = scrollY; render(); scrollTo(0, y);
-}
-
-async function openD(id, type){
-  $("#sh").classList.add("on");
-  history.pushState({d:1}, "");
-  $("#shc").innerHTML = `<div class="inf" style="padding-top:60px"><div class="empty">Loading…</div></div>`;
-  try{
-    const data = await apiGet("/detail?id=" + encodeURIComponent(id) + "&type=" + (type || "movie"));
-    if(!data.ok || !data.item){ $("#shc").innerHTML = `<div class="inf" style="padding-top:60px"><div class="empty">Could not load</div></div>`; return; }
-    const m = data.item;
-    m.mediaType = type || m.mediaType || "movie";
-    const p = PROG[m.id];
-    const bg = m.backdrop || m.poster;
-    const meta = [m.year, m.type, m.duration].filter(Boolean);
-    $("#shc").innerHTML = `
-      <div class="bd" style="background-image:url('${esc(bg)}')">
-        <button class="x" onclick="history.back()" aria-label="Close">✕</button>
-      </div>
-      <div class="inf">
-        <h1>${esc(m.title)}</h1>
-        <div class="meta">
-          ${m.rating ? `<em>${m.rating} ★</em>` : ""}
-          ${meta.map(x => `<span>${esc(x)}</span>`).join("")}
-          <b>HD</b>
+    <!-- SEARCH -->
+    <section id="screen-search" class="screen" aria-label="Search">
+      <div class="screen-pad">
+        <h1 class="screen-title" data-i18n="search">Search</h1>
+        <p class="screen-sub" data-i18n="searchSub">Find movies and TV shows</p>
+        <div class="search-bar glass">
+          <span data-icon="magnifying-glass" data-size="22"></span>
+          <input id="search-input" type="search" inputmode="search" autocomplete="off" enterkeyhint="search" placeholder="Search" aria-label="Search movies and TV shows">
+          <button class="search-clear ripple" id="search-clear" aria-label="Clear search"><span data-icon="close" data-size="18"></span></button>
         </div>
-        <button class="btn w" onclick="play('${esc(m.id)}','${esc(m.mediaType)}')">▶ ${p && p.t > 3 ? "Resume" : "Play"}</button>
-        <button class="btn g" onclick="tg('${esc(m.id)}')">${inList(m.id) ? "✓ In My List" : "＋ Add to My List"}</button>
-        ${m.trailerKey ? `<button class="btn g" onclick="playTrailer('${esc(m.trailerKey)}','${esc(m.title)}')">▶ Watch Trailer</button>` : ""}
-        ${m.description ? `<p>${esc(m.description)}</p>` : ""}
-        ${m.genres && m.genres.length ? `<div class="meta">${m.genres.map(g => `<span>${esc(g)}</span>`).join("")}</div>` : ""}
-      </div>`;
-    $("#shc").scrollTop = 0;
-  }catch(e){
-    $("#shc").innerHTML = `<div class="inf" style="padding-top:60px"><div class="empty">Connection error</div></div>`;
+        <div class="filter-bar" id="search-filters"></div>
+        <div id="search-body"></div>
+      </div>
+    </section>
+
+    <!-- MY LIST -->
+    <section id="screen-list" class="screen" aria-label="My List">
+      <div class="screen-pad">
+        <h1 class="screen-title" data-i18n="myList">My List</h1>
+        <p class="screen-sub" id="list-sub"></p>
+        <div class="toolbar" id="list-toolbar"></div>
+        <div id="list-body"></div>
+      </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section id="screen-profile" class="screen" aria-label="Profile">
+      <div class="screen-pad" id="profile-body"></div>
+    </section>
+
+    <!-- COLLECTION (See all) -->
+    <section id="screen-collection" class="screen" aria-label="Collection">
+      <div class="screen-pad" id="collection-body"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <button class="nav-btn ripple active" data-nav="home" aria-label="Home"><span data-icon="home" data-size="24"></span><span data-i18n="home">Home</span></button>
+    <button class="nav-btn ripple" data-nav="search" aria-label="Search"><span data-icon="search" data-size="24"></span><span data-i18n="search">Search</span></button>
+    <button class="nav-btn ripple" data-nav="list" aria-label="My List"><span data-icon="list" data-size="24"></span><span data-i18n="myList">My List</span></button>
+    <button class="nav-btn ripple" data-nav="profile" aria-label="Profile"><span data-icon="profile" data-size="24"></span><span data-i18n="profile">Profile</span></button>
+  </nav>
+</div>
+
+<!-- Detail bottom sheet -->
+<div id="sheet-backdrop" data-action="close-sheet"></div>
+<aside id="sheet" role="dialog" aria-modal="true" aria-label="Title details"></aside>
+
+<!-- Video player -->
+<div id="player" role="dialog" aria-modal="true" aria-label="Video player">
+  <div class="player-top">
+    <button class="icon-btn ripple" id="player-back" aria-label="Close player"><span data-icon="back" data-size="22"></span></button>
+    <div class="title" id="player-title"></div>
+    <button class="btn btn-open ripple" id="player-open" aria-label="Open in new tab">OPEN <span data-icon="external-link" data-size="16"></span></button>
+  </div>
+  <div class="player-frame" id="player-frame">
+    <div class="player-loading" id="player-loading"><div class="spinner"></div><p data-i18n="loadingPlayer">Loading player…</p></div>
+  </div>
+  <div class="player-bottom">
+    <div class="provider-row" id="provider-row"></div>
+    <button class="icon-btn ripple hidden" id="player-eps" aria-label="Episodes"><span data-icon="list-view" data-size="22"></span></button>
+    <button class="icon-btn ripple" id="player-pip" aria-label="Picture in picture"><span data-icon="cast" data-size="22"></span></button>
+    <button class="icon-btn ripple" id="player-fs" aria-label="Toggle fullscreen"><span data-icon="fullscreen" data-size="22"></span></button>
+  </div>
+  <div id="ep-drawer"></div>
+</div>
+
+<div id="toast-wrap" aria-live="polite"></div>
+
+<script>
+/* ============================================
+   SECTION 1 — CONFIGURATION
+   ============================================ */
+const CONFIG = {
+  API_BASE: 'https://144-24-218-100.nip.io/movies-api',
+  LOGO: 'https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png',
+  HERO_INTERVAL: 8000,
+  SPLASH_MS: 1500,
+  SEARCH_DEBOUNCE: 400,
+  FETCH_TIMEOUT: 14000,
+  MAX_RECENT: 10,
+  TOAST_MS: 2000,
+  DEFAULT_RUNTIME_MIN: 120,
+  EPISODE_RUNTIME_MIN: 45,
+  DEFAULT_SEASONS: 3,
+  DEFAULT_EPISODES: 10,
+  KEYS: {
+    theme: 'pika_theme', lang: 'pika_lang', list: 'pika_list', watched: 'pika_watched',
+    recent: 'pika_recent_search', settings: 'pika_settings', cache: 'pika_cache', favs: 'pika_favs', ep: 'pika_ep'
+  },
+  TRENDING_SEARCHES: ['Avengers', 'Stranger Things', 'Interstellar', 'Money Heist', 'Inception', 'Breaking Bad', 'Dune', 'The Batman'],
+  GENRES: ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War']
+};
+
+const I18N = {
+  en: {
+    home: 'Home', search: 'Search', myList: 'My List', profile: 'Profile',
+    searchSub: 'Find movies and TV shows', searchPlaceholder: 'Movies, shows, genres…',
+    play: 'Play', info: 'Info', share: 'Share', trailer: 'Trailer', moreLikeThis: 'More Like This', cast: 'Cast',
+    trending: 'Trending Now', newReleases: 'New Releases', topRated: 'Top Rated', popularTv: 'Popular TV Shows',
+    continueWatching: 'Continue Watching', seeAll: 'See All', all: 'All', movies: 'Movies', tvShows: 'TV Shows', genre: 'Genre',
+    recentSearches: 'Recent Searches', clearAll: 'Clear all', trendingSearches: 'Trending Searches',
+    noResults: 'No results found', noResultsSub: 'Try a different title or remove some filters.',
+    results: 'results', sortBy: 'Sort', recentlyAdded: 'Recently Added', az: 'A–Z', rating: 'Rating', year: 'Year',
+    emptyList: 'Your list is empty', emptyListSub: 'Save movies and shows to watch them later.', browse: 'Browse Movies',
+    totalWatched: 'Total Watched', inMyList: 'In My List', watchTime: 'Watch Time', favorites: 'Favorites',
+    watchHistory: 'Watch History', noHistory: 'Nothing watched yet. Press play on any title!', settings: 'Settings',
+    theme: 'Theme', themeDesc: 'Switch between dark and light', language: 'Language', languageDesc: 'App language',
+    autoplay: 'Autoplay Trailer', autoplayDesc: 'Play trailer preview in details', dataSaver: 'Data Saver', dataSaverDesc: 'Load smaller images',
+    clearHistory: 'Clear Watch History', clearHistoryDesc: 'Remove everything you have watched', clearList: 'Clear My List', clearListDesc: 'Remove all saved titles',
+    clearSearch: 'Clear Search History', clearSearchDesc: 'Remove recent searches', about: 'About Pika Movie', aboutDesc: 'Version 1.0 • Liquid Glass',
+    dark: 'Dark', light: 'Light', added: 'Added to My List', removed: 'Removed from My List', copied: 'Link copied',
+    cleared: 'Cleared', loadingPlayer: 'Loading player…', season: 'Season', episode: 'Episode', episodes: 'Episodes',
+    retry: 'Try again', loadError: 'Could not load content', demoMode: 'Server unreachable — showing demo content',
+    min: 'min', hrs: 'h', mins: 'm', ago: 'ago', justNow: 'Just now', remove: 'Remove', tv: 'TV', movie: 'Movie',
+    noCast: 'Cast details are not available for this title.', noTrailer: 'No trailer available', pipUnavailable: 'Picture-in-picture is not available for this embedded player',
+    welcome: 'Movie Lover', guest: 'Guest account', openedTab: 'Opened in new tab', fav: 'Favorite', favAdded: 'Added to favorites', favRemoved: 'Removed from favorites'
+  },
+  ur: {
+    home: 'ہوم', search: 'تلاش', myList: 'میری فہرست', profile: 'پروفائل',
+    searchSub: 'فلمیں اور ٹی وی شوز تلاش کریں', searchPlaceholder: 'فلمیں، شوز، صنف…',
+    play: 'چلائیں', info: 'معلومات', share: 'شیئر', trailer: 'ٹریلر', moreLikeThis: 'اس جیسی مزید', cast: 'اداکار',
+    trending: 'ابھی ٹرینڈنگ', newReleases: 'نئی ریلیز', topRated: 'اعلیٰ ریٹنگ', popularTv: 'مقبول ٹی وی شوز',
+    continueWatching: 'دیکھنا جاری رکھیں', seeAll: 'سب دیکھیں', all: 'سب', movies: 'فلمیں', tvShows: 'ٹی وی شوز', genre: 'صنف',
+    recentSearches: 'حالیہ تلاشیں', clearAll: 'سب صاف کریں', trendingSearches: 'ٹرینڈنگ تلاشیں',
+    noResults: 'کوئی نتیجہ نہیں ملا', noResultsSub: 'کوئی اور نام آزمائیں یا فلٹر ہٹا دیں۔',
+    results: 'نتائج', sortBy: 'ترتیب', recentlyAdded: 'حال ہی میں شامل', az: 'A–Z', rating: 'ریٹنگ', year: 'سال',
+    emptyList: 'آپ کی فہرست خالی ہے', emptyListSub: 'بعد میں دیکھنے کے لیے فلمیں اور شوز محفوظ کریں۔', browse: 'فلمیں دیکھیں',
+    totalWatched: 'کل دیکھا', inMyList: 'میری فہرست میں', watchTime: 'دیکھنے کا وقت', favorites: 'پسندیدہ',
+    watchHistory: 'دیکھنے کی تاریخ', noHistory: 'ابھی تک کچھ نہیں دیکھا۔ کسی بھی ٹائٹل پر پلے دبائیں!', settings: 'سیٹنگز',
+    theme: 'تھیم', themeDesc: 'ڈارک اور لائٹ کے درمیان تبدیل کریں', language: 'زبان', languageDesc: 'ایپ کی زبان',
+    autoplay: 'ٹریلر آٹو پلے', autoplayDesc: 'تفصیلات میں ٹریلر کا پیش منظر چلائیں', dataSaver: 'ڈیٹا سیور', dataSaverDesc: 'چھوٹی تصاویر لوڈ کریں',
+    clearHistory: 'دیکھنے کی تاریخ مٹائیں', clearHistoryDesc: 'جو کچھ دیکھا ہے وہ سب ہٹا دیں', clearList: 'میری فہرست صاف کریں', clearListDesc: 'تمام محفوظ ٹائٹلز ہٹا دیں',
+    clearSearch: 'تلاش کی تاریخ مٹائیں', clearSearchDesc: 'حالیہ تلاشیں ہٹا دیں', about: 'پیکا مووی کے بارے میں', aboutDesc: 'ورژن 1.0 • لکوئڈ گلاس',
+    dark: 'ڈارک', light: 'لائٹ', added: 'میری فہرست میں شامل ہو گیا', removed: 'میری فہرست سے ہٹا دیا گیا', copied: 'لنک کاپی ہو گیا',
+    cleared: 'صاف ہو گیا', loadingPlayer: 'پلیئر لوڈ ہو رہا ہے…', season: 'سیزن', episode: 'قسط', episodes: 'اقساط',
+    retry: 'دوبارہ کوشش کریں', loadError: 'مواد لوڈ نہیں ہو سکا', demoMode: 'سرور دستیاب نہیں — ڈیمو مواد دکھایا جا رہا ہے',
+    min: 'منٹ', hrs: 'گھ', mins: 'من', ago: 'پہلے', justNow: 'ابھی', remove: 'ہٹائیں', tv: 'ٹی وی', movie: 'فلم',
+    noCast: 'اس ٹائٹل کے لیے اداکاروں کی معلومات دستیاب نہیں ہیں۔', noTrailer: 'ٹریلر دستیاب نہیں', pipUnavailable: 'اس ایمبیڈڈ پلیئر میں پکچر اِن پکچر دستیاب نہیں ہے',
+    welcome: 'فلم کا شوقین', guest: 'مہمان اکاؤنٹ', openedTab: 'نئے ٹیب میں کھلا', fav: 'پسندیدہ', favAdded: 'پسندیدہ میں شامل کیا گیا', favRemoved: 'پسندیدہ سے ہٹایا گیا'
+  }
+};
+
+/* ============================================
+   SECTION 2 — STATE MANAGEMENT
+   ============================================ */
+const state = {
+  screen: 'home',
+  prevScreen: 'home',
+  theme: 'dark',
+  lang: 'en',
+  list: [],
+  watched: [],
+  recent: [],
+  favs: [],
+  epProgress: {},
+  settings: { autoplayTrailer: true, dataSaver: false },
+  itemCache: new Map(),
+  homeItems: [],
+  rows: {},
+  heroItems: [],
+  heroIndex: 0,
+  heroTimer: null,
+  demoMode: false,
+  homeLoaded: false,
+  search: { query: '', filter: 'all', genre: '', results: [], token: 0, loading: false },
+  listView: { sort: 'recent', filter: 'all' },
+  detail: { item: null, season: 1, token: 0 },
+  player: { item: null, season: 1, episode: 1, providers: [], startedAt: 0, timer: null, mode: 'movie', baseProgress: 0 },
+  collection: { title: '', items: [] }
+};
+
+/* ============================================
+   SECTION 3 — LOCAL STORAGE HELPERS
+   ============================================ */
+const store = {
+  get(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw === null ? fallback : JSON.parse(raw);
+    } catch (err) { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) { /* storage unavailable */ }
+  },
+  raw(key, fallback) {
+    try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch (err) { return fallback; }
+  },
+  setRaw(key, value) {
+    try { localStorage.setItem(key, value); } catch (err) { /* ignore */ }
+  }
+};
+
+function loadState() {
+  const K = CONFIG.KEYS;
+  const theme = store.raw(K.theme, 'dark');
+  state.theme = theme === 'light' ? 'light' : 'dark';
+  const lang = store.raw(K.lang, 'en');
+  state.lang = lang === 'ur' ? 'ur' : 'en';
+  const list = store.get(K.list, []);
+  state.list = Array.isArray(list) ? list.map(String) : [];
+  const watched = store.get(K.watched, []);
+  state.watched = Array.isArray(watched) ? watched : [];
+  const recent = store.get(K.recent, []);
+  state.recent = Array.isArray(recent) ? recent : [];
+  const favs = store.get(K.favs, []);
+  state.favs = Array.isArray(favs) ? favs.map(String) : [];
+  const ep = store.get(K.ep, {});
+  state.epProgress = ep && typeof ep === 'object' ? ep : {};
+  const settings = store.get(K.settings, null);
+  if (settings && typeof settings === 'object') {
+    state.settings = { autoplayTrailer: settings.autoplayTrailer !== false, dataSaver: !!settings.dataSaver };
+  }
+  const cache = store.get(K.cache, {});
+  if (cache && typeof cache === 'object') {
+    Object.keys(cache).forEach((id) => state.itemCache.set(String(id), cache[id]));
+  }
+}
+function saveList() { store.set(CONFIG.KEYS.list, state.list); }
+function saveWatched() { store.set(CONFIG.KEYS.watched, state.watched); }
+function saveRecent() { store.set(CONFIG.KEYS.recent, state.recent); }
+function saveFavs() { store.set(CONFIG.KEYS.favs, state.favs); }
+function saveEp() { store.set(CONFIG.KEYS.ep, state.epProgress); }
+function saveSettings() { store.set(CONFIG.KEYS.settings, state.settings); }
+function persistCacheFor(ids) {
+  const out = {};
+  ids.forEach((id) => {
+    const it = state.itemCache.get(String(id));
+    if (it) out[id] = slimItem(it);
+  });
+  const old = store.get(CONFIG.KEYS.cache, {});
+  store.set(CONFIG.KEYS.cache, Object.assign({}, old, out));
+}
+function slimItem(it) {
+  return { id: it.id, title: it.title, poster: it.poster, backdrop: it.backdrop, year: it.year, type: it.type, mediaType: it.mediaType, rating: it.rating, description: it.description, genres: it.genres, duration: it.duration };
+}
+
+/* ============================================
+   SECTION 4 — API LAYER
+   ============================================ */
+const apiCache = new Map();
+
+async function apiGet(path, params = {}, { cache = true } = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const url = `${CONFIG.API_BASE}${path}${qs ? '?' + qs : ''}`;
+  if (cache && apiCache.has(url)) return apiCache.get(url);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), CONFIG.FETCH_TIMEOUT);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data && data.ok === false) throw new Error(data.error || 'API error');
+    if (cache) apiCache.set(url, data);
+    return data;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
-async function play(id, type){
-  cur = C.find(x => x.id === id) || {id, title: "Movie", mediaType: type};
-  $("#pt").textContent = cur.title || "Playing";
-  $("#pl").classList.add("on");
-  history.pushState({p:1}, "");
-  $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#888">Loading player…</div>`;
-  try{
-    const data = await apiGet("/play?id=" + encodeURIComponent(id) + "&type=" + (type || "movie"));
-    if(!data.ok || !data.url){
-      $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#f66;padding:20px;text-align:center">Stream not available</div>`;
-      return;
+function normalizeItem(raw) {
+  if (!raw) return null;
+  const mediaType = String(raw.mediaType || raw.type || 'movie').toLowerCase();
+  const isTv = /tv|series|show/.test(mediaType);
+  const item = {
+    id: String(raw.id),
+    title: raw.title || raw.name || 'Untitled',
+    poster: raw.poster || '',
+    backdrop: raw.backdrop || raw.poster || '',
+    year: raw.year || '',
+    type: isTv ? 'tv' : 'movie',
+    mediaType: isTv ? 'tv' : 'movie',
+    rating: raw.rating !== undefined && raw.rating !== null && raw.rating !== '' ? Number(raw.rating) : 0,
+    description: raw.description || raw.overview || '',
+    genres: Array.isArray(raw.genres) ? raw.genres.map((g) => (typeof g === 'string' ? g : g && g.name)).filter(Boolean) : [],
+    duration: raw.duration || '',
+    trailerKey: raw.trailerKey || '',
+    cast: Array.isArray(raw.cast) ? raw.cast : null,
+    seasons: raw.seasons || raw.numberOfSeasons || null
+  };
+  const prev = state.itemCache.get(item.id);
+  if (prev) {
+    ['poster', 'backdrop', 'description', 'duration', 'trailerKey'].forEach((k) => { if (!item[k] && prev[k]) item[k] = prev[k]; });
+    if (!item.genres.length && prev.genres && prev.genres.length) item.genres = prev.genres;
+    if (!item.cast && prev.cast) item.cast = prev.cast;
+  }
+  state.itemCache.set(item.id, item);
+  return item;
+}
+
+async function fetchHome() {
+  const data = await apiGet('/home', { lang: state.lang });
+  return (data.items || []).map(normalizeItem).filter(Boolean);
+}
+async function fetchSearch(q) {
+  const data = await apiGet('/search', { q, lang: state.lang });
+  return (data.items || []).map(normalizeItem).filter(Boolean);
+}
+async function fetchDetail(item) {
+  const data = await apiGet('/detail', { id: item.id, type: item.type, lang: state.lang });
+  return normalizeItem(Object.assign({}, item, data.item || {}));
+}
+async function fetchPlay(item) {
+  return apiGet('/play', { id: item.id, type: item.type }, { cache: true });
+}
+function embedUrl(item, season, episode) {
+  let u = `${CONFIG.API_BASE}/proxy/embed?id=${encodeURIComponent(item.id)}&type=${item.type}`;
+  if (item.type === 'tv') u += `&season=${season || 1}&episode=${episode || 1}`;
+  return u;
+}
+
+/* Demo data used only when the server cannot be reached */
+function makePoster(title, hue, w = 400, h = 600) {
+  const initials = title.split(/\s+/).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='hsl(${hue},70%,45%)'/><stop offset='1' stop-color='hsl(${(hue + 60) % 360},70%,18%)'/></linearGradient></defs><rect width='100%' height='100%' fill='url(%23g)'/><circle cx='${w * 0.75}' cy='${h * 0.25}' r='${w * 0.28}' fill='rgba(255,255,255,0.08)'/><text x='50%' y='52%' text-anchor='middle' font-family='Impact,Arial' font-size='${w * 0.28}' fill='rgba(255,255,255,0.85)'>${initials}</text></svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+function demoItems() {
+  const titles = [
+    ['Neon Horizon', 'movie', 2025, 8.4], ['The Last Signal', 'movie', 2024, 7.9], ['Crimson Tide Rising', 'movie', 2026, 8.1],
+    ['Midnight Express', 'tv', 2025, 8.7], ['Ocean of Glass', 'movie', 2023, 7.5], ['Paper Kingdoms', 'tv', 2024, 8.2],
+    ['Echoes of Tomorrow', 'movie', 2026, 7.8], ['Silent Orbit', 'movie', 2022, 8.0], ['Golden Hour', 'tv', 2026, 8.9],
+    ['Shadow Protocol', 'movie', 2025, 7.2], ['Velvet Storm', 'tv', 2023, 7.6], ['Last Train North', 'movie', 2021, 8.3],
+    ['Atlas Falls', 'movie', 2024, 7.7], ['Moonlit Run', 'tv', 2025, 8.0], ['Iron Garden', 'movie', 2026, 7.4],
+    ['Starlight Diner', 'tv', 2022, 8.5], ['Hollow Crown', 'movie', 2023, 8.6], ['Red Desert', 'movie', 2025, 7.3]
+  ];
+  return titles.map((t, i) => ({
+    id: 'demo' + (i + 1), title: t[0], type: t[1], mediaType: t[1], year: t[2], rating: t[3],
+    poster: makePoster(t[0], (i * 47) % 360), backdrop: makePoster(t[0], (i * 47) % 360, 1280, 720),
+    description: 'A demo title shown because the server could not be reached. Connect to the internet and refresh to see real movies and shows.',
+    genres: [CONFIG.GENRES[i % CONFIG.GENRES.length], CONFIG.GENRES[(i + 5) % CONFIG.GENRES.length]], duration: t[1] === 'tv' ? '45m' : '1h 55m'
+  })).map(normalizeItem);
+}
+
+/* ============================================
+   SECTION 5 — UTILITY FUNCTIONS
+   ============================================ */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const t = (key) => (I18N[state.lang] && I18N[state.lang][key]) || I18N.en[key] || key;
+const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function debounce(fn, ms) {
+  let id;
+  return (...args) => { clearTimeout(id); id = setTimeout(() => fn(...args), ms); };
+}
+
+function imgUrl(url, kind = 'poster') {
+  if (!url) return '';
+  if (state.settings.dataSaver && /image\.tmdb\.org/.test(url)) {
+    return url.replace(/\/(original|w1280|w780|w500)\//, kind === 'backdrop' ? '/w780/' : '/w342/');
+  }
+  return url;
+}
+
+function formatRating(r) {
+  const n = Number(r);
+  return n > 0 ? n.toFixed(1) : '–';
+}
+
+function timeAgo(ts) {
+  const ur = state.lang === 'ur';
+  const diff = Math.max(0, Date.now() - ts);
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return t('justNow');
+  if (m < 60) return ur ? `${m} منٹ ${t('ago')}` : `${m}m ${t('ago')}`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return ur ? `${h} گھنٹے ${t('ago')}` : `${h}h ${t('ago')}`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return ur ? `${d} دن ${t('ago')}` : `${d}d ${t('ago')}`;
+  return new Date(ts).toLocaleDateString(ur ? 'ur-PK' : 'en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatDuration(totalSec) {
+  const mins = Math.floor(totalSec / 60);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h > 0) return `${h}${t('hrs')} ${m}${t('mins')}`;
+  return `${m}${t('mins')}`;
+}
+
+function parseDurationMinutes(d, isTv) {
+  if (!d) return isTv ? CONFIG.EPISODE_RUNTIME_MIN : CONFIG.DEFAULT_RUNTIME_MIN;
+  if (typeof d === 'number') return d;
+  const str = String(d);
+  let total = 0;
+  const h = str.match(/(\d+)\s*h/i);
+  const m = str.match(/(\d+)\s*m/i);
+  if (h) total += parseInt(h[1], 10) * 60;
+  if (m) total += parseInt(m[1], 10);
+  if (!h && !m) { const n = parseInt(str, 10); if (!isNaN(n)) total = n; }
+  return total || (isTv ? CONFIG.EPISODE_RUNTIME_MIN : CONFIG.DEFAULT_RUNTIME_MIN);
+}
+
+function displayDuration(d) {
+  if (!d) return '';
+  if (typeof d === 'number') return `${Math.floor(d / 60) ? Math.floor(d / 60) + 'h ' : ''}${d % 60}m`;
+  return String(d);
+}
+
+function initials(name) {
+  return String(name || '?').trim().split(/\s+/).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
+}
+function hueFromString(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+  return h;
+}
+
+function getItem(id) { return state.itemCache.get(String(id)) || null; }
+function inList(id) { return state.list.includes(String(id)); }
+function isFav(id) { return state.favs.includes(String(id)); }
+function getWatched(id) { return state.watched.find((w) => String(w.id) === String(id)); }
+
+function onImgLoad(img) { img.classList.add('loaded'); }
+
+/* Ripple effect */
+function attachRipple(e) {
+  const el = e.target.closest('.ripple, .btn, .icon-btn, .nav-btn');
+  if (!el || prefersReducedMotion()) return;
+  const rect = el.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 2.2;
+  const circle = document.createElement('span');
+  circle.className = 'ripple-circle';
+  circle.style.width = circle.style.height = size + 'px';
+  circle.style.left = (e.clientX - rect.left - size / 2) + 'px';
+  circle.style.top = (e.clientY - rect.top - size / 2) + 'px';
+  if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+  el.style.overflow = 'hidden';
+  el.appendChild(circle);
+  setTimeout(() => circle.remove(), 750);
+}
+
+/* Particle burst for heart / bookmark taps */
+function burst(el) {
+  if (prefersReducedMotion() || !el) return;
+  const r = el.getBoundingClientRect();
+  const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
+  const colors = ['#e50914', '#ff5a36', '#ffd54a', '#ff7a90'];
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('span');
+    const angle = (Math.PI * 2 * i) / 12 + Math.random() * 0.4;
+    const dist = 34 + Math.random() * 30;
+    p.className = 'particle';
+    p.style.left = cx - 4 + 'px';
+    p.style.top = cy - 4 + 'px';
+    p.style.background = colors[i % colors.length];
+    p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 850);
+  }
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+
+/* Toasts */
+function toast(message, iconName = 'check') {
+  const wrap = $('#toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast glass';
+  el.setAttribute('role', 'status');
+  el.innerHTML = `${icon(iconName, 20)}<span>${escapeHtml(message)}</span>`;
+  wrap.appendChild(el);
+  while (wrap.children.length > 3) wrap.firstChild.remove();
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 420);
+  }, CONFIG.TOAST_MS);
+}
+
+/* Animated progress bars (fill after paint) */
+function animateBars(root = document) {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    $$('[data-w]', root).forEach((el) => { el.style.width = el.dataset.w + '%'; });
+  }));
+}
+
+/* ============================================
+   SECTION 6 — SVG ICON LIBRARY
+   ============================================ */
+const ICONS = {
+  'home': '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  'search': '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  'list': '<path d="M6 3h12v18l-6-4.5L6 21z"/>',
+  'profile': '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
+  'play': '<path fill="currentColor" stroke="none" d="M8 5.2v13.6a1 1 0 0 0 1.5.86l11-6.8a1 1 0 0 0 0-1.72l-11-6.8A1 1 0 0 0 8 5.2z"/>',
+  'pause': '<rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor" stroke="none"/>',
+  'plus': '<path d="M12 5v14M5 12h14"/>',
+  'check': '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  'close': '<path d="M6 6l12 12M18 6 6 18"/>',
+  'back': '<path d="M19 12H5m6-6-6 6 6 6"/>',
+  'forward': '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+  'info': '<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="0.7" fill="currentColor"/>',
+  'star': '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+  'star-filled': '<path fill="currentColor" stroke="currentColor" d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+  'heart': '<path d="M12 20s-8-4.9-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 6.1-8 11-8 11z"/>',
+  'heart-filled': '<path fill="currentColor" stroke="currentColor" d="M12 20s-8-4.9-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 6.1-8 11-8 11z"/>',
+  'share': '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>',
+  'download': '<path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 21h14"/>',
+  'settings': '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/>',
+  'sun': '<circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+  'moon': '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
+  'trash': '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  'filter': '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
+  'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+  'chevron-right': '<path d="m9 6 6 6-6 6"/>',
+  'chevron-left': '<path d="m15 6-6 6 6 6"/>',
+  'chevron-up': '<path d="m6 15 6-6 6 6"/>',
+  'cast': '<path d="M3 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/><path d="M3 12a9 9 0 0 1 9 9M3 16a5 5 0 0 1 5 5"/><circle cx="3.6" cy="20.4" r="0.9" fill="currentColor"/>',
+  'fullscreen': '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  'volume': '<path d="M4 10v4h4l5 4V6l-5 4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
+  'mute': '<path d="M4 10v4h4l5 4V6l-5 4z"/><path d="m17 9 5 6m0-6-5 6"/>',
+  'magnifying-glass': '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m21 21-5.5-5.5"/>',
+  'fire': '<path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2 0 2 1 2.7 1.5 2.7C10 8 11 5.5 12 3z"/>',
+  'clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  'calendar': '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  'film': '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
+  'tv': '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="m8 2 4 4 4-4"/>',
+  'sparkle': '<path d="M12 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/>',
+  'bell': '<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
+  'external-link': '<path d="M14 4h6v6M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+  'refresh': '<path d="M20 11a8 8 0 0 0-14-4L4 9"/><path d="M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2"/><path d="M20 20v-5h-5"/>',
+  'sort': '<path d="M7 4v16m-3-3 3 3 3-3M17 20V4m-3 3 3-3 3 3"/>',
+  'grid': '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>',
+  'list-view': '<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/>',
+  'three-dots': '<circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none"/>',
+  'edit': '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  'eye': '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  'bookmark-filled': '<path fill="currentColor" stroke="currentColor" d="M6 3h12v18l-6-4.5L6 21z"/>',
+  'play-circle': '<circle cx="12" cy="12" r="9"/><path fill="currentColor" stroke="none" d="M10 8.4v7.2a.6.6 0 0 0 .9.5l6-3.6a.6.6 0 0 0 0-1l-6-3.6a.6.6 0 0 0-.9.5z"/>',
+  'pause-circle': '<circle cx="12" cy="12" r="9"/><rect x="9" y="8.5" width="2.2" height="7" rx="0.8" fill="currentColor" stroke="none"/><rect x="12.8" y="8.5" width="2.2" height="7" rx="0.8" fill="currentColor" stroke="none"/>',
+  'loader': '<path d="M12 3a9 9 0 1 0 9 9"/>',
+  'globe': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  'zap': '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'
+};
+
+function icon(name, size = 24, extraClass = '') {
+  const inner = ICONS[name] || ICONS['info'];
+  return `<svg class="ico-svg ${extraClass}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
+}
+function hydrateIcons(root = document) {
+  $$('[data-icon]', root).forEach((el) => {
+    if (el.dataset.hydrated === '1') return;
+    el.innerHTML = icon(el.dataset.icon, Number(el.dataset.size) || 24);
+    el.style.display = el.style.display || 'inline-grid';
+    el.style.placeItems = 'center';
+    el.dataset.hydrated = '1';
+  });
+}
+
+/* Illustrations */
+function illustrationSearch() {
+  return `<svg viewBox="0 0 200 200" fill="none" aria-hidden="true"><circle cx="100" cy="100" r="86" fill="rgba(229,9,20,0.08)"/><circle cx="92" cy="92" r="40" stroke="#e50914" stroke-width="8" fill="rgba(255,255,255,0.05)"/><path d="m122 122 38 38" stroke="#e50914" stroke-width="12" stroke-linecap="round"/><path d="M76 88c4-10 12-14 22-12" stroke="rgba(255,255,255,0.5)" stroke-width="5" stroke-linecap="round"/><circle cx="40" cy="48" r="5" fill="#e50914" opacity="0.6"/><circle cx="162" cy="62" r="3.5" fill="#ff5a36" opacity="0.7"/><circle cx="154" cy="146" r="4.5" fill="#e50914" opacity="0.4"/></svg>`;
+}
+function illustrationList() {
+  return `<svg viewBox="0 0 200 200" fill="none" aria-hidden="true"><circle cx="100" cy="100" r="86" fill="rgba(229,9,20,0.08)"/><rect x="58" y="40" width="84" height="118" rx="18" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.3)" stroke-width="3"/><path d="M78 40h44v52l-22-14-22 14z" fill="#e50914"/><rect x="72" y="108" width="56" height="7" rx="3.5" fill="rgba(255,255,255,0.35)"/><rect x="72" y="124" width="38" height="7" rx="3.5" fill="rgba(255,255,255,0.2)"/><circle cx="150" cy="150" r="22" fill="#e50914"/><path d="M150 140v20M140 150h20" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>`;
+}
+function illustrationHistory() {
+  return `<svg viewBox="0 0 200 200" fill="none" aria-hidden="true" style="width:120px;height:120px"><circle cx="100" cy="100" r="80" fill="rgba(229,9,20,0.08)"/><circle cx="100" cy="100" r="46" stroke="#e50914" stroke-width="7"/><path d="M100 72v30l20 12" stroke="rgba(255,255,255,0.6)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+function avatarSvg(name) {
+  const h = hueFromString(name);
+  return `<svg class="avatar" viewBox="0 0 100 100" role="img" aria-label="${escapeHtml(name)} avatar"><defs><linearGradient id="avg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e50914"/><stop offset="1" stop-color="hsl(${(h + 40) % 360},70%,35%)"/></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(#avg)"/><circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="2"/><text x="50" y="62" text-anchor="middle" font-family="Impact,Arial" font-size="38" fill="#fff" letter-spacing="2">${escapeHtml(initials(name))}</text></svg>`;
+}
+
+/* ============================================
+   SECTION 7 — ROUTER / SCREEN SWITCHING
+   ============================================ */
+const SCREENS = ['home', 'search', 'list', 'profile', 'collection'];
+
+function navigate(name, opts = {}) {
+  if (!SCREENS.includes(name)) name = 'home';
+  closeSheet(true);
+  const prev = state.screen;
+  if (prev !== name) state.prevScreen = prev;
+  state.screen = name;
+  SCREENS.forEach((s) => {
+    const el = $('#screen-' + s);
+    if (el) el.classList.toggle('active', s === name);
+  });
+  $$('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.nav === name));
+  window.scrollTo({ top: 0, behavior: 'auto' });
+  if (name === 'home') { if (state.homeLoaded) startHeroTimer(); } else stopHeroTimer();
+  if (name === 'search') renderSearchScreen();
+  if (name === 'list') renderListScreen();
+  if (name === 'profile') renderProfileScreen();
+  if (name === 'collection') renderCollectionScreen();
+  if (!opts.silent) {
+    try { history.replaceState({ screen: name }, '', '#' + name); } catch (err) { /* file:// may block */ }
+  }
+}
+
+/* ============================================
+   SECTION 8 — HOME SCREEN RENDER
+   ============================================ */
+function posterCard(item, opts = {}) {
+  const { progress = null, removable = false, wide = false, showType = true } = opts;
+  const src = imgUrl(wide ? (item.backdrop || item.poster) : item.poster, wide ? 'backdrop' : 'poster');
+  const typeLabel = item.type === 'tv' ? 'TV' : '';
+  return `<article class="card ${wide ? 'wide' : ''}" data-action="open-detail" data-id="${escapeHtml(item.id)}" tabindex="0" role="button" aria-label="${escapeHtml(item.title)}">
+    ${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.title)}" loading="lazy" decoding="async" onload="onImgLoad(this)" onerror="this.style.display='none'">` : ''}
+    ${showType && typeLabel ? `<span class="badge-type">${typeLabel}</span>` : ''}
+    ${item.rating > 0 ? `<span class="badge-rate">${icon('star-filled', 11)}${formatRating(item.rating)}</span>` : ''}
+    <div class="card-fade">
+      <div class="card-title">${escapeHtml(item.title)}</div>
+      <div class="card-sub">${escapeHtml(item.year || '')}${item.year && item.type === 'tv' ? ' • ' : ''}${item.type === 'tv' ? t('tv') : ''}</div>
+    </div>
+    ${removable ? `<button class="card-trash" data-action="remove-list" data-id="${escapeHtml(item.id)}" aria-label="${t('remove')} ${escapeHtml(item.title)}">${icon('trash', 16)}</button>` : ''}
+    ${progress !== null ? `<div class="card-progress" aria-hidden="true"><i data-w="${clamp(progress, 0, 100)}"></i></div>` : ''}
+  </article>`;
+}
+
+function skeletonRow(n = 7) {
+  return `<div class="row"><div class="row-head"><div class="skeleton skel-line" style="width:150px;height:22px"></div></div><div class="row-scroll">${Array.from({ length: n }, () => '<div class="skeleton skel-card"></div>').join('')}</div></div>`;
+}
+function renderHomeSkeleton() {
+  $('#hero-wrap').innerHTML = '<div class="skeleton skel-hero"></div>';
+  $('#home-rows').innerHTML = skeletonRow() + skeletonRow() + skeletonRow();
+}
+
+async function loadHome(force = false) {
+  if (state.homeLoaded && !force) return;
+  renderHomeSkeleton();
+  try {
+    const items = await fetchHome();
+    if (!items.length) throw new Error('empty');
+    state.homeItems = items;
+    state.demoMode = false;
+  } catch (err) {
+    state.homeItems = demoItems();
+    state.demoMode = true;
+    toast(t('demoMode'), 'info');
+  }
+  state.homeLoaded = true;
+  buildRows();
+  renderHome();
+}
+
+function buildRows() {
+  const items = state.homeItems;
+  const byYear = items.slice().sort((a, b) => Number(b.year || 0) - Number(a.year || 0));
+  const byRating = items.slice().sort((a, b) => b.rating - a.rating);
+  let tv = items.filter((i) => i.type === 'tv');
+  if (tv.length < 4) tv = items.filter((i) => i.type === 'tv').concat(byRating.filter((i) => i.type !== 'tv')).slice(0, 12);
+  state.rows = {
+    trending: items.slice(0, 20),
+    newReleases: byYear.slice(0, 20),
+    topRated: byRating.slice(0, 20),
+    popularTv: tv.slice(0, 20)
+  };
+  const withBackdrop = items.filter((i) => i.backdrop);
+  state.heroItems = (withBackdrop.length ? withBackdrop : items).slice(0, 6);
+  state.heroIndex = 0;
+}
+
+function renderHome() {
+  renderHero();
+  renderRows();
+  if (state.screen === 'home') startHeroTimer();
+}
+
+function renderHero() {
+  const wrap = $('#hero-wrap');
+  const items = state.heroItems;
+  if (!items.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<section class="hero" aria-label="Featured">
+    ${items.map((it, i) => `<div class="hero-bg ${i === 0 ? 'active' : ''}" data-hero-bg="${i}" style="background-image:url('${escapeHtml(imgUrl(it.backdrop, 'backdrop'))}')" role="img" aria-label="${escapeHtml(it.title)}"></div>`).join('')}
+    <div class="hero-content" id="hero-content"></div>
+    <div class="hero-dots" id="hero-dots">${items.map((_, i) => `<button class="hero-dot ${i === 0 ? 'active' : ''}" data-action="hero-go" data-index="${i}" aria-label="Show featured title ${i + 1}"></button>`).join('')}</div>
+  </section>`;
+  fillHeroContent(false);
+}
+
+function fillHeroContent(animate = true) {
+  const it = state.heroItems[state.heroIndex];
+  const box = $('#hero-content');
+  if (!it || !box) return;
+  const saved = inList(it.id);
+  box.innerHTML = `
+    <span class="hero-badge glass">${icon('fire', 14)}<span>${t('trending')}</span></span>
+    <h1 class="hero-title">${escapeHtml(it.title)}</h1>
+    <div class="hero-meta">
+      <span>${escapeHtml(it.year || '')}</span><span class="dot">•</span>
+      <span>${it.type === 'tv' ? t('tvShows') : t('movies')}</span>
+      ${it.genres && it.genres[0] ? `<span class="dot">•</span><span>${escapeHtml(it.genres[0])}</span>` : ''}
+      ${it.rating > 0 ? `<span class="dot">•</span><span class="rate">${icon('star-filled', 14)}${formatRating(it.rating)}</span>` : ''}
+    </div>
+    <p class="hero-desc">${escapeHtml(it.description)}</p>
+    <div class="hero-actions">
+      <button class="btn btn-primary ripple" data-action="play" data-id="${escapeHtml(it.id)}" aria-label="${t('play')} ${escapeHtml(it.title)}">${icon('play', 20)}<span>${t('play')}</span></button>
+      <button class="btn btn-glass ripple" data-action="toggle-list" data-id="${escapeHtml(it.id)}" aria-label="${t('myList')}">${icon(saved ? 'check' : 'plus', 20)}<span>${t('myList')}</span></button>
+      <button class="btn btn-glass btn-round ripple" data-action="open-detail" data-id="${escapeHtml(it.id)}" aria-label="${t('info')}">${icon('info', 22)}</button>
+    </div>`;
+  if (animate) { box.classList.remove('swap'); void box.offsetWidth; box.classList.add('swap'); }
+  $$('.hero-bg').forEach((el, i) => el.classList.toggle('active', i === state.heroIndex));
+  $$('.hero-dot').forEach((el, i) => el.classList.toggle('active', i === state.heroIndex));
+}
+
+function heroGo(i) {
+  if (!state.heroItems.length) return;
+  state.heroIndex = (i + state.heroItems.length) % state.heroItems.length;
+  fillHeroContent(true);
+  startHeroTimer();
+}
+function startHeroTimer() {
+  stopHeroTimer();
+  if (state.heroItems.length < 2) return;
+  state.heroTimer = setInterval(() => {
+    if (document.hidden || state.screen !== 'home' || $('#sheet').classList.contains('open') || $('#player').classList.contains('open')) return;
+    state.heroIndex = (state.heroIndex + 1) % state.heroItems.length;
+    fillHeroContent(true);
+  }, CONFIG.HERO_INTERVAL);
+}
+function stopHeroTimer() { if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; } }
+
+function rowHtml(titleKey, iconName, items, collectionKey, opts = {}) {
+  if (!items.length) return '';
+  const cards = items.map((it) => posterCard(it, opts.cardOpts ? opts.cardOpts(it) : {})).join('');
+  return `<section class="row fade-up" aria-label="${t(titleKey)}">
+    <div class="row-head">
+      <h2 class="row-title">${icon(iconName, 22)}<span>${t(titleKey)}</span></h2>
+      <button class="see-all ripple" data-action="see-all" data-key="${collectionKey}" aria-label="${t('seeAll')} ${t(titleKey)}"><span>${t('seeAll')}</span>${icon('forward', 16)}</button>
+    </div>
+    <div class="row-scroll">${cards}</div>
+  </section>`;
+}
+
+function continueItems() {
+  return state.watched
+    .filter((w) => w.progress > 1 && w.progress < 95)
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .map((w) => {
+      const base = getItem(w.id) || normalizeItem({ id: w.id, title: w.title, poster: w.poster, backdrop: w.backdrop, type: w.mediaType || w.type || 'movie', year: w.year });
+      return Object.assign({}, base, { _progress: w.progress });
+    });
+}
+
+function renderRows() {
+  const host = $('#home-rows');
+  const cont = continueItems();
+  let html = '';
+  html += rowHtml('trending', 'fire', state.rows.trending, 'trending');
+  html += rowHtml('newReleases', 'sparkle', state.rows.newReleases, 'newReleases');
+  if (cont.length) html += rowHtml('continueWatching', 'clock', cont, 'continue', { cardOpts: (it) => ({ progress: it._progress }) });
+  html += rowHtml('topRated', 'star', state.rows.topRated, 'topRated');
+  html += rowHtml('popularTv', 'tv', state.rows.popularTv, 'popularTv');
+  html += `<p class="footer-note">PIKA MOVIE • ${state.demoMode ? t('demoMode') : 'Liquid Glass'}</p>`;
+  host.innerHTML = html;
+  animateBars(host);
+}
+
+function openCollection(key) {
+  let items = [];
+  let title = '';
+  if (key === 'continue') { items = continueItems(); title = t('continueWatching'); }
+  else if (key === 'history') { items = state.watched.map((w) => getItem(w.id) || normalizeItem({ id: w.id, title: w.title, poster: w.poster, type: w.mediaType || 'movie' })); title = t('watchHistory'); }
+  else {
+    const map = { trending: 'trending', newReleases: 'newReleases', topRated: 'topRated', popularTv: 'popularTv' };
+    items = state.rows[map[key]] || [];
+    title = t(map[key] || 'trending');
+  }
+  state.collection = { title, items, key };
+  navigate('collection');
+}
+
+function renderCollectionScreen() {
+  const { title, items, key } = state.collection;
+  const body = $('#collection-body');
+  body.innerHTML = `
+    <div class="col-head"><button class="icon-btn glass ripple" data-action="collection-back" aria-label="Back">${icon('back', 22)}</button><h1>${escapeHtml(title)}</h1></div>
+    ${items.length ? `<div class="grid">${items.map((it) => posterCard(it, key === 'continue' ? { progress: it._progress } : {})).join('')}</div>` : emptyState('search', t('noResults'), t('noResultsSub'))}`;
+  animateBars(body);
+}
+
+function emptyState(kind, title, sub, ctaHtml = '') {
+  return `<div class="empty-state fade-up">${kind === 'list' ? illustrationList() : illustrationSearch()}<h3>${escapeHtml(title)}</h3><p>${escapeHtml(sub)}</p>${ctaHtml}</div>`;
+}
+
+/* ============================================
+   SECTION 9 — SEARCH SCREEN RENDER
+   ============================================ */
+function renderSearchScreen() {
+  const input = $('#search-input');
+  input.placeholder = t('searchPlaceholder');
+  input.value = state.search.query;
+  $('#search-clear').classList.toggle('show', !!state.search.query);
+  renderSearchFilters();
+  renderSearchBody();
+}
+
+function renderSearchFilters() {
+  const f = state.search.filter;
+  const genreOptions = `<option value="">${t('genre')}</option>` + CONFIG.GENRES.map((g) => `<option value="${g}" ${state.search.genre === g ? 'selected' : ''}>${g}</option>`).join('');
+  $('#search-filters').innerHTML = `
+    <button class="chip ripple ${f === 'all' ? 'active' : ''}" data-action="search-filter" data-filter="all">${t('all')}</button>
+    <button class="chip ripple ${f === 'movie' ? 'active' : ''}" data-action="search-filter" data-filter="movie">${icon('film', 15)}${t('movies')}</button>
+    <button class="chip ripple ${f === 'tv' ? 'active' : ''}" data-action="search-filter" data-filter="tv">${icon('tv', 15)}${t('tvShows')}</button>
+    <span class="select-wrap"><select id="genre-select" aria-label="${t('genre')}">${genreOptions}</select><span class="chev">${icon('chevron-down', 16)}</span></span>`;
+  $('#genre-select').addEventListener('change', (e) => {
+    state.search.genre = e.target.value;
+    renderSearchBody();
+  });
+}
+
+function renderSearchBody() {
+  const body = $('#search-body');
+  const s = state.search;
+  if (!s.query.trim()) {
+    const recent = state.recent;
+    let html = '';
+    if (recent.length) {
+      html += `<div class="section-head"><h2>${icon('clock', 20)}${t('recentSearches')}</h2><button class="link-btn" data-action="clear-recent">${t('clearAll')}</button></div>
+        <div class="chip-wrap">${recent.map((r, i) => `<span class="chip" ><button class="ripple" style="min-height:36px" data-action="use-recent" data-q="${escapeHtml(r.query)}" aria-label="Search ${escapeHtml(r.query)}">${escapeHtml(r.query)}</button><button class="x" data-action="remove-recent" data-index="${i}" aria-label="Remove ${escapeHtml(r.query)}">${icon('close', 12)}</button></span>`).join('')}</div>`;
     }
-    providers = data.providers || [{name: "default", url: data.url}];
-    curProv = 0;
-    renderSrcBar();
-    loadProvider(0);
-  }catch(e){
-    $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#f66;padding:20px;text-align:center">Connection error</div>`;
-  }
-}
-
-function renderSrcBar(){
-  const bar = $("#psrc");
-  if(!bar) return;
-  if(providers.length < 2){
-    bar.classList.remove("on");
-    bar.innerHTML = "";
+    html += `<div class="section-head"><h2>${icon('fire', 20)}${t('trendingSearches')}</h2></div>
+      <div class="trend-list">${CONFIG.TRENDING_SEARCHES.map((q, i) => `<button class="trend-item glass ripple" data-action="use-recent" data-q="${escapeHtml(q)}"><span class="num">${i + 1}</span><span>${escapeHtml(q)}</span><span class="fire">${icon('fire', 18)}</span></button>`).join('')}</div>`;
+    body.innerHTML = html;
     return;
   }
-  bar.classList.add("on");
-  bar.innerHTML = providers.map((p, i) =>
-    `<button class="${i === curProv ? "on" : ""}" onclick="loadProvider(${i})">${esc(p.name)}</button>`
-  ).join("");
-}
-
-function loadProvider(i){
-  curProv = i;
-  externalUrl = providers[i].url;
-  const id = cur.id;
-  const type = (cur.mediaType || "movie");
-  const proxyUrl = API + "/proxy/embed?id=" + encodeURIComponent(id) + "&type=" + encodeURIComponent(type);
-  $("#pf").innerHTML =
-    `<iframe src="${esc(proxyUrl)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
-  renderSrcBar();
-}
-
-function openExternal(){
-  if(externalUrl) window.open(externalUrl, "_blank", "noopener,noreferrer");
-}
-
-function playTrailer(key, title){
-  $("#pt").textContent = title + " — Trailer";
-  $("#pl").classList.add("on");
-  history.pushState({p:1}, "");
-  providers = [];
-  curProv = 0;
-  externalUrl = "https://www.youtube.com/watch?v=" + key;
-  const bar = $("#psrc");
-  if(bar){ bar.classList.remove("on"); bar.innerHTML = ""; }
-  $("#pf").innerHTML = `<iframe src="https://www.youtube.com/embed/${esc(key)}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
-}
-
-function stop(){
-  $("#pl").classList.remove("on");
-  $("#pf").innerHTML = "";
-  const bar = $("#psrc");
-  if(bar){ bar.classList.remove("on"); bar.innerHTML = ""; }
-  providers = [];
-  curProv = 0;
-  externalUrl = "";
-  if(cur && cur.id && PROG[cur.id]) sv("pm_prog", PROG);
-}
-
-addEventListener("popstate", ()=>{ if($("#pl").classList.contains("on")) stop(); else $("#sh").classList.remove("on"); });
-$("#sh").addEventListener("click", e => { if(e.target.id == "sh") history.back(); });
-addEventListener("scroll", ()=> $("#hd").classList.toggle("s", scrollY > 40), {passive:true});
-setInterval(()=>{
-  if(tab=="home" && !$("#sh").classList.contains("on") && !$("#pl").classList.contains("on") && scrollY < 10 && C.length){
-    heroI++; render();
+  if (s.loading) {
+    body.innerHTML = `<div class="grid" style="margin-top:18px">${Array.from({ length: 12 }, () => '<div class="skeleton skel-card"></div>').join('')}</div>`;
+    return;
   }
-}, 8000);
+  let results = s.results.slice();
+  if (s.filter !== 'all') results = results.filter((r) => r.type === s.filter);
+  if (s.genre) {
+    const g = s.genre.toLowerCase();
+    results = results.filter((r) => (r.genres || []).some((x) => String(x).toLowerCase().includes(g)) || (r.description || '').toLowerCase().includes(g));
+  }
+  if (!results.length) {
+    body.innerHTML = emptyState('search', t('noResults'), t('noResultsSub'));
+    return;
+  }
+  body.innerHTML = `<p class="results-count">${results.length} ${t('results')}</p><div class="grid">${results.map((r) => posterCard(r)).join('')}</div>`;
+}
 
-(async function(){
-  try{
-    const data = await apiGet("/home");
-    C = data.items || [];
-  }catch(e){ C = []; }
-  render();
-  setTimeout(()=> $("#splash").classList.add("off"), 1200);
-})();
-</script></body></html>
+async function runSearch(q) {
+  const query = q.trim();
+  state.search.query = q;
+  const token = ++state.search.token;
+  $('#search-clear').classList.toggle('show', !!q);
+  if (!query) { state.search.results = []; state.search.loading = false; renderSearchBody(); return; }
+  state.search.loading = true;
+  renderSearchBody();
+  try {
+    const items = await fetchSearch(query);
+    if (token !== state.search.token) return;
+    state.search.results = items;
+    addRecentSearch(query);
+  } catch (err) {
+    if (token !== state.search.token) return;
+    const ql = query.toLowerCase();
+    state.search.results = state.homeItems.filter((i) => i.title.toLowerCase().includes(ql));
+  }
+  state.search.loading = false;
+  renderSearchBody();
+}
+const debouncedSearch = debounce(runSearch, CONFIG.SEARCH_DEBOUNCE);
+
+function addRecentSearch(query) {
+  const q = query.trim();
+  if (q.length < 2) return;
+  state.recent = state.recent.filter((r) => r.query.toLowerCase() !== q.toLowerCase());
+  state.recent.unshift({ query: q, timestamp: Date.now() });
+  state.recent = state.recent.slice(0, CONFIG.MAX_RECENT);
+  saveRecent();
+}
+
+/* ============================================
+   SECTION 10 — MY LIST SCREEN RENDER
+   ============================================ */
+function listItems() {
+  let items = state.list.map((id) => getItem(id)).filter(Boolean);
+  const f = state.listView.filter;
+  if (f !== 'all') items = items.filter((i) => i.type === f);
+  const s = state.listView.sort;
+  if (s === 'az') items.sort((a, b) => a.title.localeCompare(b.title));
+  else if (s === 'rating') items.sort((a, b) => b.rating - a.rating);
+  else if (s === 'year') items.sort((a, b) => Number(b.year || 0) - Number(a.year || 0));
+  return items;
+}
+
+function renderListScreen() {
+  const v = state.listView;
+  $('#list-sub').textContent = `${state.list.length} ${state.list.length === 1 ? 'title' : 'titles'}`;
+  $('#list-toolbar').innerHTML = `
+    <button class="chip ripple ${v.filter === 'all' ? 'active' : ''}" data-action="list-filter" data-filter="all">${t('all')}</button>
+    <button class="chip ripple ${v.filter === 'movie' ? 'active' : ''}" data-action="list-filter" data-filter="movie">${t('movies')}</button>
+    <button class="chip ripple ${v.filter === 'tv' ? 'active' : ''}" data-action="list-filter" data-filter="tv">${t('tvShows')}</button>
+    <span class="spacer"></span>
+    <span class="select-wrap"><select id="list-sort" aria-label="${t('sortBy')}">
+      <option value="recent" ${v.sort === 'recent' ? 'selected' : ''}>${t('recentlyAdded')}</option>
+      <option value="az" ${v.sort === 'az' ? 'selected' : ''}>${t('az')}</option>
+      <option value="rating" ${v.sort === 'rating' ? 'selected' : ''}>${t('rating')}</option>
+      <option value="year" ${v.sort === 'year' ? 'selected' : ''}>${t('year')}</option>
+    </select><span class="chev">${icon('chevron-down', 16)}</span></span>`;
+  $('#list-sort').addEventListener('change', (e) => { state.listView.sort = e.target.value; renderListBody(); });
+  renderListBody();
+}
+
+function renderListBody() {
+  const body = $('#list-body');
+  if (!state.list.length) {
+    body.innerHTML = emptyState('list', t('emptyList'), t('emptyListSub'), `<button class="btn btn-accent ripple" data-action="go-home" style="margin-top:8px">${icon('film', 18)}<span>${t('browse')}</span></button>`);
+    return;
+  }
+  const items = listItems();
+  if (!items.length) { body.innerHTML = emptyState('search', t('noResults'), t('noResultsSub')); return; }
+  body.innerHTML = `<div class="grid">${items.map((it) => posterCard(it, { removable: true })).join('')}</div>`;
+}
+
+function toggleList(id, sourceEl) {
+  id = String(id);
+  const item = getItem(id);
+  if (inList(id)) {
+    state.list = state.list.filter((x) => x !== id);
+    toast(t('removed'), 'bookmark-filled');
+  } else {
+    state.list.unshift(id);
+    if (item) persistCacheFor([id]);
+    toast(t('added'), 'check');
+    burst(sourceEl);
+  }
+  saveList();
+  refreshListUi(id);
+}
+
+function removeFromList(id, cardEl) {
+  id = String(id);
+  const finish = () => {
+    state.list = state.list.filter((x) => x !== id);
+    saveList();
+    toast(t('removed'), 'trash');
+    if (state.screen === 'list') renderListScreen();
+    refreshListUi(id);
+  };
+  if (cardEl && !prefersReducedMotion()) { cardEl.classList.add('removing'); setTimeout(finish, 350); } else finish();
+}
+
+function refreshListUi(id) {
+  if (state.screen === 'home') fillHeroContent(false);
+  if (state.screen === 'list') { $('#list-sub').textContent = `${state.list.length} ${state.list.length === 1 ? 'title' : 'titles'}`; renderListBody(); }
+  if (state.screen === 'profile') renderProfileScreen();
+  const sheetBtn = $('#sheet-list-btn');
+  if (sheetBtn && state.detail.item && String(state.detail.item.id) === String(id)) {
+    const saved = inList(id);
+    sheetBtn.innerHTML = `${icon(saved ? 'bookmark-filled' : 'plus', 20)}<span>${t('myList')}</span>`;
+    sheetBtn.classList.toggle('is-saved', saved);
+  }
+}
+
+/* ============================================
+   SECTION 11 — PROFILE SCREEN RENDER
+   ============================================ */
+function totalWatchSeconds() {
+  return state.watched.reduce((sum, w) => sum + (Number(w.watchSeconds) || 0), 0);
+}
+
+function renderProfileScreen() {
+  const body = $('#profile-body');
+  const name = t('welcome');
+  const cont = continueItems();
+  const hist = state.watched.slice().sort((a, b) => b.timestamp - a.timestamp);
+  const s = state.settings;
+  body.innerHTML = `
+    <div class="profile-head">${avatarSvg(name)}<div><h1 class="profile-name">${escapeHtml(name)}</h1><p class="profile-mail">${t('guest')}</p></div></div>
+    <div class="stats-grid">
+      ${statCard('eye', state.watched.length, t('totalWatched'))}
+      ${statCard('list', state.list.length, t('inMyList'))}
+      ${statCard('clock', formatDuration(totalWatchSeconds()), t('watchTime'))}
+      ${statCard('heart', state.favs.length, t('favorites'))}
+    </div>
+
+    ${cont.length ? `<section class="row" style="margin-left:-16px;margin-right:-16px"><div class="row-head"><h2 class="row-title">${icon('clock', 22)}<span>${t('continueWatching')}</span></h2></div><div class="row-scroll">${cont.map((it) => posterCard(it, { progress: it._progress })).join('')}</div></section>` : ''}
+
+    <div class="section-head"><h2>${icon('film', 20)}${t('watchHistory')}</h2></div>
+    ${hist.length ? `<div class="history-list">${hist.slice(0, 30).map(historyRow).join('')}</div>` : `<div class="glass empty-state" style="border-radius:var(--radius)">${illustrationHistory()}<p>${t('noHistory')}</p></div>`}
+
+    <div class="section-head"><h2>${icon('settings', 20)}${t('settings')}</h2></div>
+    <div class="settings-list">
+      <div class="setting-row glass"><span class="setting-ico">${icon(state.theme === 'dark' ? 'moon' : 'sun', 22)}</span><div class="setting-text"><div class="setting-label">${t('theme')}</div><div class="setting-desc">${t('themeDesc')}</div></div>
+        <div class="seg" role="group" aria-label="${t('theme')}"><button class="${state.theme === 'dark' ? 'active' : ''}" data-action="set-theme" data-theme="dark">${t('dark')}</button><button class="${state.theme === 'light' ? 'active' : ''}" data-action="set-theme" data-theme="light">${t('light')}</button></div></div>
+      <div class="setting-row glass"><span class="setting-ico">${icon('globe', 22)}</span><div class="setting-text"><div class="setting-label">${t('language')}</div><div class="setting-desc">${t('languageDesc')}</div></div>
+        <div class="seg" role="group" aria-label="${t('language')}"><button class="${state.lang === 'en' ? 'active' : ''}" data-action="set-lang" data-lang="en">EN</button><button class="${state.lang === 'ur' ? 'active' : ''}" data-action="set-lang" data-lang="ur">اردو</button></div></div>
+      <div class="setting-row glass"><span class="setting-ico">${icon('play-circle', 22)}</span><div class="setting-text"><div class="setting-label">${t('autoplay')}</div><div class="setting-desc">${t('autoplayDesc')}</div></div>
+        <button class="switch ${s.autoplayTrailer ? 'on' : ''}" role="switch" aria-checked="${s.autoplayTrailer}" aria-label="${t('autoplay')}" data-action="toggle-setting" data-key="autoplayTrailer"></button></div>
+      <div class="setting-row glass"><span class="setting-ico">${icon('zap', 22)}</span><div class="setting-text"><div class="setting-label">${t('dataSaver')}</div><div class="setting-desc">${t('dataSaverDesc')}</div></div>
+        <button class="switch ${s.dataSaver ? 'on' : ''}" role="switch" aria-checked="${s.dataSaver}" aria-label="${t('dataSaver')}" data-action="toggle-setting" data-key="dataSaver"></button></div>
+      <button class="setting-row glass danger ripple" data-action="clear-history"><span class="setting-ico">${icon('trash', 22)}</span><div class="setting-text"><div class="setting-label">${t('clearHistory')}</div><div class="setting-desc">${t('clearHistoryDesc')}</div></div>${icon('chevron-right', 20)}</button>
+      <button class="setting-row glass danger ripple" data-action="clear-list"><span class="setting-ico">${icon('bookmark-filled', 22)}</span><div class="setting-text"><div class="setting-label">${t('clearList')}</div><div class="setting-desc">${t('clearListDesc')}</div></div>${icon('chevron-right', 20)}</button>
+      <button class="setting-row glass danger ripple" data-action="clear-recent-all"><span class="setting-ico">${icon('clock', 22)}</span><div class="setting-text"><div class="setting-label">${t('clearSearch')}</div><div class="setting-desc">${t('clearSearchDesc')}</div></div>${icon('chevron-right', 20)}</button>
+      <button class="setting-row glass ripple" data-action="toggle-about"><span class="setting-ico">${icon('info', 22)}</span><div class="setting-text"><div class="setting-label">${t('about')}</div><div class="setting-desc">${t('aboutDesc')}</div></div>${icon('chevron-down', 20)}</button>
+    </div>
+    <div class="about-card glass hidden" id="about-card"><img src="${CONFIG.LOGO}" alt="PIKA MOVIE logo" onerror="this.style.display='none'"><h3 style="font-family:var(--font-display);letter-spacing:2px;font-size:22px">PIKA <span style="color:var(--accent)">MOVIE</span></h3><p>Stream movies and TV shows in a Liquid Glass interface. Your list, history and settings are stored privately on this device.</p></div>
+    <p class="footer-note">PIKA MOVIE v1.0</p>`;
+  animateBars(body);
+}
+
+function statCard(ico, value, label) {
+  return `<div class="stat-card glass"><span class="stat-ico">${icon(ico, 20)}</span><span class="val">${escapeHtml(value)}</span><span class="lbl">${escapeHtml(label)}</span></div>`;
+}
+
+function historyRow(w) {
+  const item = getItem(w.id);
+  const poster = imgUrl(w.poster || (item && item.poster), 'poster');
+  const epInfo = w.mediaType === 'tv' && w.season ? ` • S${w.season}:E${w.episode}` : '';
+  return `<div class="history-item glass" data-action="open-detail" data-id="${escapeHtml(w.id)}" role="button" tabindex="0" aria-label="${escapeHtml(w.title)}">
+    <img src="${escapeHtml(poster)}" alt="${escapeHtml(w.title)}" loading="lazy" onerror="this.style.visibility='hidden'">
+    <div class="history-info"><div class="history-title">${escapeHtml(w.title)}</div><div class="history-time">${timeAgo(w.timestamp)}${epInfo}</div><div class="bar"><i data-w="${clamp(w.progress, 0, 100)}"></i></div></div>
+    <button class="icon-btn ripple" data-action="remove-history" data-id="${escapeHtml(w.id)}" aria-label="${t('remove')} ${escapeHtml(w.title)}">${icon('close', 18)}</button>
+  </div>`;
+}
+
+function clearHistory() { state.watched = []; saveWatched(); state.epProgress = {}; saveEp(); toast(t('cleared'), 'trash'); renderProfileScreen(); if (state.homeLoaded) renderRows(); }
+function clearList() { state.list = []; saveList(); toast(t('cleared'), 'trash'); renderProfileScreen(); }
+function clearRecent() { state.recent = []; saveRecent(); toast(t('cleared'), 'trash'); if (state.screen === 'search') renderSearchBody(); }
+
+/* ============================================
+   SECTION 12 — DETAIL MODAL
+   ============================================ */
+function openDetail(id) {
+  const item = getItem(id);
+  if (!item) return;
+  state.detail.item = item;
+  state.detail.token++;
+  state.detail.season = 1;
+  const token = state.detail.token;
+  renderSheet(item, true);
+  $('#sheet-backdrop').classList.add('open');
+  $('#sheet').classList.add('open');
+  $('#sheet').scrollTop = 0;
+  document.body.classList.add('no-scroll');
+  fetchDetail(item).then((full) => {
+    if (token !== state.detail.token) return;
+    state.detail.item = full;
+    renderSheet(full, false);
+    maybeAutoplayTrailer(full, token);
+  }).catch(() => {
+    if (token !== state.detail.token) return;
+    renderSheet(item, false);
+  });
+}
+
+function closeSheet(instant = false) {
+  const sheet = $('#sheet');
+  if (!sheet.classList.contains('open')) return;
+  state.detail.token++;
+  sheet.classList.remove('open');
+  $('#sheet-backdrop').classList.remove('open');
+  if (!$('#player').classList.contains('open')) document.body.classList.remove('no-scroll');
+  const ifr = $('#sheet-trailer');
+  if (ifr) ifr.remove();
+}
+
+function castHtml(item) {
+  if (item.cast && item.cast.length) {
+    return `<div class="cast-row">${item.cast.slice(0, 14).map((c) => {
+      const name = typeof c === 'string' ? c : (c.name || '');
+      const photo = typeof c === 'object' ? (c.photo || c.profile || c.image || '') : '';
+      const h = hueFromString(name);
+      return `<div class="cast-item"><div class="cast-avatar" style="background:linear-gradient(135deg,hsl(${h},65%,45%),hsl(${(h + 50) % 360},65%,25%))">${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.remove()">` : escapeHtml(initials(name))}</div><div class="cast-name">${escapeHtml(name)}</div></div>`;
+    }).join('')}</div>`;
+  }
+  return `<p class="muted">${t('noCast')}</p>`;
+}
+
+function moreLikeThis(item) {
+  const pool = state.homeItems.concat(Array.from(state.itemCache.values()));
+  const seen = new Set([String(item.id)]);
+  const genres = (item.genres || []).map((g) => g.toLowerCase());
+  const scored = [];
+  pool.forEach((p) => {
+    if (seen.has(String(p.id)) || !p.poster) return;
+    seen.add(String(p.id));
+    let score = p.type === item.type ? 2 : 0;
+    (p.genres || []).forEach((g) => { if (genres.includes(g.toLowerCase())) score += 3; });
+    score += (p.rating || 0) / 10;
+    scored.push({ p, score });
+  });
+  return scored.sort((a, b) => b.score - a.score).slice(0, 14).map((s) => s.p);
+}
+
+function renderSheet(item, loading) {
+  const isTv = item.type === 'tv';
+  const saved = inList(item.id);
+  const fav = isFav(item.id);
+  const more = moreLikeThis(item);
+  const backdrop = imgUrl(item.backdrop || item.poster, 'backdrop');
+  const watched = getWatched(item.id);
+  $('#sheet').innerHTML = `
+    <div class="sheet-grab" aria-hidden="true"></div>
+    <button class="sheet-close ripple" data-action="close-sheet" aria-label="Close details">${icon('close', 22)}</button>
+    <div class="sheet-hero" id="sheet-hero">${backdrop ? `<img src="${escapeHtml(backdrop)}" alt="${escapeHtml(item.title)}">` : ''}</div>
+    <div class="sheet-body">
+      <h2 class="sheet-title">${escapeHtml(item.title)}</h2>
+      <div class="sheet-meta">
+        ${item.year ? `<span>${escapeHtml(item.year)}</span>` : ''}
+        ${item.duration ? `<span>• ${escapeHtml(displayDuration(item.duration))}</span>` : (loading ? '<span class="skeleton" style="width:50px;height:14px;border-radius:7px"></span>' : '')}
+        ${item.rating > 0 ? `<span class="rate">${icon('star-filled', 15)}${formatRating(item.rating)}</span>` : ''}
+        <span class="hd-badge">HD</span>
+        <span>${isTv ? t('tv') : t('movie')}</span>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn btn-primary ripple" data-action="play" data-id="${escapeHtml(item.id)}">${icon('play', 20)}<span>${watched && watched.progress > 1 && watched.progress < 95 ? t('continueWatching') : t('play')}</span></button>
+        <button class="btn btn-glass ripple ${saved ? 'is-saved' : ''}" id="sheet-list-btn" data-action="toggle-list" data-id="${escapeHtml(item.id)}" aria-label="${t('myList')}">${icon(saved ? 'bookmark-filled' : 'plus', 20)}<span>${t('myList')}</span></button>
+        <button class="btn btn-glass btn-round ripple" data-action="share" data-id="${escapeHtml(item.id)}" aria-label="${t('share')}">${icon('share', 20)}</button>
+        <button class="btn btn-glass btn-round ripple ${fav ? 'is-fav' : ''}" data-action="toggle-fav" data-id="${escapeHtml(item.id)}" aria-label="${t('fav')}" id="sheet-fav-btn">${icon(fav ? 'heart-filled' : 'heart', 20)}</button>
+        ${item.trailerKey ? `<button class="btn btn-glass ripple" data-action="trailer" data-id="${escapeHtml(item.id)}">${icon('film', 18)}<span>${t('trailer')}</span></button>` : ''}
+      </div>
+      <p class="sheet-desc">${escapeHtml(item.description || '')}</p>
+      ${item.genres && item.genres.length ? `<div class="genre-row">${item.genres.map((g) => `<span class="chip">${escapeHtml(g)}</span>`).join('')}</div>` : ''}
+      ${isTv ? `<div id="episode-section"></div>` : ''}
+      <h3 class="sheet-h">${t('cast')}</h3>
+      ${loading ? `<div class="cast-row">${Array.from({ length: 6 }, () => '<div class="skeleton" style="width:68px;height:68px;border-radius:50%;flex:0 0 auto"></div>').join('')}</div>` : castHtml(item)}
+      ${more.length ? `<div class="sheet-more"><h3 class="sheet-h">${t('moreLikeThis')}</h3><div class="row-scroll">${more.map((m) => posterCard(m, { showType: false })).join('')}</div></div>` : ''}
+    </div>`;
+  if (isTv) renderEpisodeSection($('#episode-section'), item, state.detail.season, false);
+  animateBars($('#sheet'));
+}
+
+function maybeAutoplayTrailer(item, token) {
+  if (!item.trailerKey || !state.settings.autoplayTrailer || state.settings.dataSaver || prefersReducedMotion()) return;
+  setTimeout(() => {
+    if (token !== state.detail.token) return;
+    const hero = $('#sheet-hero');
+    if (!hero || $('#sheet-trailer')) return;
+    const ifr = document.createElement('iframe');
+    ifr.id = 'sheet-trailer';
+    ifr.title = 'Trailer preview';
+    ifr.allow = 'autoplay; encrypted-media';
+    ifr.setAttribute('loading', 'lazy');
+    ifr.src = `https://www.youtube.com/embed/${encodeURIComponent(item.trailerKey)}?autoplay=1&mute=1&controls=0&loop=1&playlist=${encodeURIComponent(item.trailerKey)}&modestbranding=1&playsinline=1&rel=0`;
+    ifr.addEventListener('load', () => ifr.classList.add('on'));
+    hero.appendChild(ifr);
+  }, 1400);
+}
+
+async function shareItem(id) {
+  const item = getItem(id);
+  if (!item) return;
+  const text = `${item.title}${item.year ? ' (' + item.year + ')' : ''} — watch on PIKA MOVIE`;
+  const url = location.href.split('#')[0];
+  try {
+    if (navigator.share) { await navigator.share({ title: item.title, text, url }); return; }
+  } catch (err) { if (err && err.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(`${text}\n${url}`); toast(t('copied'), 'share'); }
+  catch (err) { toast(text, 'share'); }
+}
+
+function toggleFav(id, el) {
+  id = String(id);
+  if (isFav(id)) { state.favs = state.favs.filter((x) => x !== id); toast(t('favRemoved'), 'heart'); }
+  else { state.favs.unshift(id); toast(t('favAdded'), 'heart-filled'); burst(el); persistCacheFor([id]); }
+  saveFavs();
+  const btn = $('#sheet-fav-btn');
+  if (btn) { btn.innerHTML = icon(isFav(id) ? 'heart-filled' : 'heart', 20); btn.classList.toggle('is-fav', isFav(id)); }
+}
+
+/* Episode picker */
+function seasonCount(item) {
+  const n = Number(item.seasons);
+  return n > 0 ? Math.min(n, 30) : CONFIG.DEFAULT_SEASONS;
+}
+function episodeKey(season, episode) { return `s${season}e${episode}`; }
+function episodeProgress(id, season, episode) {
+  const rec = state.epProgress[String(id)];
+  return rec && rec[episodeKey(season, episode)] ? rec[episodeKey(season, episode)] : 0;
+}
+
+function renderEpisodeSection(host, item, season, inPlayer) {
+  if (!host) return;
+  const seasons = seasonCount(item);
+  const thumb = imgUrl(item.backdrop || item.poster, 'backdrop');
+  const eps = Array.from({ length: CONFIG.DEFAULT_EPISODES }, (_, i) => i + 1);
+  const opts = Array.from({ length: seasons }, (_, i) => `<option value="${i + 1}" ${i + 1 === season ? 'selected' : ''}>${t('season')} ${i + 1}</option>`).join('');
+  host.innerHTML = `
+    <div class="ep-head"><h3>${t('episodes')}</h3><span class="select-wrap"><select class="season-select" aria-label="${t('season')}">${opts}</select><span class="chev">${icon('chevron-down', 16)}</span></span></div>
+    <div class="ep-grid">${eps.map((n) => {
+      const pr = episodeProgress(item.id, season, n);
+      return `<div class="ep-card glass" data-action="play-episode" data-id="${escapeHtml(item.id)}" data-season="${season}" data-episode="${n}" role="button" tabindex="0" aria-label="${t('play')} ${t('season')} ${season} ${t('episode')} ${n}">
+        <div class="ep-thumb">${thumb ? `<img src="${escapeHtml(thumb)}" alt="" loading="lazy" style="object-position:${(n * 17) % 100}% 50%">` : ''}<span class="num">${n}</span><span class="play-ov">${icon('play', 26)}</span>${pr > 0 ? `<div class="bar"><i data-w="${pr}"></i></div>` : ''}</div>
+        <div class="ep-info"><div class="ep-title">${t('episode')} ${n}</div><div class="ep-dur">${t('season')} ${season} • ${CONFIG.EPISODE_RUNTIME_MIN}${t('min') === 'min' ? ' min' : ' ' + t('min')}</div></div>
+        <span class="ep-play">${icon('play', 18)}</span>
+      </div>`;
+    }).join('')}</div>`;
+  const sel = $('.season-select', host);
+  sel.addEventListener('change', (e) => {
+    const s = parseInt(e.target.value, 10) || 1;
+    if (inPlayer) state.player.season = s; else state.detail.season = s;
+    renderEpisodeSection(host, item, s, inPlayer);
+  });
+  animateBars(host);
+}
+
+/* ============================================
+   SECTION 13 — VIDEO PLAYER
+   ============================================ */
+function openPlayer(item, opts = {}) {
+  if (!item) return;
+  const p = state.player;
+  p.item = item;
+  p.season = opts.season || 1;
+  p.episode = opts.episode || 1;
+  p.mode = opts.trailer ? 'trailer' : 'movie';
+  p.providers = [];
+  p.startedAt = Date.now();
+  const prev = getWatched(item.id);
+  p.baseProgress = prev && item.type !== 'tv' ? prev.progress : (item.type === 'tv' ? episodeProgress(item.id, p.season, p.episode) : 0);
+  if (p.baseProgress >= 95) p.baseProgress = 0;
+  $('#player-title').innerHTML = `${escapeHtml(item.title)}${item.type === 'tv' && !opts.trailer ? `<small>${t('season')} ${p.season} • ${t('episode')} ${p.episode}</small>` : (opts.trailer ? `<small>${t('trailer')}</small>` : '')}`;
+  $('#player-eps').classList.toggle('hidden', item.type !== 'tv' || !!opts.trailer);
+  $('#player-open').classList.toggle('hidden', !!opts.trailer);
+  $('#player-pip').classList.toggle('hidden', !!opts.trailer);
+  $('#provider-row').innerHTML = '';
+  $('#ep-drawer').classList.remove('open');
+  closeSheet(true);
+  $('#player').classList.add('open');
+  document.body.classList.add('no-scroll');
+  stopHeroTimer();
+  if (opts.trailer) { loadFrame(`https://www.youtube.com/embed/${encodeURIComponent(item.trailerKey)}?autoplay=1&rel=0&playsinline=1`); return; }
+  loadFrame(embedUrl(item, p.season, p.episode));
+  recordWatch(item, true);
+  clearInterval(p.timer);
+  p.timer = setInterval(() => recordWatch(item, false), 15000);
+  fetchPlay(item).then((data) => {
+    if (state.player.item !== item) return;
+    const list = Array.isArray(data.providers) ? data.providers : [];
+    state.player.providers = list.length ? list : (data.url ? [{ name: 'Default', url: data.url }] : []);
+    renderProviders();
+  }).catch(() => { renderProviders(); });
+}
+
+function loadFrame(url) {
+  const frame = $('#player-frame');
+  const loading = $('#player-loading');
+  loading.classList.remove('done');
+  const old = $('iframe', frame);
+  if (old) old.remove();
+  const ifr = document.createElement('iframe');
+  ifr.title = state.player.item ? state.player.item.title : 'Video';
+  ifr.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
+  ifr.allowFullscreen = true;
+  ifr.setAttribute('referrerpolicy', 'no-referrer');
+  ifr.addEventListener('load', () => setTimeout(() => loading.classList.add('done'), 400));
+  ifr.src = url;
+  frame.insertBefore(ifr, loading);
+  setTimeout(() => loading.classList.add('done'), 15000);
+}
+
+function renderProviders() {
+  const row = $('#provider-row');
+  const list = state.player.providers;
+  const current = state.player.currentProvider === undefined ? -1 : state.player.currentProvider;
+  const proxyChip = `<button class="chip ripple ${current === -1 ? 'active' : ''}" data-action="provider" data-index="-1">PIKA</button>`;
+  row.innerHTML = proxyChip + list.map((p, i) => `<button class="chip ripple ${current === i ? 'active' : ''}" data-action="provider" data-index="${i}">${escapeHtml(p.name || 'Server ' + (i + 1))}</button>`).join('');
+}
+
+function switchProvider(index) {
+  const p = state.player;
+  p.currentProvider = index;
+  if (index === -1) loadFrame(embedUrl(p.item, p.season, p.episode));
+  else if (p.providers[index]) loadFrame(withEpisode(p.providers[index].url, p.item, p.season, p.episode));
+  renderProviders();
+}
+function withEpisode(url, item, season, episode) {
+  if (item.type !== 'tv' || !url) return url;
+  if (/[?&]season=/.test(url)) return url;
+  return url + (url.includes('?') ? '&' : '?') + `season=${season}&episode=${episode}`;
+}
+
+function recordWatch(item, initial) {
+  const p = state.player;
+  const elapsed = Math.floor((Date.now() - p.startedAt) / 1000);
+  const runtime = parseDurationMinutes(item.duration, item.type === 'tv') * 60;
+  const progress = clamp(Math.round(p.baseProgress + (elapsed / runtime) * 100), initial ? Math.max(1, Math.round(p.baseProgress)) : 1, 100);
+  let rec = getWatched(item.id);
+  if (!rec) {
+    rec = { id: String(item.id), title: item.title, poster: item.poster, backdrop: item.backdrop, progress: progress, timestamp: Date.now(), mediaType: item.type, year: item.year, watchSeconds: 0 };
+    state.watched.unshift(rec);
+  }
+  rec.progress = Math.max(progress, initial ? rec.progress : 0);
+  rec.timestamp = Date.now();
+  rec.mediaType = item.type;
+  if (item.type === 'tv') { rec.season = p.season; rec.episode = p.episode; }
+  if (!initial) rec.watchSeconds = (Number(rec.watchSeconds) || 0) + 15;
+  state.watched = state.watched.slice(0, 100);
+  saveWatched();
+  if (item.type === 'tv') {
+    const key = String(item.id);
+    state.epProgress[key] = state.epProgress[key] || {};
+    state.epProgress[key][episodeKey(p.season, p.episode)] = clamp(progress, 0, 100);
+    saveEp();
+  }
+  persistCacheFor([item.id]);
+}
+
+function closePlayer() {
+  const p = state.player;
+  if (p.timer) { clearInterval(p.timer); p.timer = null; }
+  if (p.item && p.mode !== 'trailer') recordWatch(p.item, true);
+  const frame = $('#player-frame');
+  const ifr = $('iframe', frame);
+  if (ifr) ifr.remove();
+  $('#player').classList.remove('open');
+  $('#ep-drawer').classList.remove('open');
+  if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (err) { /* ignore */ } }
+  document.body.classList.remove('no-scroll');
+  p.currentProvider = undefined;
+  p.item = null;
+  if (state.screen === 'home') { renderRows(); startHeroTimer(); }
+  if (state.screen === 'profile') renderProfileScreen();
+}
+
+function toggleFullscreen() {
+  const el = $('#player');
+  try {
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      (el.requestFullscreen || el.webkitRequestFullscreen || function () { throw new Error('unsupported'); }).call(el);
+    }
+  } catch (err) { toast('Fullscreen is not supported here', 'info'); }
+}
+
+async function togglePip() {
+  try {
+    const ifr = $('#player-frame iframe');
+    let video = null;
+    try { video = ifr && ifr.contentDocument ? ifr.contentDocument.querySelector('video') : null; } catch (err) { video = null; }
+    if (video && document.pictureInPictureEnabled) {
+      if (document.pictureInPictureElement) await document.exitPictureInPicture();
+      else await video.requestPictureInPicture();
+      return;
+    }
+    toast(t('pipUnavailable'), 'info');
+  } catch (err) { toast(t('pipUnavailable'), 'info'); }
+}
+
+function openExternal() {
+  const p = state.player;
+  const url = p.providers && p.providers[0] && p.providers[0].url;
+  if (url) { window.open(withEpisode(url, p.item, p.season, p.episode), '_blank', 'noopener'); return; }
+  if (p.item) {
+    fetchPlay(p.item).then((d) => {
+      const u = (d.providers && d.providers[0] && d.providers[0].url) || d.url;
+      if (u) window.open(withEpisode(u, p.item, p.season, p.episode), '_blank', 'noopener');
+      else toast(t('loadError'), 'info');
+    }).catch(() => toast(t('loadError'), 'info'));
+  }
+}
+
+function openEpisodeDrawer() {
+  const p = state.player;
+  if (!p.item) return;
+  const drawer = $('#ep-drawer');
+  drawer.innerHTML = `<div class="ep-head" style="margin-top:0"><h3>${escapeHtml(p.item.title)}</h3><button class="icon-btn glass ripple" data-action="close-drawer" aria-label="Close episodes">${icon('close', 20)}</button></div><div id="drawer-eps"></div>`;
+  renderEpisodeSection($('#drawer-eps'), p.item, p.season, true);
+  drawer.classList.add('open');
+}
+
+function playEpisode(id, season, episode) {
+  const item = getItem(id);
+  if (!item) return;
+  openPlayer(item, { season, episode });
+}
+
+/* ============================================
+   SECTION 14 — THEME SYSTEM
+   ============================================ */
+function applyTheme(theme, persist = true) {
+  state.theme = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', state.theme);
+  const meta = $('#meta-theme-color');
+  if (meta) meta.setAttribute('content', state.theme === 'dark' ? '#000000' : '#f5f5f7');
+  if (persist) store.setRaw(CONFIG.KEYS.theme, state.theme);
+  $('#theme-toggle').setAttribute('aria-label', state.theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+  if (state.screen === 'profile' && persist) renderProfileScreen();
+}
+function toggleTheme() { applyTheme(state.theme === 'dark' ? 'light' : 'dark'); }
+
+/* ============================================
+   SECTION 15 — LANGUAGE SYSTEM
+   ============================================ */
+function applyStaticTranslations() {
+  $$('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.documentElement.lang = state.lang === 'ur' ? 'ur' : 'en';
+  document.documentElement.dir = state.lang === 'ur' ? 'rtl' : 'ltr';
+  $('#search-input').placeholder = t('searchPlaceholder');
+}
+
+async function setLanguage(lang) {
+  if (lang === state.lang) return;
+  state.lang = lang === 'ur' ? 'ur' : 'en';
+  store.setRaw(CONFIG.KEYS.lang, state.lang);
+  applyStaticTranslations();
+  apiCache.clear();
+  if (state.screen === 'profile') renderProfileScreen();
+  if (state.screen === 'list') renderListScreen();
+  if (state.screen === 'search') renderSearchScreen();
+  state.homeLoaded = false;
+  loadHome(true).then(() => { if (state.screen === 'profile') renderProfileScreen(); });
+}
+
+/* ============================================
+   SECTION 16 — EVENT LISTENERS
+   ============================================ */
+function handleAction(el, e) {
+  const a = el.dataset.action;
+  const id = el.dataset.id;
+  switch (a) {
+    case 'open-detail': openDetail(id); break;
+    case 'play': {
+      const item = getItem(id);
+      if (item && item.type === 'tv') {
+        const rec = getWatched(id);
+        openPlayer(item, { season: (rec && rec.season) || 1, episode: (rec && rec.episode) || 1 });
+      } else openPlayer(item);
+      break;
+    }
+    case 'play-episode': playEpisode(id, parseInt(el.dataset.season, 10), parseInt(el.dataset.episode, 10)); break;
+    case 'toggle-list': toggleList(id, el); break;
+    case 'remove-list': removeFromList(id, el.closest('.card')); break;
+    case 'toggle-fav': toggleFav(id, el); break;
+    case 'share': shareItem(id); break;
+    case 'trailer': { const it = getItem(id); if (it && it.trailerKey) openPlayer(it, { trailer: true }); else toast(t('noTrailer'), 'info'); break; }
+    case 'close-sheet': closeSheet(); break;
+    case 'hero-go': heroGo(parseInt(el.dataset.index, 10)); break;
+    case 'see-all': openCollection(el.dataset.key); break;
+    case 'collection-back': navigate(state.prevScreen && state.prevScreen !== 'collection' ? state.prevScreen : 'home'); break;
+    case 'go-home': navigate('home'); break;
+    case 'search-filter': state.search.filter = el.dataset.filter; renderSearchFilters(); renderSearchBody(); break;
+    case 'use-recent': { const q = el.dataset.q; $('#search-input').value = q; runSearch(q); break; }
+    case 'remove-recent': { const idx = parseInt(el.dataset.index, 10); state.recent.splice(idx, 1); saveRecent(); renderSearchBody(); break; }
+    case 'clear-recent': clearRecent(); break;
+    case 'list-filter': state.listView.filter = el.dataset.filter; renderListScreen(); break;
+    case 'set-theme': applyTheme(el.dataset.theme); break;
+    case 'set-lang': setLanguage(el.dataset.lang); break;
+    case 'toggle-setting': {
+      const k = el.dataset.key;
+      state.settings[k] = !state.settings[k];
+      saveSettings();
+      el.classList.toggle('on', state.settings[k]);
+      el.setAttribute('aria-checked', String(state.settings[k]));
+      break;
+    }
+    case 'clear-history': clearHistory(); break;
+    case 'clear-list': clearList(); break;
+    case 'clear-recent-all': clearRecent(); break;
+    case 'remove-history': {
+      state.watched = state.watched.filter((w) => String(w.id) !== String(id));
+      saveWatched();
+      delete state.epProgress[String(id)];
+      saveEp();
+      renderProfileScreen();
+      break;
+    }
+    case 'toggle-about': { const c = $('#about-card'); if (c) { c.classList.toggle('hidden'); if (!c.classList.contains('hidden')) c.scrollIntoView({ behavior: 'smooth', block: 'center' }); } break; }
+    case 'provider': switchProvider(parseInt(el.dataset.index, 10)); break;
+    case 'close-drawer': $('#ep-drawer').classList.remove('open'); break;
+    default: break;
+  }
+}
+
+function initEventListeners() {
+  document.addEventListener('pointerdown', attachRipple, { passive: true });
+
+  document.addEventListener('click', (e) => {
+    const nav = e.target.closest('[data-nav]');
+    if (nav) { navigate(nav.dataset.nav); return; }
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    // inner buttons win over their card
+    handleAction(el, e);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.card, .history-item, .ep-card')) {
+      e.preventDefault();
+      const el = e.target.closest('[data-action]');
+      if (el) handleAction(el, e);
+    }
+    if (e.key === 'Escape') {
+      if ($('#ep-drawer').classList.contains('open')) $('#ep-drawer').classList.remove('open');
+      else if ($('#player').classList.contains('open')) closePlayer();
+      else if ($('#sheet').classList.contains('open')) closeSheet();
+    }
+  });
+
+  $('#theme-toggle').addEventListener('click', toggleTheme);
+
+  const input = $('#search-input');
+  input.addEventListener('input', () => {
+    const v = input.value;
+    $('#search-clear').classList.toggle('show', !!v);
+    if (!v.trim()) { state.search.token++; runSearch(''); return; }
+    debouncedSearch(v);
+  });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch(input.value); input.blur(); } });
+  $('#search-clear').addEventListener('click', () => { input.value = ''; state.search.token++; runSearch(''); input.focus(); });
+
+  $('#player-back').addEventListener('click', closePlayer);
+  $('#player-open').addEventListener('click', openExternal);
+  $('#player-fs').addEventListener('click', toggleFullscreen);
+  $('#player-pip').addEventListener('click', togglePip);
+  $('#player-eps').addEventListener('click', openEpisodeDrawer);
+
+  /* Swipe down to dismiss the bottom sheet */
+  const sheet = $('#sheet');
+  let startY = 0, dragging = false, delta = 0;
+  sheet.addEventListener('touchstart', (e) => { if (sheet.scrollTop <= 0) { startY = e.touches[0].clientY; dragging = true; delta = 0; } }, { passive: true });
+  sheet.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    delta = e.touches[0].clientY - startY;
+    if (delta > 0 && sheet.scrollTop <= 0) {
+      sheet.style.transition = 'none';
+      sheet.style.transform = `translate(-50%, ${delta}px)`;
+    }
+  }, { passive: true });
+  sheet.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+    if (delta > 140) closeSheet();
+  });
+
+  window.addEventListener('popstate', () => {
+    if ($('#player').classList.contains('open')) closePlayer();
+    else if ($('#sheet').classList.contains('open')) closeSheet();
+    else { const h = location.hash.replace('#', ''); if (SCREENS.includes(h)) navigate(h, { silent: true }); }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopHeroTimer(); else if (state.screen === 'home' && state.homeLoaded) startHeroTimer();
+  });
+
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener && window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { /* user choice persists */ });
+}
+
+/* ============================================
+   SECTION 17 — INITIALIZATION
+   ============================================ */
+function buildSplashLogo() {
+  const svg = $('#splash-svg');
+  const word1 = 'PIKA';
+  const word2 = 'MOVIE';
+  const step = 52;
+  const gap = 36;
+  const total1 = word1.length * step;
+  const total2 = word2.length * step;
+  const width = total1 + gap + total2;
+  const startX = (560 - width) / 2 + step / 2;
+  let out = '';
+  let idx = 0;
+  [...word1].forEach((ch, i) => {
+    out += `<text x="${startX + i * step}" y="78" text-anchor="middle" style="animation-delay:${0.5 + idx * 0.09}s">${ch}</text>`;
+    idx++;
+  });
+  [...word2].forEach((ch, i) => {
+    out += `<text class="red" x="${startX + total1 + gap + i * step}" y="78" text-anchor="middle" style="animation-delay:${0.5 + idx * 0.09}s">${ch}</text>`;
+    idx++;
+  });
+  svg.innerHTML = out;
+}
+
+async function runSplash() {
+  const splash = $('#splash');
+  await wait(CONFIG.SPLASH_MS + 1000);
+  splash.classList.add('hide');
+  setTimeout(() => splash.remove(), 1000);
+}
+
+function init() {
+  loadState();
+  document.documentElement.classList.add('no-trans');
+  applyTheme(state.theme, false);
+  hydrateIcons();
+  applyStaticTranslations();
+  buildSplashLogo();
+  initEventListeners();
+  requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('no-trans')));
+  const startScreen = location.hash.replace('#', '');
+  navigate(SCREENS.includes(startScreen) && startScreen !== 'collection' ? startScreen : 'home', { silent: true });
+  loadHome();
+  runSplash();
+  if ('serviceWorker' in navigator && false) { /* intentionally disabled */ }
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+</script>
+</body>
+</html>
