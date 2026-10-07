@@ -264,7 +264,7 @@ function loadProvider(i){
   curProv = i;
   externalUrl = providers[i].url;
   $("#pf").innerHTML =
-    `<iframe src="${esc(externalUrl)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-presentation allow-forms allow-popups"></iframe>`;
+    `<iframe src="${esc(externalUrl)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
   renderSrcBar();
 }
 
