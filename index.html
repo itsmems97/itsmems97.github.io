@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0B0E14" />
 <title>Pika Store</title>
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
+<!-- Eruda removed — using custom Owner Console Detector instead -->
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
 <link rel="manifest" href="pika-manifest.json" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
@@ -1489,66 +1488,89 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 html[data-theme="dark"] #home-page{ background: #0b0e14; }
 
 .gh-hero{
+  --hero-w: min(348px, calc(100vw - 32px));
+  --icon-base: calc(var(--hero-w) * 0.344);
+  --gh-c1: #b06bff;
+  --gh-c2: #6a4de6;
   position:relative;
-  width:min(348px, calc(100% - 28px));
-  height:340px;
+  width: var(--hero-w);
+  height: calc(var(--hero-w) * 340 / 348);
   margin:6px auto 0;
   border-radius:30px;
   overflow:hidden;
   background:#ffffff;
   isolation:isolate;
-  box-shadow:0 26px 44px -22px rgba(30,24,70,.34), 0 10px 22px -14px rgba(30,24,70,.18), 0 1px 3px -1px rgba(30,24,70,.06);
+  touch-action:pan-y;
+  -webkit-user-select:none; user-select:none;
+  transition: --gh-c1 1s cubic-bezier(.72,0,.22,1), --gh-c2 1s cubic-bezier(.72,0,.22,1);
+  box-shadow:0 30px 50px -24px rgba(30,24,70,.4), 0 10px 22px -14px rgba(30,24,70,.2);
 }
-html[data-theme="dark"] .gh-hero{ background:#12161f; box-shadow:0 26px 44px -22px rgba(0,0,0,.65); }
+html[data-theme="dark"] .gh-hero{
+  background:#141824;
+  box-shadow:0 30px 50px -24px rgba(0,0,0,.7), 0 10px 22px -14px rgba(0,0,0,.45);
+}
+.gh-hero::after{
+  content:''; position:absolute; inset:0; border-radius:inherit; z-index:7;
+  border:1px solid rgba(255,255,255,.1); pointer-events:none;
+}
+.gh-glow{
+  position:absolute; inset:0; z-index:0; opacity:.32;
+  background:radial-gradient(55% 55% at 74% 72%, var(--gh-c2), transparent 72%);
+}
+.gh-grain{
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  opacity:.14; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
 .gh-blob{
-  position:absolute; left:-20%; top:-30%;
-  width:83%; height:88%;
+  position:absolute; left:-22%; top:-32%; width:96%; height:102%; z-index:1;
   border-radius:47% 53% 42% 58% / 52% 46% 54% 48%;
   background:linear-gradient(135deg, var(--gh-c1), var(--gh-c2));
   transform:rotate(-12deg);
-  transition: --gh-c1 1s cubic-bezier(.72,0,.22,1), --gh-c2 1s cubic-bezier(.72,0,.22,1);
-  z-index:1;
 }
 .gh-hero-fade{
-  position:absolute; left:0; right:0; bottom:0; height:96px;
-  background:linear-gradient(to top, rgba(118,118,140,.15) 0%, rgba(118,118,140,.06) 48%, rgba(118,118,140,0) 100%);
-  pointer-events:none; z-index:2;
+  position:absolute; left:0; right:0; bottom:0; height:28%; z-index:2; pointer-events:none;
+  background:linear-gradient(to top, rgba(0,0,0,.28), rgba(0,0,0,0));
 }
-.gh-title-stack{ position:absolute; left:24px; top:74px; width:220px; height:76px; z-index:3; pointer-events:none; }
+.gh-title-stack{
+  position:absolute; left:6.9%; top:5.5%; width:58%; height:42%;
+  z-index:3; pointer-events:none;
+}
 .gh-title-layer{
-  position:absolute; inset:0; font-size:30px; font-weight:800; line-height:1.04;
-  letter-spacing:-1px; color:#fff; opacity:0; text-shadow:0 2px 14px rgba(40,20,90,.18);
-  will-change:transform, opacity, filter;
+  position:absolute; inset:0; opacity:0;
+  color:var(--ink, #fff); will-change:transform, opacity, filter;
 }
 .gh-title-layer.in{ animation:ghTIn .8s cubic-bezier(.72,0,.22,1) both; }
 .gh-title-layer.out{ animation:ghTOut .8s cubic-bezier(.72,0,.22,1) both; }
-@keyframes ghTIn{ from{opacity:0;filter:blur(10px);transform:translateX(58px);} to{opacity:1;filter:blur(0);transform:translateX(0);} }
-@keyframes ghTOut{ from{opacity:1;filter:blur(0);transform:translateX(0);} to{opacity:0;filter:blur(10px);transform:translateX(-58px);} }
-
-.gh-rows{ position:absolute; left:16px; right:16px; top:200px; height:126px; z-index:4; }
-.gh-row-layer{ position:absolute; inset:0; }
-.gh-prow{
-  display:flex; align-items:center; gap:8px; height:38px; padding:0 11px;
-  border-radius:12px; font-size:11.5px; color:#22222a;
-  will-change:transform, opacity, filter;
+@keyframes ghTIn{
+  from{ opacity:0; filter:blur(10px); transform:translateX(58px); }
+  to  { opacity:1; filter:blur(0);    transform:translateX(0); }
 }
-html[data-theme="dark"] .gh-prow{ color:#eef1f6; }
-.gh-prow + .gh-prow{ margin-top:6px; }
-.gh-prow{ background:#f4f5f8; }
-html[data-theme="dark"] .gh-prow{ background:rgba(255,255,255,.05); }
-.gh-pname{ flex:1 1 auto; min-width:0; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.gh-psize{ flex:none; font-size:9.5px; color:#a8a8b4; }
-.gh-pthumb{
-  flex:none; width:24px; height:24px; border-radius:8px; background-size:cover; background-position:center;
-  box-shadow:inset 0 -2px 4px rgba(0,0,0,.06), inset 0 1px 3px rgba(255,255,255,.85);
+@keyframes ghTOut{
+  from{ opacity:1; filter:blur(0);    transform:translateX(0); }
+  to  { opacity:0; filter:blur(10px); transform:translateX(-58px); }
 }
-.gh-pplus{ flex:none; width:14px; text-align:center; font-size:15px; font-weight:400; line-height:1; color:#1a1a1a; opacity:.82; }
-html[data-theme="dark"] .gh-pplus{ color:#eef1f6; }
-.gh-row-layer.in .gh-prow{ animation:ghRIn .8s cubic-bezier(.72,0,.22,1) both; animation-delay:calc(var(--i) * 40ms); }
-.gh-row-layer.out .gh-prow{ animation:ghROut .8s cubic-bezier(.72,0,.22,1) both; animation-delay:calc(var(--i) * 40ms); }
-@keyframes ghRIn{ from{opacity:0;filter:blur(8px);transform:translateX(58px);} to{opacity:1;filter:blur(0);transform:translateX(0);} }
-@keyframes ghROut{ from{opacity:1;filter:blur(0);transform:translateX(0);} to{opacity:0;filter:blur(8px);transform:translateX(-58px);} }
+.gh-title{
+  font-size:calc(var(--hero-w) * 0.086);
+  font-weight:800; line-height:1.04; letter-spacing:-.03em;
+}
+.gh-sub{
+  margin-top:calc(var(--hero-w) * 0.024);
+  font-size:calc(var(--hero-w) * 0.036);
+  font-weight:500; line-height:1.3; opacity:.82; max-width:92%;
+}
+.gh-cta{
+  margin-top:calc(var(--hero-w) * 0.04);
+  display:inline-flex; align-items:center; gap:6px;
+  padding:calc(var(--hero-w) * 0.024) calc(var(--hero-w) * 0.04) calc(var(--hero-w) * 0.024) calc(var(--hero-w) * 0.046);
+  border:0; border-radius:99px; background:#fff; color:#1b1330;
+  font-family:inherit; font-weight:700; font-size:calc(var(--hero-w) * 0.036);
+  box-shadow:0 8px 18px -6px rgba(20,12,50,.5);
+  pointer-events:auto; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.gh-cta:active{ transform:scale(.95); }
 
 .gh-objects{ position:absolute; inset:0; z-index:5; pointer-events:none; }
 .gh-orbiter{
@@ -1559,7 +1581,7 @@ html[data-theme="dark"] .gh-pplus{ color:#eef1f6; }
   will-change:transform;
 }
 .gh-obj{
-  position:absolute;
+  position:absolute; pointer-events:none;
   transform:translate(-50%,-50%) rotate(calc(var(--rot,0deg) * -1)) scale(var(--s,1));
   transform-origin:50% 50%;
   transition:transform .8s cubic-bezier(.72,0,.22,1);
@@ -1567,13 +1589,51 @@ html[data-theme="dark"] .gh-pplus{ color:#eef1f6; }
   will-change:transform, opacity, filter;
 }
 .gh-orbiter.nt, .gh-orbiter.nt .gh-obj{ transition:none !important; }
-.gh-obj.in{ animation:ghObjIn .8s cubic-bezier(.72,0,.22,1) both; }
+.gh-obj.in { animation:ghObjIn  .8s cubic-bezier(.72,0,.22,1) both; }
 .gh-obj.out{ animation:ghObjOut .8s cubic-bezier(.72,0,.22,1) both; }
-@keyframes ghObjIn{ from{opacity:0;filter:blur(14px);} to{opacity:1;filter:blur(0);} }
-@keyframes ghObjOut{ from{opacity:1;filter:blur(0);} to{opacity:0;filter:blur(14px);} }
-.gh-float{ animation:ghBob 3s ease-in-out infinite; will-change:transform; }
-@keyframes ghBob{ 0%,100%{transform:translateY(-5px);} 50%{transform:translateY(5px);} }
-.gh-obj svg{ display:block; filter:drop-shadow(0 14px 16px rgba(46,26,92,.26)); }
+@keyframes ghObjIn { from{ opacity:0; filter:blur(14px); } to{ opacity:1; filter:blur(0); } }
+@keyframes ghObjOut{ from{ opacity:1; filter:blur(0); }    to{ opacity:0; filter:blur(14px); } }
+.gh-float{
+  display:flex; flex-direction:column; align-items:center;
+  gap:calc(var(--hero-w) * 0.017);
+  animation:ghBob 3s ease-in-out infinite; will-change:transform;
+}
+@keyframes ghBob{ 0%,100%{ transform:translateY(-5px); } 50%{ transform:translateY(5px); } }
+
+.gh-app-name{
+  max-width:calc(var(--hero-w) * 0.4);
+  font-size:calc(var(--hero-w) * 0.035); font-weight:700; color:#fff; text-align:center;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  padding:calc(var(--hero-w) * 0.0086) calc(var(--hero-w) * 0.028);
+  background:rgba(10,12,20,.55); border:1px solid rgba(255,255,255,.14);
+  border-radius:99px;
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  transform:scale(calc(1 / var(--s, 1))); transform-origin:center top;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.gh-app-name:active{ transform:scale(calc(0.94 / var(--s, 1))); }
+.gh-obj.live .gh-app-obj, .gh-obj.live .gh-app-name{ pointer-events:auto; }
+.gh-hero button:focus-visible, .gh-app-obj:focus-visible, .gh-dots button:focus-visible{
+  outline:2px solid #FFC61A; outline-offset:3px;
+}
+
+.gh-dots{ display:flex; gap:6px; justify-content:center; margin-top:16px; }
+.gh-dots button{
+  position:relative; overflow:hidden; border:0; padding:0;
+  width:6px; height:6px; border-radius:99px; background:rgba(255,255,255,.2);
+  cursor:pointer; transition:width .35s cubic-bezier(.72,0,.22,1);
+}
+.gh-dots button.active{ width:28px; }
+.gh-dots button.active::after{
+  content:''; position:absolute; inset:0; background:#FFC61A;
+  transform-origin:left; animation:ghFill 3.6s linear forwards;
+}
+.gh-dots.paused button.active::after{ animation-play-state:paused; }
+@keyframes ghFill{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+@media (prefers-reduced-motion:reduce){
+  .gh-float{ animation:none; }
+  .gh-orbiter{ transition:none; }
+}
 
 .gh-chips{ display:flex; gap:8px; padding:20px 16px 4px; overflow-x:auto; scrollbar-width:none; }
 .gh-chips::-webkit-scrollbar{ display:none; }
@@ -1667,18 +1727,32 @@ html[data-theme="dark"] .gh-adl{ background:rgba(106,77,230,.2); }
 }
 html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
 .gh-app-obj{
-  width:120px; height:120px; /* Size bada kar diya */
-  border-radius:30px;
-  background-size:cover; background-position:center;
-  background-color:#fff;
-  border:3px solid rgba(255,255,255,.85);
-  box-shadow:0 20px 40px rgba(30,24,70,.45), 0 6px 14px rgba(30,24,70,.22), inset 0 2px 0 rgba(255,255,255,.55);
-  filter:drop-shadow(0 16px 24px rgba(30,24,70,.35));
+  position:relative; overflow:hidden;
+  width:var(--icon-base); height:var(--icon-base);
+  border-radius:26%;
+  border:calc(var(--hero-w) * 0.0057) solid rgba(255,255,255,.9);
+  background-size:cover; background-position:center; background-color:#fff;
+  box-shadow:
+    0 18px 30px -8px rgba(20,12,50,.55),
+    0 4px 10px rgba(20,12,50,.25),
+    inset 0 -6px 12px rgba(0,0,0,.14);
+  display:grid; place-items:center;
+  font-size:calc(var(--icon-base) * 0.44); font-weight:800; color:#fff;
+  text-shadow:0 2px 6px rgba(0,0,0,.35);
+  transform:rotate(var(--gh-tilt, 0deg));
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
 }
+.gh-app-obj::after{
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(160deg, rgba(255,255,255,.4), rgba(255,255,255,0) 46%);
+}
+.gh-app-obj:active{ transform:rotate(var(--gh-tilt, 0deg)) scale(.94); }
 .gh-app-obj-fallback{
   display:grid; place-items:center;
-  font-size:50px; font-weight:800; color:#171200;
+  font-size:calc(var(--icon-base) * 0.42); font-weight:800; color:#171200;
   background:linear-gradient(135deg,#FFE066,#FFA800);
+  pointer-events:auto; cursor:pointer;
 }
 /* ============ OWNER CONSOLE DETECTOR ============ */
 #owner-console-btn {
@@ -2046,19 +2120,18 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
 
   <main>
     <section id="home-page" class="page">
-  <div class="gh-hero" id="gh-hero">
+  <div class="gh-hero" id="gh-hero" role="region" aria-roledescription="carousel" aria-label="Featured apps">
+    <div class="gh-glow"></div>
     <div class="gh-blob" id="gh-blob"></div>
+    <div class="gh-grain"></div>
     <div class="gh-title-stack">
       <div class="gh-title-layer" id="gh-titleA"></div>
       <div class="gh-title-layer" id="gh-titleB"></div>
     </div>
-    <div class="gh-rows">
-      <div class="gh-row-layer" id="gh-rowA"></div>
-      <div class="gh-row-layer" id="gh-rowB"></div>
-    </div>
     <div class="gh-objects" id="gh-objects"></div>
     <div class="gh-hero-fade"></div>
   </div>
+  <div class="gh-dots" id="gh-dots"></div>
 
   <div class="gh-chips" id="gh-chips"></div>
 
@@ -2286,6 +2359,7 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
   <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
   <div class="row tap" id="row-maintenance" hidden><div class="row-left"><svg><use href="#ic-lock"/></svg> Maintenance Mode</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="maintenance-label">OFF</span></div>
 <div class="row tap" id="row-send-messages" hidden><div class="row-left"><svg><use href="#ic-chat"/></svg> Send Messages</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+<div class="row tap" id="row-console-detector" hidden><div class="row-left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> Console Detector</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="console-detector-label">OFF</span></div>
   <div class="row tap" id="row-verify"><div class="row-left"><svg><use href="#ic-verified"/></svg> Enter blue-tick code</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
   <div class="row tap" id="row-logout"><div class="row-left"><svg><use href="#ic-close"/></svg> Log out</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 </div>
@@ -2318,8 +2392,8 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
     <span class="badge" id="chat-badge" hidden>0</span>
   </button>
   <div id="toast-container"></div>
-  <!-- Owner Console Detector -->
-<button id="owner-console-btn" title="Console Errors">
+  <!-- Owner Console Detector (shown only for owner when enabled) -->
+<button id="owner-console-btn" title="Console Errors" style="display:none">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </button>
 <div id="owner-console-modal">
@@ -4032,18 +4106,53 @@ function boot(){
   }, 400);
 }
 
+const CONSOLE_DETECTOR_KEY = "pika_console_detector_v1";
+
+function isConsoleDetectorEnabled(){
+  try{ return localStorage.getItem(CONSOLE_DETECTOR_KEY) === "1"; }
+  catch(e){ return false; }
+}
+
+function updateConsoleDetectorUI(){
+  const row = document.getElementById("row-console-detector");
+  const lbl = document.getElementById("console-detector-label");
+  const btn = document.getElementById("owner-console-btn");
+
+  if(row){
+    if(state.isOwner){
+      row.hidden = false;
+      if(lbl){
+        lbl.textContent = isConsoleDetectorEnabled() ? "ON" : "OFF";
+        lbl.style.color = isConsoleDetectorEnabled() ? "var(--accent-2)" : "var(--text-faint)";
+      }
+    } else {
+      row.hidden = true;
+    }
+  }
+
+  const shouldShow = state.isOwner && isConsoleDetectorEnabled();
+  if(btn) btn.style.display = shouldShow ? "flex" : "none";
+}
+
+function toggleConsoleDetector(){
+  if(!state.isOwner) return;
+  const next = !isConsoleDetectorEnabled();
+  try{ localStorage.setItem(CONSOLE_DETECTOR_KEY, next ? "1" : "0"); }catch(e){}
+  updateConsoleDetectorUI();
+  toast(next ? "Console Detector ON" : "Console Detector OFF", next ? "ic-check" : "ic-close");
+}
+
+let __ownerConsoleSetup = false;
 function initOwnerConsole(){
-  if(!state.isOwner) return; // Sirf owner ke liye
+  if(__ownerConsoleSetup) return;
+  __ownerConsoleSetup = true;
 
   const btn = document.getElementById("owner-console-btn");
   const modal = document.getElementById("owner-console-modal");
   const logBox = document.getElementById("owner-console-log");
+  if(!btn || !modal || !logBox) return;
 
-  if(!btn || !modal) return;
-
-  btn.style.display = "flex";
   let errors = [];
-
   const addLog = (type, msg) => {
     const time = new Date().toLocaleTimeString();
     errors.push(`[${time}] [${type}] ${msg}`);
@@ -4056,49 +4165,50 @@ function initOwnerConsole(){
     btn.classList.add("has-errors");
   };
 
-  const originalError = console.error;
+  const oErr = console.error;
   console.error = function(...args){
-    originalError.apply(console, args);
+    oErr.apply(console, args);
+    if(!(state.isOwner && isConsoleDetectorEnabled())) return;
     addLog("ERROR", args.map(a => {
       if(a instanceof Error) return a.message + "\n" + (a.stack || "");
-      if(typeof a === "object") return JSON.stringify(a);
+      if(typeof a === "object"){ try{ return JSON.stringify(a); }catch(e){ return String(a); } }
       return String(a);
     }).join(" "));
   };
 
-  const originalWarn = console.warn;
+  const oWarn = console.warn;
   console.warn = function(...args){
-    originalWarn.apply(console, args);
+    oWarn.apply(console, args);
+    if(!(state.isOwner && isConsoleDetectorEnabled())) return;
     addLog("WARN", args.map(a => {
       if(a instanceof Error) return a.message;
-      if(typeof a === "object") return JSON.stringify(a);
+      if(typeof a === "object"){ try{ return JSON.stringify(a); }catch(e){ return String(a); } }
       return String(a);
     }).join(" "));
   };
 
-  window.addEventListener("error", (e) => {
+  window.addEventListener("error", e => {
+    if(!(state.isOwner && isConsoleDetectorEnabled())) return;
     addLog("ERROR", `${e.message} at ${e.filename}:${e.lineno}:${e.colno}`);
   });
-
-  window.addEventListener("unhandledrejection", (e) => {
+  window.addEventListener("unhandledrejection", e => {
+    if(!(state.isOwner && isConsoleDetectorEnabled())) return;
     addLog("ERROR", `Unhandled Promise: ${e.reason}`);
   });
 
   btn.addEventListener("click", () => {
+    if(!(state.isOwner && isConsoleDetectorEnabled())) return;
     modal.classList.add("active");
     btn.classList.remove("has-errors");
   });
-
   document.getElementById("owner-console-close").addEventListener("click", () => {
     modal.classList.remove("active");
   });
-
   document.getElementById("owner-console-clear").addEventListener("click", () => {
     errors = [];
     logBox.innerHTML = "No errors detected.";
     btn.classList.remove("has-errors");
   });
-
   document.getElementById("owner-console-copy").addEventListener("click", async () => {
     const text = errors.length ? errors.join("\n") : "No errors.";
     const ok = await copyText(text);
@@ -4571,43 +4681,6 @@ function renderCategoryChips(){
   add.addEventListener("click", createCategoryQuick);
   upRow.appendChild(add);
 }
-let heroApps = [], heroIndex = 0, heroTimer = null;
-function stopHeroCarousel(){ if(heroTimer){ clearInterval(heroTimer); heroTimer = null; } heroApps = []; }
-async function quickDownload(app){
-  if(app.hasPassword && !state.isOwner){
-    const entered = await askPassword(app);
-    if(entered === null) return;
-    if(await sha256(entered) !== app.passwordHash){ toast("Wrong password", "ic-close"); return; }
-  }
-  startDownloadJob(app);
-}
-function startHeroCarousel(apps){
-  const same = apps.length === heroApps.length && apps.every((a,i)=> heroApps[i] && a.id === heroApps[i].id);
-  if(same) return;
-  if(heroTimer) clearInterval(heroTimer);
-  heroApps = apps; heroIndex = 0;
-  $("#hero-dots").innerHTML = heroApps.map((_,i)=>`<span class="${i===0?"active":""}"></span>`).join("");
-  showHeroSlide(0, true);
-  heroTimer = heroApps.length > 1 ? setInterval(()=>{
-    heroIndex = (heroIndex + 1) % heroApps.length;
-    showHeroSlide(heroIndex);
-  }, 3000) : null;
-}
-function showHeroSlide(i, instant){
-  const featured = heroApps[i]; if(!featured) return;
-  const bg = $("#hero-bg"), title = $("#hero-title"), sub = $("#hero-sub");
-  const apply = () => {
-    title.textContent = featured.name;
-    sub.textContent = (featured.description||"").slice(0,80) || `Uploaded by ${featured.uploaderName||"a member"}`;
-    bg.style.backgroundImage = featured.thumbUrl ? `url(${featured.thumbUrl})` : "none";
-    $("#hero-primary-btn").onclick = ()=>quickDownload(featured);
-    $$("#hero-dots span").forEach((d,idx)=> d.classList.toggle("active", idx===i));
-    bg.style.opacity = "0.55"; title.style.opacity = "1"; sub.style.opacity = "1";
-  };
-  if(instant){ apply(); return; }
-  bg.style.opacity = "0"; title.style.opacity = "0"; sub.style.opacity = "0";
-  setTimeout(apply, 350);
-}
 /* ================= NEW GAMEHUB HOME (v2) — BACKEND CONNECTED ================= */
 let __ghUid = 0;
 function ghNid(p){ return p + (++__ghUid); }
@@ -4645,128 +4718,106 @@ function ghCloud(){
 }
 
 const GH_SLIDES = [
-  { title: 'Trending<br>Now',   c1:'#b06bff', c2:'#6a4de6', objs: () => [
+  { title:'Trending<br>Now', sub:'Most downloaded this week', cta:'See trending',
+    ink:'#ffffff', c1:'#b06bff', c2:'#6a4de6', objs: () => [
       { x:15, y:22, s:0.50, svg: ghPebble() },
       { x:44, y:38, s:0.58, svg: ghSofa() },
-      { x:71, y:31, s:0.50, svg: ghPillow() },
-      { x:82, y:49, s:0.52, svg: ghStool() }
-  ]},
-  { title: 'Top<br>Rated',      c1:'#ffe35c', c2:'#ffa63d', objs: () => [
+      { x:71, y:31, s:0.50, svg: ghPillow() }
+    ]},
+  { title:'Top<br>Rated', sub:'Best reviewed by members', cta:'See top rated',
+    ink:'#2a1600', c1:'#ffe35c', c2:'#ffa63d', objs: () => [
       { x:17, y:26, s:0.50, svg: ghBall('#ffd6e8','#ff8fc7','#e0559a',58) },
       { x:46, y:39, s:0.50, svg: ghBlobSofa() },
-      { x:72, y:29, s:0.45, svg: ghBall('#fff3b8','#ffc93c','#e08c10',50) },
       { x:80, y:52, s:0.55, svg: ghBall('#fff3b8','#ffc93c','#d98a0c',78) }
-  ]},
-  { title: 'New<br>Arrivals',   c1:'#5df3cf', c2:'#3ad8e6', objs: () => [
+    ]},
+  { title:'New<br>Arrivals', sub:'Fresh on Pika today', cta:'See new apps',
+    ink:'#062a33', c1:'#5df3cf', c2:'#3ad8e6', objs: () => [
       { x:43, y:41, s:0.48, svg: ghPlant() },
       { x:73, y:28, s:0.50, svg: ghCloud() },
       { x:82, y:56, s:0.45, svg: ghPebble() }
-  ]}
+    ]}
 ];
 
 const ghState = {
   orbiters: [],
   current: -1,
-  timers: [],
-  loopId: null,
-  titleLayers: [null, null],
-  rowLayers: [null, null],
-  tActive: 0,
-  rActive: 0,
+  titleActive: 0,
   built: false,
-  builtSig: '',
-  slidesData: [],
-  largeAppIndices: []   // Naya: har slide ka large index track karega
+  heroSig: '',
+  slidesData: []
 };
+
+const GH_POSITIONS = [ {x:76,y:24}, {x:74,y:70}, {x:26,y:74} ];
+const GH_TILTS = [6, -5, -5];
+const GH_SIZES = [0.68, 0.92, 0.68];
 
 function ghBuildOrbiters(){
   const box = document.getElementById('gh-objects');
-  if (!box) return;
+  if(!box) return;
+  const currentApps = ghGetCurrentApps();
+  const sig = currentApps.length + '|' + currentApps.map(a => a.id).sort().join(',');
+  if(ghState.built && ghState.heroSig === sig) return;
+  ghState.heroSig = sig;
+ghState.built = true;
+box.innerHTML = '';
+ghState.orbiters = [];
+ghState.current = -1;
 
-  // Apps ki list ka signature — agar badla nahi to rebuild mat karo
-  const apps = state.apps || [];
-  const sig = apps.length + '|' + apps.slice(0,12).map(a => a.id).join(',');
-  if (ghState.built && ghState.builtSig === sig) return;
-  ghState.built = true;
-  ghState.builtSig = sig;
+const N = currentApps.length;
 
-  box.innerHTML = '';
-  ghState.orbiters = [];
-  ghState.titleLayers = [document.getElementById('gh-titleA'), document.getElementById('gh-titleB')];
-  ghState.rowLayers = [document.getElementById('gh-rowA'), document.getElementById('gh-rowB')];
-
-  const allApps = ghGetCurrentApps();
-  
-  // Fixed positions for 3 apps
-  const positions = [
-    { x: 20, y: 30 }, // Left
-    { x: 50, y: 50 }, // Center
-    { x: 80, y: 30 }  // Right
-  ];
-
-  // Agar koi app nahi hai → purane decorative SVG objects (fallback)
-  if (allApps.length === 0){
+  if (N === 0){
     GH_SLIDES.forEach((slide, si) => {
       const list = [];
-      slide.objs().forEach((o, oi) => {
-        if(oi >= 3) return; // Sirf 3 objects
-        const orb = document.createElement('div'); orb.className = 'gh-orbiter';
-        orb.style.setProperty('--rot', '-22deg');
-        const obj = document.createElement('div'); obj.className = 'gh-obj';
-        obj.style.left = o.x + '%'; obj.style.top = o.y + '%';
-        obj.style.setProperty('--s', o.s);
-        const fl = document.createElement('div'); fl.className = 'gh-float';
-        fl.style.animationDelay = (-(oi * 0.53 + si * 0.31)).toFixed(2) + 's';
-        fl.innerHTML = o.svg;
-        obj.appendChild(fl); orb.appendChild(obj); box.appendChild(orb);
-        list.push({ orb, obj });
-      });
+      const o = GH_POSITIONS[si] || GH_POSITIONS[0];
+      const orb = document.createElement('div'); orb.className = 'gh-orbiter';
+      orb.style.setProperty('--rot', '-22deg');
+      const obj = document.createElement('div'); obj.className = 'gh-obj';
+      obj.style.left = o.x + '%'; obj.style.top = o.y + '%';
+      obj.style.setProperty('--s', GH_SIZES[si] || 0.68);
+      const fl = document.createElement('div'); fl.className = 'gh-float';
+      fl.style.animationDelay = (-(si * 0.5)).toFixed(2) + 's';
+      const svgList = slide.objs();
+      if(svgList[0]) fl.innerHTML = svgList[0].svg;
+      obj.appendChild(fl); orb.appendChild(obj); box.appendChild(orb);
+      list.push({ orb, obj });
       ghState.orbiters.push(list);
     });
     return;
   }
 
-  // Apps hain — app icons ko floating objects banao (sirf 3)
+  const shuffled = [...currentApps].sort(() => Math.random() - 0.5);
+  function batch(offset){
+    const out = [];
+    for (let i = 0; i < 3; i++) out.push(shuffled[(offset + i) % N]);
+    return out;
+  }
+  ghState.slidesData = [ batch(0), batch(Math.min(3, N)), batch(Math.min(6, N)) ];
+
   GH_SLIDES.forEach((slide, si) => {
     const list = [];
-    let slideApps = [];
-    
-    if (si === 0) {
-      slideApps = [...allApps].sort((a,b) => (b.downloadCount||0) - (a.downloadCount||0)).slice(0, 3);
-    } else if (si === 1) {
-      slideApps = [...allApps].filter(a => !a.__discover).sort((a,b) => (b.createdAtMs||0) - (a.createdAtMs||0)).slice(0, 3);
-    } else {
-      slideApps = [...allApps].sort(() => Math.random() - 0.5).slice(0, 3);
-    }
-
-    // Randomly select one index to be "large" (0, 1, or 2)
-const largeIndex = Math.floor(Math.random() * slideApps.length);
-
-// Track which app is large for THIS slide's single line
-ghState.largeAppIndices[si] = largeIndex;
-ghState.slidesData[si] = slideApps; // Store for the single line
-
+    const slideApps = (ghState.slidesData[si] || []).slice().reverse();
     for (let oi = 0; oi < slideApps.length; oi++){
       const app = slideApps[oi];
-      const o = positions[oi] || positions[0];
-      
-      // Assign size: large one gets 0.75, others get 0.45
-      const sizeScale = (oi === largeIndex) ? 0.75 : 0.45;
+      const pos = GH_POSITIONS[oi] || GH_POSITIONS[0];
+      const tilt = GH_TILTS[oi] || 0;
+      const size = GH_SIZES[oi] || 0.68;
 
       const orb = document.createElement('div'); orb.className = 'gh-orbiter';
       orb.style.setProperty('--rot', '-22deg');
       const obj = document.createElement('div'); obj.className = 'gh-obj';
-      obj.style.left = o.x + '%'; obj.style.top = o.y + '%';
-      obj.style.setProperty('--s', sizeScale);
+      obj.style.left = pos.x + '%'; obj.style.top = pos.y + '%';
+      obj.style.setProperty('--s', size);
+      obj.style.setProperty('--gh-tilt', tilt + 'deg');
       const fl = document.createElement('div'); fl.className = 'gh-float';
       fl.style.animationDelay = (-(oi * 0.53 + si * 0.31)).toFixed(2) + 's';
 
       const iconUrl = (app.thumbUrl || '').replace(/'/g, '%27').replace(/"/g, '%22');
+      const safeName = escapeHtml(app.name || 'App');
       if (iconUrl){
-        fl.innerHTML = `<div class="gh-app-obj" style="background-image:url('${iconUrl}')"></div>`;
+        fl.innerHTML = `<div class="gh-app-obj" data-gh-open="${escapeHtml(app.id)}" style="background-image:url('${iconUrl}')"></div><div class="gh-app-name" data-gh-open="${escapeHtml(app.id)}">${safeName}</div>`;
       } else {
         const letter = (app.name || 'A').trim().charAt(0).toUpperCase();
-        fl.innerHTML = `<div class="gh-app-obj gh-app-obj-fallback">${letter}</div>`;
+        fl.innerHTML = `<div class="gh-app-obj gh-app-obj-fallback" data-gh-open="${escapeHtml(app.id)}">${letter}</div><div class="gh-app-name" data-gh-open="${escapeHtml(app.id)}">${safeName}</div>`;
       }
 
       obj.appendChild(fl); orb.appendChild(obj); box.appendChild(orb);
@@ -4776,79 +4827,137 @@ ghState.slidesData[si] = slideApps; // Store for the single line
   });
 }
 
+function ghSetLive(obj, on){
+  obj.classList.toggle('live', on);
+}
+
 function ghSetObj(item, state, animate){
-  const orb = item.orb, obj = item.obj;
-  if (state === 'before'){
+  const { orb, obj } = item;
+  if(state === 'before'){
+    ghSetLive(obj, false);
     orb.classList.add('nt');
     orb.style.setProperty('--rot', '-22deg');
-    obj.classList.remove('in', 'out');
-    obj.style.opacity = '0'; obj.style.filter = 'blur(14px)';
-    void orb.offsetWidth; orb.classList.remove('nt');
-  } else if (state === 'active'){
+    obj.classList.remove('in','out');
+    obj.style.opacity = '0';
+    obj.style.filter = 'blur(14px)';
+    void orb.offsetWidth;
+    orb.classList.remove('nt');
+  } else if(state === 'active'){
+    ghSetLive(obj, true);
     if (animate){
       orb.style.setProperty('--rot', '0deg');
-      obj.classList.remove('out'); obj.style.opacity = ''; obj.style.filter = '';
-      void obj.offsetWidth; obj.classList.add('in');
+      obj.classList.remove('out');
+      obj.style.opacity = '';
+      obj.style.filter = '';
+      void obj.offsetWidth;
+      obj.classList.add('in');
     } else {
-      orb.classList.add('nt'); orb.style.setProperty('--rot', '0deg');
-      obj.classList.remove('in', 'out'); obj.style.opacity = '1'; obj.style.filter = 'none';
-      void orb.offsetWidth; orb.classList.remove('nt');
+      orb.classList.add('nt');
+      orb.style.setProperty('--rot', '0deg');
+      obj.classList.remove('in','out');
+      obj.style.opacity = '1';
+      obj.style.filter = 'none';
+      void orb.offsetWidth;
+      orb.classList.remove('nt');
     }
   } else {
+    ghSetLive(obj, false);
     orb.style.setProperty('--rot', '22deg');
-    obj.classList.remove('in'); void obj.offsetWidth; obj.classList.add('out');
+    obj.classList.remove('in');
+    void obj.offsetWidth;
+    obj.classList.add('out');
   }
 }
 
-function ghCrossFade(layers, activeIdx, html){
-  const outL = layers[activeIdx], inL = layers[1 - activeIdx];
-  inL.innerHTML = html; inL.classList.remove('in', 'out'); void inL.offsetWidth; inL.classList.add('in');
-  outL.classList.remove('in', 'out'); void outL.offsetWidth; outL.classList.add('out');
-  return 1 - activeIdx;
-}
-
-function ghRowsHTML(apps){
-  // Sirf 1 line dikhani hai, aur wo sabse bade app ki honi chahiye
-  if (!apps || !apps.length) {
-    return `<div class="gh-prow" style="--i:0"><span class="gh-pname" style="opacity:.4">— No app yet —</span></div>`;
-  }
-  
-  const si = ghState.current >= 0 ? ghState.current : 0;
-  const largeIndex = ghState.largeAppIndices[si] || 0;
-  const a = apps[largeIndex] || apps[0]; // Us slide ka sabse bada app uthao
-  
-  return `
-    <div class="gh-prow" style="--i:0">
-      <span class="gh-pname">${escapeHtml(a.name)}</span>
-      <span class="gh-psize">${escapeHtml(a.sizeLabel || '—')}</span>
-      <span class="gh-pthumb" style="background-image:url('${escapeHtml(a.thumbUrl || placeholderIcon(a.name))}')"></span>
-      <span class="gh-pplus">+</span>
-    </div>`;
+function ghCrossFade(slide){
+  const titleA = document.getElementById('gh-titleA');
+  const titleB = document.getElementById('gh-titleB');
+  if(!titleA || !titleB) return;
+  const outL = ghState.titleActive === 0 ? titleA : titleB;
+  const inL  = ghState.titleActive === 0 ? titleB : titleA;
+  inL.innerHTML =
+    `<div class="gh-title">${slide.title}</div>` +
+    `<div class="gh-sub">${slide.sub}</div>` +
+    `<button class="gh-cta" type="button" data-gh-cta="${escapeHtml(slide.cta)}">${slide.cta}` +
+    `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 1.5 6.5 5 3 8.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+  inL.style.setProperty('--ink', slide.ink);
+  inL.classList.remove('in','out'); void inL.offsetWidth; inL.classList.add('in');
+  outL.classList.remove('in','out'); void outL.offsetWidth; outL.classList.add('out');
+  ghState.titleActive = 1 - ghState.titleActive;
 }
 
 function ghGoTo(si, animate){
+  if(si === ghState.current) return;
   const prev = ghState.current;
   ghState.current = si;
-  if (prev >= 0 && prev !== si){
+
+  if(prev >= 0){
     ghState.orbiters[prev].forEach(it => ghSetObj(it, 'after', true));
     const p = prev;
-    ghState.timers.push(setTimeout(() => {
-      if (ghState.current !== p) ghState.orbiters[p].forEach(it => ghSetObj(it, 'before', false));
-    }, 900));
+    setTimeout(()=>{
+      if(ghState.current !== p) ghState.orbiters[p].forEach(it => ghSetObj(it, 'before', false));
+    }, 900);
   }
   ghState.orbiters[si].forEach(it => ghSetObj(it, 'active', animate));
-  const bl = document.getElementById('gh-blob');
-  if (bl){ bl.style.setProperty('--gh-c1', GH_SLIDES[si].c1); bl.style.setProperty('--gh-c2', GH_SLIDES[si].c2); }
-  ghState.tActive = ghCrossFade(ghState.titleLayers, ghState.tActive, GH_SLIDES[si].title);
-  const apps = ghState.slidesData[si] || [];
-  ghState.rActive = ghCrossFade(ghState.rowLayers, ghState.rActive, ghRowsHTML(apps));
+
+  const hero = document.getElementById('gh-hero');
+  if(hero){
+    hero.style.setProperty('--gh-c1', GH_SLIDES[si].c1);
+    hero.style.setProperty('--gh-c2', GH_SLIDES[si].c2);
+  }
+  ghCrossFade(GH_SLIDES[si]);
+
+  const dotsEl = document.getElementById('gh-dots');
+  if(dotsEl){
+    const dots = Array.from(dotsEl.children);
+    dots.forEach(d => d.classList.remove('active'));
+    void dotsEl.offsetWidth;
+    if(dots[si]) dots[si].classList.add('active');
+  }
 }
 
-function ghStartLoop(){
-  if (ghState.loopId) clearInterval(ghState.loopId);
-  ghState.loopId = setInterval(() => {
-    ghGoTo((ghState.current + 1) % GH_SLIDES.length, true);
-  }, 3400);
+function ghInitDots(){
+  const dotsEl = document.getElementById('gh-dots');
+  if(!dotsEl) return;
+  dotsEl.innerHTML = GH_SLIDES.map((s,i)=>`<button type="button" aria-label="Show slide ${i+1}"></button>`).join('');
+  Array.from(dotsEl.children).forEach((d,i)=> d.addEventListener('click', ()=> ghGoTo(i, true)));
+  if(!dotsEl.__bound){
+    dotsEl.__bound = true;
+    dotsEl.addEventListener('animationend', e=>{
+      if(e.animationName === 'ghFill') ghGoTo((ghState.current + 1) % GH_SLIDES.length, true);
+    });
+  }
+  if(ghState.current >= 0 && dotsEl.children[ghState.current]){
+    dotsEl.children[ghState.current].classList.add('active');
+  }
+}
+
+function ghBindSwipe(){
+  const hero = document.getElementById('gh-hero');
+  if(!hero || hero.__swipeBound) return;
+  hero.__swipeBound = true;
+  const dotsEl = document.getElementById('gh-dots');
+  let sx = 0, sy = 0, down = false, moved = false;
+  hero.addEventListener('pointerdown', e=>{
+    if(e.target.closest('[data-gh-open], [data-gh-cta]')) return;
+    down = true; moved = false; sx = e.clientX; sy = e.clientY;
+    if(dotsEl) dotsEl.classList.add('paused');
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(type=>{
+    hero.addEventListener(type, e=>{
+      if(!down) return;
+      down = false;
+      if(dotsEl) dotsEl.classList.remove('paused');
+      if(type !== 'pointerup') return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      moved = Math.abs(dx) > 10 || Math.abs(dy) > 10;
+      if(Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)){
+        ghGoTo((ghState.current + (dx < 0 ? 1 : -1) + GH_SLIDES.length) % GH_SLIDES.length, true);
+      } else if(!moved && !e.target.closest('[data-gh-open], [data-gh-cta]')){
+        ghGoTo((ghState.current + 1) % GH_SLIDES.length, true);
+      }
+    });
+  });
 }
 
 function ghRenderChips(){
@@ -4971,57 +5080,78 @@ function ghGetCurrentApps(){
 }
 
 function renderHome(){
-  ghBuildOrbiters();
-  const currentApps = ghGetCurrentApps();
-  const byDl = [...currentApps].sort((a, b) => (b.downloadCount||0) - (a.downloadCount||0)).slice(0, 3);
-  const byNew = [...currentApps].filter(a => !a.__discover).sort((a, b) => (b.createdAtMs||0) - (a.createdAtMs||0)).slice(0, 3);
-  const byRand = [...currentApps].sort(() => Math.random() - 0.5).slice(0, 3);
-  ghState.slidesData = [byDl, byNew, byRand];
-
-  const sec = ['gh-trending-sec','gh-latest-sec','gh-picks-sec'];
   const empty = document.getElementById('gh-empty');
   const hasStoreApps = state.apps.length > 0;
-  if (!hasStoreApps){
-    const heroEl = document.querySelector('.gh-hero');
+  const heroEl = document.querySelector('.gh-hero');
+
+  if (!hasStoreApps && (!discover || !discover.apps.length)){
     if (heroEl) heroEl.style.display = 'none';
-    sec.forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
+    const dotsEl = document.getElementById('gh-dots');
+    if(dotsEl) dotsEl.style.display = 'none';
+    ['gh-trending-sec','gh-latest-sec','gh-picks-sec'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.hidden = true;
+    });
     if (empty) empty.hidden = false;
     ghRenderChips();
     return;
   }
-  const heroEl = document.querySelector('.gh-hero');
   if (heroEl) heroEl.style.display = '';
+  const dotsEl = document.getElementById('gh-dots');
+  if(dotsEl) dotsEl.style.display = '';
   if (empty) empty.hidden = true;
+
+  ghBuildOrbiters();
   ghRenderChips();
   ghRenderTrending();
   ghRenderLatest();
   ghRenderPicks();
 
+  ghInitDots();
+  ghBindSwipe();
+
   if (ghState.current < 0){
     ghState.orbiters.forEach(list => list.forEach(it => ghSetObj(it, 'before', false)));
-    requestAnimationFrame(() => requestAnimationFrame(() => { ghGoTo(0, true); ghStartLoop(); }));
+    requestAnimationFrame(() => requestAnimationFrame(() => ghGoTo(0, true)));
   } else {
-    ghGoTo(ghState.current, false);
+    ghGoTo(Math.min(ghState.current, GH_SLIDES.length - 1), false);
   }
-
-  const hero = document.getElementById('gh-hero');
-if (hero && !hero.__clickBound){
-  hero.__clickBound = true;
-  /* Hero banner ka touch event band kar diya hai taaki galti se app change na ho */
-  /*
-  hero.addEventListener('click', () => {
-    ghState.timers.forEach(clearTimeout); ghState.timers = [];
-    ghGoTo((ghState.current + 1) % GH_SLIDES.length, true);
-    ghStartLoop();
-  });
-  */
-}
 }
 
 (function ghBind(){
   document.addEventListener('click', (e) => {
     const chip = e.target.closest('[data-gh-cat]');
     if (chip){ state.activeCategory = chip.dataset.ghCat; renderHome(); return; }
+    const cta = e.target.closest('[data-gh-cta]');
+    if (cta){
+      const label = (cta.dataset.ghCta || '').toLowerCase();
+      let targetId = '';
+      if (label.includes('trending')) targetId = 'gh-trending-sec';
+      else if (label.includes('new')) targetId = 'gh-latest-sec';
+      else if (label.includes('rated') || label.includes('top')) targetId = 'gh-picks-sec';
+
+      if (targetId){
+        const el = document.getElementById(targetId);
+        if (el && !el.hidden){
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const title = el.querySelector('.gh-sec-title');
+          if (title){
+            title.style.transition = 'color 0.25s ease, transform 0.25s ease';
+            title.style.color = 'var(--accent)';
+            title.style.transform = 'scale(1.08)';
+            title.style.transformOrigin = 'left center';
+            setTimeout(() => {
+              title.style.color = '';
+              title.style.transform = '';
+            }, 1000);
+          }
+        } else {
+          toast('Loading apps, please wait…', 'ic-lock');
+        }
+      } else {
+        toast(cta.dataset.ghCta || '', 'ic-sparkle');
+      }
+      return;
+    }
     const openEl = e.target.closest('[data-gh-open]');
     if (openEl){
       const id = openEl.dataset.ghOpen;
@@ -5084,7 +5214,7 @@ function initHomeCategories(){
     const cp = e.target.closest("[data-copy-cat]");
     if(cp){ e.stopPropagation(); const ok = await copyText(catLink(cp.dataset.copyCat)); toast(ok ? "Category link copied" : "Copy failed", ok ? "ic-check" : "ic-close"); return; }
     const c = e.target.closest("[data-cat]");
-    if(c){ state.activeCategory = c.dataset.cat; heroApps = []; renderHome(); }
+    if(c){ state.activeCategory = c.dataset.cat; renderHome(); }
   });
 }
 let deepLinkDone = false;
@@ -5093,7 +5223,7 @@ function applyDeepLink(){
   deepLinkDone = true;
   const qs = new URLSearchParams(location.search);
   const cat = qs.get("cat"), appId = qs.get("app"), dm = qs.get("dm"), disc = qs.get("disc");
-  if(cat){ state.activeCategory = cat; heroApps = []; renderHome(); $$(".nav-btn")[0].click(); }
+  if(cat){ state.activeCategory = cat; renderHome(); $$(".nav-btn")[0].click(); }
   if(appId){
     if(state.apps.some(a=>a.id===appId)) openAppDetail(appId);
     else toast("This item is no longer available.", "ic-close");
@@ -6058,6 +6188,7 @@ renderInviteCard();
 renderAccountDetails();
 updateMaintenanceUI();
 updateSendMessagesUI();
+updateConsoleDetectorUI();
   const list = state.isOwner ? state.apps : mine;
   $("#my-uploads-title").textContent = state.isOwner ? "All uploads (Owner)" : "My uploads";
   $("#my-uploads-list").innerHTML = list.length ? list.map(a=>{
@@ -6683,7 +6814,9 @@ function initProfileActions(){
   const _maintRow = document.getElementById("row-maintenance");
   if(_maintRow) _maintRow.addEventListener("click", toggleMaintenance);
   const _sendMsgRow = document.getElementById("row-send-messages");
-  if(_sendMsgRow) _sendMsgRow.addEventListener("click", openSendMessagesSheet);
+if(_sendMsgRow) _sendMsgRow.addEventListener("click", openSendMessagesSheet);
+const _cdRow = document.getElementById("row-console-detector");
+if(_cdRow) _cdRow.addEventListener("click", toggleConsoleDetector);
   $("#profile-avatar").addEventListener("click", ()=> $("#profile-photo-input").click());
   $("#profile-photo-input").addEventListener("change", e=>{ changeMyPhoto(e.target.files[0]); e.target.value = ""; });
   $("#row-rename").addEventListener("click", renameMyself);
