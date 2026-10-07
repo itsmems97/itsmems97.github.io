@@ -102,10 +102,13 @@ input[type=range]{flex:1;accent-color:var(--red);height:24px}
 <div id="toast"></div>
 
 <script>
-/* ===== CATALOG: edit this list. v = video URL (.mp4 or .m3u8), p = poster URL ===== */
+/* ===== API ENDPOINT (VPS backend) ===== */
+const API = "https://144-24-218-100.nip.io/movies-api";
+
+/* ===== FALLBACK catalog (offline / backend down) ===== */
 const B="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/";
 const mk=(id,t,y,r,d,g,ds,f,c)=>({id,t,y,r,d,g,ds,v:B+f+".mp4",p:B+"images/"+f+".jpg",c});
-const C=[
+const FALLBACK=[
 mk(1,"Big Buck Bunny",2008,"PG","10m",["Animation","Family","Comedy"],"A gentle giant rabbit finally loses his patience with three bullying rodents and plans a very creative payback.","BigBuckBunny",["#3a7d44","#10281a"]),
 mk(2,"Sintel",2010,"PG-13","15m",["Animation","Adventure","Fantasy"],"A lone young woman searches a harsh world for the baby dragon she once befriended.","Sintel",["#b5532a","#2a120a"]),
 mk(3,"Tears of Steel",2012,"PG-13","12m",["Sci-Fi","Action"],"In a ruined future Amsterdam, a band of warriors and scientists try to save the world from killer robots.","TearsOfSteel",["#1f5f8b","#07121c"]),
@@ -126,13 +129,47 @@ let LIST=ld("pm_list",[]),PROG=ld("pm_prog",{});
 const $=s=>document.querySelector(s);
 let tab="home",flt="All",q="",cur=null,heroI=0;
 
+/* ===== runtime catalog (fallback first) ===== */
+let C = FALLBACK.slice();
+
+/* ===== fetch from backend ===== */
+async function loadCatalog(searchQ){
+  try{
+    const endpoint = (searchQ && searchQ.length >= 2)
+      ? (API + "/search?q=" + encodeURIComponent(searchQ))
+      : (API + "/search?q=popular");
+    const res = await fetch(endpoint, { cache: "no-store" });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if(!data || !data.ok) throw new Error((data && data.error) || "Backend error");
+    const items = (data.items || []).map(x => ({
+      id: String(x.id || ""),
+      t: x.title || "Untitled",
+      y: x.year || "",
+      r: x.type || "Movie",
+      d: x.duration || "",
+      g: Array.isArray(x.genres) ? x.genres : [],
+      ds: x.description || "",
+      v: x.stream || "",
+      p: x.poster || "",
+      c: ["#3a7d44","#10281a"]
+    }));
+    C = items;
+    return true;
+  }catch(e){
+    console.warn("Backend fetch failed, using fallback:", e);
+    C = FALLBACK.slice();
+    return false;
+  }
+}
+
 /* ===== helpers ===== */
 const poster=m=>`style="background:linear-gradient(160deg,${m.c[0]},${m.c[1]})"`;
-const card=(m,pr)=>`<div class="card" ${poster(m)} onclick="openD(${m.id})"><img loading="lazy" src="${m.p}" alt="" onerror="this.remove()"><span>${m.t}</span>${pr?`<i style="width:${pr}%"></i>`:""}</div>`;
+const card=(m,pr)=>`<div class="card" ${poster(m)} onclick="openD('${m.id}')"><img loading="lazy" src="${m.p}" alt="" onerror="this.remove()"><span>${m.t}</span>${pr?`<i style="width:${pr}%"></i>`:""}</div>`;
 const row=(t,a,pr)=>a.length?`<h2>${t}</h2><div class="row">${a.map(m=>card(m,pr&&PROG[m.id]?Math.min(100,PROG[m.id].t/PROG[m.id].d*100):0)).join("")}</div>`:"";
 const toast=t=>{const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e.t);e.t=setTimeout(()=>e.classList.remove("on"),1800)};
 const fmt=s=>{s=Math.max(0,~~s||0);return ~~(s/60)+":"+String(s%60).padStart(2,"0")};
-const inList=id=>LIST.includes(id);
+const inList=id=>LIST.includes(String(id));
 const ICO={home:"M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z",search:"M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z",list:"M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z",me:"M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3 0-8 1.5-8 4v2h16v-2c0-2.5-5-4-8-4z"};
 const NAV=[["home","Home"],["search","Search"],["list","My List"],["me","Profile"]];
 
@@ -143,36 +180,69 @@ function chips(){const e=$("#chips");e.style.display=tab=="home"?"flex":"none";e
 function render(){nav();chips();const a=$("#app");
  if(tab=="home")a.innerHTML=homeV();
  else if(tab=="search")a.innerHTML=searchV();
- else if(tab=="list"){const l=C.filter(m=>inList(m.id));a.innerHTML=`<div class="pad"><h2 style="margin-top:0">My List</h2>${l.length?`<div class="grid">${l.map(m=>card(m)).join("")}</div>`:`<div class="empty">Your list is empty.<br>Tap “My List” on any title to save it here.</div>`}</div>`}
+ else if(tab=="list"){const l=C.filter(m=>inList(m.id));a.innerHTML=`<div class="pad"><h2 style="margin-top:0">My List</h2>${l.length?`<div class="grid">${l.map(m=>card(m)).join("")}</div>`:`<div class="empty">Your list is empty.<br>Tap "My List" on any title to save it here.</div>`}</div>`}
  else a.innerHTML=`<div class="pad"><h2 style="margin-top:0">Profile</h2><div class="empty" style="padding:20px 30px">Saved titles: ${LIST.length}<br>Titles in progress: ${Object.keys(PROG).length}</div><div style="padding:0 14px;display:grid;gap:10px"><button class="btn g" onclick="PROG={};sv('pm_prog',PROG);toast('Watch history cleared');render()">Clear watch history</button><button class="btn g" onclick="LIST=[];sv('pm_list',LIST);toast('My List cleared');render()">Clear My List</button></div><div class="empty">Pika Movie v1.0</div></div>`}
 function homeV(){
+ if(!C.length){return `<div class="pad"><div class="empty">Loading movies…</div></div>`}
  if(flt!="All"){const l=C.filter(m=>m.g.includes(flt));return `<div class="pad"><h2 style="margin-top:0">${flt}</h2><div class="grid">${l.map(m=>card(m)).join("")}</div></div>`}
  const h=C[heroI%C.length],cw=C.filter(m=>PROG[m.id]&&PROG[m.id].t>3&&PROG[m.id].t<PROG[m.id].d-5);
- return `<div class="hero" style="background-image:url('${h.p}'),linear-gradient(160deg,${h.c[0]},${h.c[1]})"><h1>${h.t}</h1><p>${h.g.slice(0,3).join(" • ")}</p><div class="acts"><button class="btn w" onclick="play(${h.id})">▶ Play</button><button class="btn g" onclick="tg(${h.id})">${inList(h.id)?"✓ My List":"＋ My List"}</button><button class="btn g" style="flex:0 0 48px" onclick="openD(${h.id})">ⓘ</button></div></div>`
+ return `<div class="hero" style="background-image:url('${h.p}'),linear-gradient(160deg,${h.c[0]},${h.c[1]})"><h1>${h.t}</h1><p>${h.g.slice(0,3).join(" • ")}</p><div class="acts"><button class="btn w" onclick="play('${h.id}')">▶ Play</button><button class="btn g" onclick="tg('${h.id}')">${inList(h.id)?"✓ My List":"＋ My List"}</button><button class="btn g" style="flex:0 0 48px" onclick="openD('${h.id}')">ⓘ</button></div></div>`
  +row("Continue Watching",cw,1)+row("Trending Now",C.slice().sort((a,b)=>b.id%4-a.id%4))
  +GEN.map(g=>row(g,C.filter(m=>m.g.includes(g)))).join("")+row("My List",C.filter(m=>inList(m.id)))}
-function searchV(){const r=q?C.filter(m=>(m.t+m.g.join(" ")+m.y).toLowerCase().includes(q.toLowerCase())):[];
- return `<div class="pad"><div class="sb"><svg class="ic" viewBox="0 0 24 24" style="fill:#aaa"><path d="${ICO.search}"/></svg><input id="qi" value="${q}" placeholder="Search movies, genres, years" oninput="q=this.value;res()"></div><div id="res">${resV(r)}</div></div>`}
-const resV=r=>q?(r.length?`<div class="grid">${r.map(m=>card(m)).join("")}</div>`:`<div class="empty">No results for “${q}”.<br>Try a different title or genre.</div>`):`<h2 style="margin-top:0">Top searches</h2><div class="grid">${C.slice(0,6).map(m=>card(m)).join("")}</div>`;
-function res(){$("#res").innerHTML=resV(q?C.filter(m=>(m.t+m.g.join(" ")+m.y).toLowerCase().includes(q.toLowerCase())):[])}
+function searchV(){return `<div class="pad"><div class="sb"><svg class="ic" viewBox="0 0 24 24" style="fill:#aaa"><path d="${ICO.search}"/></svg><input id="qi" value="${q}" placeholder="Search movies, genres, years" oninput="onSearch(this.value)"></div><div id="res">${resV(C)}</div></div>`}
+const resV=r=>q?(r.length?`<div class="grid">${r.map(m=>card(m)).join("")}</div>`:`<div class="empty">No results for "${q}".<br>Try a different title or genre.</div>`):`<h2 style="margin-top:0">Top searches</h2><div class="grid">${C.slice(0,6).map(m=>card(m)).join("")}</div>`;
+
+let searchTimeout=null;
+async function onSearch(v){
+  q=v;
+  clearTimeout(searchTimeout);
+  searchTimeout=setTimeout(async()=>{
+    if(q.length===0){
+      await loadCatalog("");
+      render();
+    } else if(q.length>=2){
+      await loadCatalog(q);
+      const rr=document.getElementById("res");
+      if(rr) rr.innerHTML=resV(C);
+    }
+  },400);
+}
 
 /* ===== list + detail ===== */
-function tg(id){const i=LIST.indexOf(id);i<0?LIST.push(id):LIST.splice(i,1);sv("pm_list",LIST);toast(i<0?"Added to My List":"Removed from My List");if($("#sh").classList.contains("on"))detail(id);render_keep()}
+function tg(id){id=String(id);const i=LIST.indexOf(id);i<0?LIST.push(id):LIST.splice(i,1);sv("pm_list",LIST);toast(i<0?"Added to My List":"Removed from My List");if($("#sh").classList.contains("on"))detail(id);render_keep()}
 function render_keep(){const y=scrollY;render();scrollTo(0,y)}
-function openD(id){detail(id);if(!$("#sh").classList.contains("on")){$("#sh").classList.add("on");history.pushState({d:1},"")}}
-function detail(id){const m=C.find(x=>x.id==id),p=PROG[id],more=C.filter(x=>x.id!=id&&x.g.some(g=>m.g.includes(g))).slice(0,6);
- $("#shc").innerHTML=`<div class="bd" style="background-image:url('${m.p}'),linear-gradient(160deg,${m.c[0]},${m.c[1]})"><button class="x" onclick="history.back()" aria-label="Close">✕</button></div><div class="inf"><h1>${m.t}</h1><div class="meta"><em>98% match</em><span>${m.y}</span><b>${m.r}</b><span>${m.d}</span><b>HD</b></div><button class="btn w" onclick="play(${m.id})">▶ ${p&&p.t>3?"Resume from "+fmt(p.t):"Play"}</button><button class="btn g" onclick="tg(${m.id})">${inList(m.id)?"✓ In My List":"＋ Add to My List"}</button><p>${m.ds}</p><div class="meta">${m.g.join(" • ")}</div><h2 style="margin:18px 0 10px">More like this</h2><div class="grid" style="padding:0">${more.map(x=>card(x)).join("")}</div></div>`;
+function openD(id){id=String(id);detail(id);if(!$("#sh").classList.contains("on")){$("#sh").classList.add("on");history.pushState({d:1},"")}}
+function detail(id){id=String(id);const m=C.find(x=>String(x.id)===id);if(!m)return;const p=PROG[id],more=C.filter(x=>String(x.id)!==id&&x.g.some(g=>m.g.includes(g))).slice(0,6);
+ $("#shc").innerHTML=`<div class="bd" style="background-image:url('${m.p}'),linear-gradient(160deg,${m.c[0]},${m.c[1]})"><button class="x" onclick="history.back()" aria-label="Close">✕</button></div><div class="inf"><h1>${m.t}</h1><div class="meta"><em>98% match</em><span>${m.y}</span><b>${m.r}</b><span>${m.d}</span><b>HD</b></div><button class="btn w" onclick="play('${m.id}')">▶ ${p&&p.t>3?"Resume from "+fmt(p.t):"Play"}</button><button class="btn g" onclick="tg('${m.id}')">${inList(m.id)?"✓ In My List":"＋ Add to My List"}</button><p>${m.ds}</p><div class="meta">${m.g.join(" • ")}</div><h2 style="margin:18px 0 10px">More like this</h2><div class="grid" style="padding:0">${more.map(x=>card(x)).join("")}</div></div>`;
  $("#shc").scrollTop=0}
 
 /* ===== player ===== */
 const V=$("#vid");let ht,last=0,sv_t=0;
 const PL='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',PA='<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>';
-function play(id){cur=C.find(m=>m.id==id);$("#pt").textContent=cur.t;$("#err").style.display="none";$("#pl").classList.add("on");history.pushState({p:1},"");
- V.src=cur.v;V.playbackRate=1;$("#spd").textContent="1x";
- V.onloadedmetadata=()=>{const p=PROG[id];if(p&&p.t>3&&p.t<V.duration-5)V.currentTime=p.t};
- V.play().catch(()=>{});
- const e=$("#pl");(e.requestFullscreen?e.requestFullscreen():Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock("landscape").catch(()=>{})).catch(()=>{});
- show()}
+async function play(id){
+  id=String(id);
+  cur=C.find(m=>String(m.id)===id);
+  if(!cur)return;
+  $("#pt").textContent=cur.t;
+  $("#err").style.display="none";
+  $("#pl").classList.add("on");
+  history.pushState({p:1},"");
+  $("#spin").style.display="block";
+  V.removeAttribute("src");
+  V.playbackRate=1;
+  $("#spd").textContent="1x";
+  let streamUrl=cur.v;
+  try{
+    const res=await fetch(API+"/play?id="+encodeURIComponent(id));
+    const data=await res.json();
+    if(data&&data.ok&&data.url) streamUrl=data.url;
+  }catch(e){ console.warn("play fetch failed, using local url", e); }
+  V.src=streamUrl;
+  V.onloadedmetadata=()=>{const p=PROG[id];if(p&&p.t>3&&p.t<V.duration-5)V.currentTime=p.t};
+  V.play().catch(()=>{});
+  const e=$("#pl");(e.requestFullscreen?e.requestFullscreen():Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock("landscape").catch(()=>{})).catch(()=>{});
+  show();
+}
 function stop(){V.pause();if(cur&&V.duration)save();V.removeAttribute("src");V.load();$("#pl").classList.remove("on");
  try{document.fullscreenElement&&document.exitFullscreen();screen.orientation&&screen.orientation.unlock()}catch(e){}
  if($("#sh").classList.contains("on"))detail(cur.id);render_keep()}
@@ -198,5 +268,11 @@ addEventListener("popstate",()=>{if($("#pl").classList.contains("on"))stop();els
 $("#sh").addEventListener("click",e=>{if(e.target.id=="sh")history.back()});
 addEventListener("scroll",()=>$("#hd").classList.toggle("s",scrollY>40),{passive:true});
 setInterval(()=>{if(tab=="home"&&flt=="All"&&!$("#sh").classList.contains("on")&&!$("#pl").classList.contains("on")&&scrollY<10){heroI++;render()}},9000);
-render();setTimeout(()=>$("#splash").classList.add("off"),1500);
+
+/* ===== INIT (fetch from backend, then render) ===== */
+(async function(){
+  await loadCatalog("");
+  render();
+  setTimeout(()=>$("#splash").classList.add("off"),1500);
+})();
 </script></body></html>
