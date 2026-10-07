@@ -1,1 +1,202 @@
-coming soon
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Pika Movie</title>
+<style>
+:root{--red:#e50914;--bg:#000;--mut:#a8a8a8;--card:#1a1a1a;--sa:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:#fff;font-family:Roboto,system-ui,sans-serif;overflow-x:hidden;padding-bottom:calc(66px + var(--sb));user-select:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+#splash{position:fixed;inset:0;background:#000;z-index:99;display:grid;place-items:center;transition:opacity .5s}
+#splash b{font:900 15vw/1 Impact,'Arial Black',sans-serif;color:var(--red);letter-spacing:.04em;animation:z 1.4s ease-out}
+#splash.off{opacity:0;pointer-events:none}
+@keyframes z{from{transform:scale(2.4);opacity:0}to{transform:scale(1);opacity:1}}
+header{position:fixed;top:0;left:0;right:0;z-index:10;padding:calc(10px + var(--sa)) 14px 8px;background:linear-gradient(#000e,#0000);transition:background .3s}
+header.s{background:#000}
+.top{display:flex;justify-content:space-between;align-items:center}
+.logo{font:900 26px Impact,'Arial Black',sans-serif;color:var(--red);letter-spacing:.03em}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-top:8px;scrollbar-width:none}
+.chip{border:1px solid #fff8;border-radius:20px;padding:5px 14px;font-size:14px;white-space:nowrap}
+.chip.on{background:#fff;color:#000;border-color:#fff}
+.hero{height:68vh;min-height:420px;position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding:0 16px 18px;background-size:cover;background-position:center top}
+.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(#0006,#0000 30%,#000 96%)}
+.hero>*{position:relative;z-index:1}
+.hero h1{font:900 34px/1.05 Impact,'Arial Black',sans-serif;text-align:center;letter-spacing:.02em;text-shadow:0 2px 12px #000}
+.hero p{font-size:13px;color:#ddd;margin:8px 0 14px}
+.acts{display:flex;gap:10px;width:100%;max-width:420px}
+.btn{flex:1;display:flex;gap:6px;align-items:center;justify-content:center;padding:11px;border-radius:5px;font-weight:700;font-size:16px}
+.btn.w{background:#fff;color:#000}.btn.g{background:#6d6d6eb3}
+h2{font-size:17px;margin:20px 14px 10px}
+.row{display:flex;gap:8px;overflow-x:auto;padding:0 14px;scrollbar-width:none;scroll-snap-type:x proximity}
+.card{flex:0 0 112px;aspect-ratio:2/3;border-radius:4px;position:relative;overflow:hidden;scroll-snap-align:start;background-size:cover}
+.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.card span{position:absolute;left:6px;right:6px;bottom:8px;font:700 13px/1.1 Roboto,sans-serif;text-shadow:0 1px 4px #000}
+.card i{position:absolute;left:0;bottom:0;height:3px;background:var(--red)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px}
+.grid .card{flex:none}
+.pad{padding-top:calc(70px + var(--sa))}
+.sb{display:flex;gap:8px;align-items:center;background:#333;margin:0 14px 14px;border-radius:6px;padding:0 12px}
+.sb input{flex:1;background:none;border:0;outline:0;color:#fff;font-size:16px;padding:12px 0;user-select:text}
+.empty{color:var(--mut);text-align:center;padding:60px 30px;line-height:1.5}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:10;background:#0c0c0c;border-top:1px solid #222;display:flex;padding-bottom:var(--sb)}
+nav button{flex:1;padding:9px 0 7px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button.on{color:#fff}
+nav svg,.ic{width:24px;height:24px;fill:currentColor}
+#sh{position:fixed;inset:0;z-index:20;background:#000a;display:none}
+#sh.on{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;top:6vh;background:#141414;border-radius:14px 14px 0 0;overflow-y:auto;animation:up .28s ease-out}
+@keyframes up{from{transform:translateY(100%)}}
+.bd{height:230px;background-size:cover;background-position:center;position:relative}
+.bd:after{content:"";position:absolute;inset:0;background:linear-gradient(#0000 50%,#141414)}
+.x{position:absolute;top:10px;right:10px;z-index:2;width:34px;height:34px;border-radius:50%;background:#000b;font-size:20px}
+.inf{padding:0 16px 30px}
+.inf h1{font-size:24px;margin-top:-10px;position:relative;z-index:1}
+.meta{display:flex;gap:10px;align-items:center;color:var(--mut);font-size:13px;margin:8px 0 14px}
+.meta b{border:1px solid #666;padding:0 5px;border-radius:3px;font-size:11px;color:#ddd}
+.meta em{color:#46d369;font-style:normal;font-weight:700}
+.inf .btn{margin-bottom:10px;flex:none;width:100%}
+.inf p{font-size:14px;line-height:1.45;color:#ddd;margin:12px 0}
+#pl{position:fixed;inset:0;z-index:50;background:#000;display:none}
+#pl.on{display:block}
+#vid{width:100%;height:100%;background:#000}
+.zone{position:absolute;top:0;bottom:0;width:50%}
+#zl{left:0}#zr{right:0}
+.ctl{position:absolute;inset:0;background:#0007;display:flex;flex-direction:column;justify-content:space-between;padding:calc(10px + var(--sa)) 16px calc(12px + var(--sb));transition:opacity .25s;pointer-events:none}
+.ctl.h{opacity:0}.ctl>*{pointer-events:auto}.ctl.h>*{pointer-events:none}
+.ctl .tb{display:flex;align-items:center;gap:12px;font-weight:700}
+.mid{display:flex;justify-content:center;align-items:center;gap:44px}
+.mid button{width:54px;height:54px}.mid .pp{width:74px;height:74px}
+.mid svg{width:100%;height:100%;fill:#fff}
+.bar{display:flex;align-items:center;gap:10px;font-size:12px}
+input[type=range]{flex:1;accent-color:var(--red);height:24px}
+.bar button{font-weight:700;font-size:13px;min-width:40px}
+#spin{position:absolute;top:50%;left:50%;width:46px;height:46px;margin:-23px;border:4px solid #fff4;border-top-color:var(--red);border-radius:50%;animation:r .8s linear infinite;display:none;pointer-events:none}
+@keyframes r{to{transform:rotate(360deg)}}
+#err{position:absolute;top:50%;left:0;right:0;text-align:center;padding:0 30px;display:none;color:#ddd}
+#fl{position:absolute;top:50%;margin-top:-30px;background:#0008;padding:16px 20px;border-radius:30px;font-weight:700;display:none;pointer-events:none}
+#toast{position:fixed;left:50%;bottom:calc(84px + var(--sb));transform:translateX(-50%);background:#fff;color:#000;padding:9px 16px;border-radius:20px;font-size:14px;font-weight:700;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none}
+#toast.on{opacity:1}
+</style></head><body>
+<div id="splash"><b>PIKA MOVIE</b></div>
+<header id="hd"><div class="top"><span class="logo">PIKA MOVIE</span></div><div class="chips" id="chips"></div></header>
+<main id="app"></main>
+<nav id="nav"></nav>
+
+<div id="sh"><div class="sheet" id="shc"></div></div>
+
+<div id="pl">
+ <video id="vid" playsinline preload="metadata"></video>
+ <div class="zone" id="zl"></div><div class="zone" id="zr"></div>
+ <div id="spin"></div><div id="err"></div><div id="fl"></div>
+ <div class="ctl" id="ctl">
+  <div class="tb"><button onclick="history.back()" aria-label="Back"><svg class="ic" viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg></button><span id="pt"></span></div>
+  <div class="mid">
+   <button onclick="sk(-10)" aria-label="Back 10 seconds"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8zm-1.1 11h-.9v-4.4l-1 .3v-.7l1.8-.6h.1zm3.8-2.4c0 .3-.1.6-.2.8s-.3.3-.5.4-.4.1-.7.1-.5 0-.7-.1-.4-.2-.5-.4-.2-.5-.2-.8v-.9c0-.3.1-.6.2-.8s.3-.3.5-.4.4-.1.7-.1.5 0 .7.1.4.2.5.4.2.5.2.8zm-.9-.9c0-.2 0-.3-.1-.4s-.1-.1-.2-.1-.2 0-.2.1-.1.2-.1.4v1c0 .2 0 .3.1.4s.1.1.2.1.2 0 .2-.1.1-.2.1-.4z"/></svg></button>
+   <button class="pp" id="ppb" onclick="tp()" aria-label="Play or pause"></button>
+   <button onclick="sk(10)" aria-label="Forward 10 seconds"><svg viewBox="0 0 24 24" style="transform:scaleX(-1)"><path d="M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/><text x="12" y="16" font-size="7" font-weight="700" text-anchor="middle" transform="scale(-1,1) translate(-24,0)">10</text></svg></button>
+  </div>
+  <div class="bar"><span id="tc">0:00</span><input type="range" id="sk" min="0" max="1000" value="0"><span id="td">0:00</span><button id="spd" onclick="sp()">1x</button><button onclick="fs()" aria-label="Fullscreen"><svg class="ic" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7zm-2-4h2V7h3V5H5zm12 7h-3v2h5v-5h-2zM14 5v2h3v3h2V5z"/></svg></button></div>
+ </div>
+</div>
+<div id="toast"></div>
+
+<script>
+/* ===== CATALOG: edit this list. v = video URL (.mp4 or .m3u8), p = poster URL ===== */
+const B="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/";
+const mk=(id,t,y,r,d,g,ds,f,c)=>({id,t,y,r,d,g,ds,v:B+f+".mp4",p:B+"images/"+f+".jpg",c});
+const C=[
+mk(1,"Big Buck Bunny",2008,"PG","10m",["Animation","Family","Comedy"],"A gentle giant rabbit finally loses his patience with three bullying rodents and plans a very creative payback.","BigBuckBunny",["#3a7d44","#10281a"]),
+mk(2,"Sintel",2010,"PG-13","15m",["Animation","Adventure","Fantasy"],"A lone young woman searches a harsh world for the baby dragon she once befriended.","Sintel",["#b5532a","#2a120a"]),
+mk(3,"Tears of Steel",2012,"PG-13","12m",["Sci-Fi","Action"],"In a ruined future Amsterdam, a band of warriors and scientists try to save the world from killer robots.","TearsOfSteel",["#1f5f8b","#07121c"]),
+mk(4,"Elephants Dream",2006,"PG","11m",["Animation","Sci-Fi"],"Two strange men explore a vast, surreal machine world where nothing is as it seems.","ElephantsDream",["#6b3fa0","#150a24"]),
+mk(5,"For Bigger Blazes",2013,"PG","15s",["Action","Drama"],"A short, high-energy burst of fire and motion.","ForBiggerBlazes",["#c0392b","#220806"]),
+mk(6,"For Bigger Escapes",2013,"PG","15s",["Adventure","Action"],"A quick getaway filled with wide-open scenery.","ForBiggerEscapes",["#16a085","#06201b"]),
+mk(7,"For Bigger Fun",2013,"G","1m",["Comedy","Family"],"Lighthearted fun in under a minute.","ForBiggerFun",["#d4a017","#2a1f03"]),
+mk(8,"For Bigger Joyrides",2013,"PG","15s",["Adventure","Drama"],"Take the long way round on a carefree joyride.","ForBiggerJoyrides",["#2980b9","#08192a"]),
+mk(9,"For Bigger Meltdowns",2013,"PG","15s",["Drama","Comedy"],"Everything gets a little too heated in this tiny drama.","ForBiggerMeltdowns",["#8e44ad","#1c0a24"]),
+mk(10,"Subaru Outback",2014,"G","10m",["Adventure","Documentary"],"Mud, dust and open road: a rugged drive through street and dirt.","SubaruOutbackOnStreetAndDirt",["#7f6a3a","#1c1608"])
+];
+const GEN=["Action","Adventure","Animation","Comedy","Drama","Sci-Fi","Family"];
+
+/* ===== storage ===== */
+const ld=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let LIST=ld("pm_list",[]),PROG=ld("pm_prog",{});
+const $=s=>document.querySelector(s);
+let tab="home",flt="All",q="",cur=null,heroI=0;
+
+/* ===== helpers ===== */
+const poster=m=>`style="background:linear-gradient(160deg,${m.c[0]},${m.c[1]})"`;
+const card=(m,pr)=>`<div class="card" ${poster(m)} onclick="openD(${m.id})"><img loading="lazy" src="${m.p}" alt="" onerror="this.remove()"><span>${m.t}</span>${pr?`<i style="width:${pr}%"></i>`:""}</div>`;
+const row=(t,a,pr)=>a.length?`<h2>${t}</h2><div class="row">${a.map(m=>card(m,pr&&PROG[m.id]?Math.min(100,PROG[m.id].t/PROG[m.id].d*100):0)).join("")}</div>`:"";
+const toast=t=>{const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e.t);e.t=setTimeout(()=>e.classList.remove("on"),1800)};
+const fmt=s=>{s=Math.max(0,~~s||0);return ~~(s/60)+":"+String(s%60).padStart(2,"0")};
+const inList=id=>LIST.includes(id);
+const ICO={home:"M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z",search:"M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z",list:"M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z",me:"M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3 0-8 1.5-8 4v2h16v-2c0-2.5-5-4-8-4z"};
+const NAV=[["home","Home"],["search","Search"],["list","My List"],["me","Profile"]];
+
+/* ===== views ===== */
+function nav(){$("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${tab==k?"on":""}" onclick="go('${k}')"><svg viewBox="0 0 24 24"><path d="${ICO[k]}"/></svg>${l}</button>`).join("")}
+function go(t){tab=t;scrollTo(0,0);render()}
+function chips(){const e=$("#chips");e.style.display=tab=="home"?"flex":"none";e.innerHTML=["All",...GEN].map(g=>`<button class="chip ${flt==g?"on":""}" onclick="flt='${g}';render()">${g}</button>`).join("")}
+function render(){nav();chips();const a=$("#app");
+ if(tab=="home")a.innerHTML=homeV();
+ else if(tab=="search")a.innerHTML=searchV();
+ else if(tab=="list"){const l=C.filter(m=>inList(m.id));a.innerHTML=`<div class="pad"><h2 style="margin-top:0">My List</h2>${l.length?`<div class="grid">${l.map(m=>card(m)).join("")}</div>`:`<div class="empty">Your list is empty.<br>Tap “My List” on any title to save it here.</div>`}</div>`}
+ else a.innerHTML=`<div class="pad"><h2 style="margin-top:0">Profile</h2><div class="empty" style="padding:20px 30px">Saved titles: ${LIST.length}<br>Titles in progress: ${Object.keys(PROG).length}</div><div style="padding:0 14px;display:grid;gap:10px"><button class="btn g" onclick="PROG={};sv('pm_prog',PROG);toast('Watch history cleared');render()">Clear watch history</button><button class="btn g" onclick="LIST=[];sv('pm_list',LIST);toast('My List cleared');render()">Clear My List</button></div><div class="empty">Pika Movie v1.0</div></div>`}
+function homeV(){
+ if(flt!="All"){const l=C.filter(m=>m.g.includes(flt));return `<div class="pad"><h2 style="margin-top:0">${flt}</h2><div class="grid">${l.map(m=>card(m)).join("")}</div></div>`}
+ const h=C[heroI%C.length],cw=C.filter(m=>PROG[m.id]&&PROG[m.id].t>3&&PROG[m.id].t<PROG[m.id].d-5);
+ return `<div class="hero" style="background-image:url('${h.p}'),linear-gradient(160deg,${h.c[0]},${h.c[1]})"><h1>${h.t}</h1><p>${h.g.slice(0,3).join(" • ")}</p><div class="acts"><button class="btn w" onclick="play(${h.id})">▶ Play</button><button class="btn g" onclick="tg(${h.id})">${inList(h.id)?"✓ My List":"＋ My List"}</button><button class="btn g" style="flex:0 0 48px" onclick="openD(${h.id})">ⓘ</button></div></div>`
+ +row("Continue Watching",cw,1)+row("Trending Now",C.slice().sort((a,b)=>b.id%4-a.id%4))
+ +GEN.map(g=>row(g,C.filter(m=>m.g.includes(g)))).join("")+row("My List",C.filter(m=>inList(m.id)))}
+function searchV(){const r=q?C.filter(m=>(m.t+m.g.join(" ")+m.y).toLowerCase().includes(q.toLowerCase())):[];
+ return `<div class="pad"><div class="sb"><svg class="ic" viewBox="0 0 24 24" style="fill:#aaa"><path d="${ICO.search}"/></svg><input id="qi" value="${q}" placeholder="Search movies, genres, years" oninput="q=this.value;res()"></div><div id="res">${resV(r)}</div></div>`}
+const resV=r=>q?(r.length?`<div class="grid">${r.map(m=>card(m)).join("")}</div>`:`<div class="empty">No results for “${q}”.<br>Try a different title or genre.</div>`):`<h2 style="margin-top:0">Top searches</h2><div class="grid">${C.slice(0,6).map(m=>card(m)).join("")}</div>`;
+function res(){$("#res").innerHTML=resV(q?C.filter(m=>(m.t+m.g.join(" ")+m.y).toLowerCase().includes(q.toLowerCase())):[])}
+
+/* ===== list + detail ===== */
+function tg(id){const i=LIST.indexOf(id);i<0?LIST.push(id):LIST.splice(i,1);sv("pm_list",LIST);toast(i<0?"Added to My List":"Removed from My List");if($("#sh").classList.contains("on"))detail(id);render_keep()}
+function render_keep(){const y=scrollY;render();scrollTo(0,y)}
+function openD(id){detail(id);if(!$("#sh").classList.contains("on")){$("#sh").classList.add("on");history.pushState({d:1},"")}}
+function detail(id){const m=C.find(x=>x.id==id),p=PROG[id],more=C.filter(x=>x.id!=id&&x.g.some(g=>m.g.includes(g))).slice(0,6);
+ $("#shc").innerHTML=`<div class="bd" style="background-image:url('${m.p}'),linear-gradient(160deg,${m.c[0]},${m.c[1]})"><button class="x" onclick="history.back()" aria-label="Close">✕</button></div><div class="inf"><h1>${m.t}</h1><div class="meta"><em>98% match</em><span>${m.y}</span><b>${m.r}</b><span>${m.d}</span><b>HD</b></div><button class="btn w" onclick="play(${m.id})">▶ ${p&&p.t>3?"Resume from "+fmt(p.t):"Play"}</button><button class="btn g" onclick="tg(${m.id})">${inList(m.id)?"✓ In My List":"＋ Add to My List"}</button><p>${m.ds}</p><div class="meta">${m.g.join(" • ")}</div><h2 style="margin:18px 0 10px">More like this</h2><div class="grid" style="padding:0">${more.map(x=>card(x)).join("")}</div></div>`;
+ $("#shc").scrollTop=0}
+
+/* ===== player ===== */
+const V=$("#vid");let ht,last=0,sv_t=0;
+const PL='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',PA='<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>';
+function play(id){cur=C.find(m=>m.id==id);$("#pt").textContent=cur.t;$("#err").style.display="none";$("#pl").classList.add("on");history.pushState({p:1},"");
+ V.src=cur.v;V.playbackRate=1;$("#spd").textContent="1x";
+ V.onloadedmetadata=()=>{const p=PROG[id];if(p&&p.t>3&&p.t<V.duration-5)V.currentTime=p.t};
+ V.play().catch(()=>{});
+ const e=$("#pl");(e.requestFullscreen?e.requestFullscreen():Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock("landscape").catch(()=>{})).catch(()=>{});
+ show()}
+function stop(){V.pause();if(cur&&V.duration)save();V.removeAttribute("src");V.load();$("#pl").classList.remove("on");
+ try{document.fullscreenElement&&document.exitFullscreen();screen.orientation&&screen.orientation.unlock()}catch(e){}
+ if($("#sh").classList.contains("on"))detail(cur.id);render_keep()}
+function save(){if(!cur||!V.duration||isNaN(V.duration))return;PROG[cur.id]={t:V.currentTime,d:V.duration};sv("pm_prog",PROG)}
+function tp(){V.paused?V.play():V.pause();show()}
+function sk(s){V.currentTime=Math.min(V.duration||1e9,Math.max(0,V.currentTime+s));fl((s>0?"+":"−")+"10s",s>0);show()}
+function fl(t,r){const e=$("#fl");e.textContent=t;e.style.display="block";e.style.left=r?"auto":"12%";e.style.right=r?"12%":"auto";clearTimeout(e.t);e.t=setTimeout(()=>e.style.display="none",600)}
+function sp(){const a=[1,1.25,1.5,2,.75],n=a[(a.indexOf(V.playbackRate)+1)%a.length];V.playbackRate=n;$("#spd").textContent=n+"x";show()}
+function fs(){const e=$("#pl");document.fullscreenElement?document.exitFullscreen():e.requestFullscreen&&e.requestFullscreen();show()}
+function show(){const c=$("#ctl");c.classList.remove("h");clearTimeout(ht);if(!V.paused)ht=setTimeout(()=>c.classList.add("h"),3000)}
+function zone(id,d){$(id).onclick=()=>{const n=Date.now();if(n-last<320){sk(d);last=0}else{last=n;const c=$("#ctl");c.classList.contains("h")?show():c.classList.add("h")}}}
+zone("#zl",-10);zone("#zr",10);
+V.onplay=()=>{$("#ppb").innerHTML=PA;show()};V.onpause=()=>{$("#ppb").innerHTML=PL;show();save()};
+V.onwaiting=()=>$("#spin").style.display="block";V.oncanplay=V.onplaying=()=>$("#spin").style.display="none";
+V.onerror=()=>{$("#spin").style.display="none";const e=$("#err");e.innerHTML="Can't play this video.<br>Check your connection or the video link.";e.style.display="block"};
+V.onended=()=>{PROG[cur.id]={t:0,d:V.duration};sv("pm_prog",PROG);$("#ppb").innerHTML=PL;show()};
+V.ontimeupdate=()=>{if(!V.duration)return;$("#sk").value=V.currentTime/V.duration*1000;$("#tc").textContent=fmt(V.currentTime);$("#td").textContent=fmt(V.duration);if(Date.now()-sv_t>3000){sv_t=Date.now();save()}};
+$("#sk").oninput=e=>{if(V.duration)V.currentTime=e.target.value/1000*V.duration;show()};
+$("#ppb").innerHTML=PL;
+
+/* ===== system back button, scroll, start ===== */
+addEventListener("popstate",()=>{if($("#pl").classList.contains("on"))stop();else $("#sh").classList.remove("on")});
+$("#sh").addEventListener("click",e=>{if(e.target.id=="sh")history.back()});
+addEventListener("scroll",()=>$("#hd").classList.toggle("s",scrollY>40),{passive:true});
+setInterval(()=>{if(tab=="home"&&flt=="All"&&!$("#sh").classList.contains("on")&&!$("#pl").classList.contains("on")&&scrollY<10){heroI++;render()}},9000);
+render();setTimeout(()=>$("#splash").classList.add("off"),1500);
+</script></body></html>
