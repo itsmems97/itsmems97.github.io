@@ -64,6 +64,10 @@ nav svg,.ic{width:24px;height:24px;fill:currentColor}
 #pl .pbar span{flex:1;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #pl .pframe{flex:1;position:relative;background:#000}
 #pl iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#psrc{display:none;gap:6px;overflow-x:auto;padding:6px 10px;background:#0a0a0a;border-top:1px solid #222}
+#psrc.on{display:flex}
+#psrc button{flex:0 0 auto;font-size:12px;padding:6px 12px;border-radius:14px;border:1px solid #444;color:#ccc;background:#111;font-weight:700}
+#psrc button.on{background:#fff;color:#000;border-color:#fff}
 #toast{position:fixed;left:50%;bottom:calc(84px + var(--sb));transform:translateX(-50%);background:#fff;color:#000;padding:9px 16px;border-radius:20px;font-size:14px;font-weight:700;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none}
 #toast.on{opacity:1}
 </style></head><body>
@@ -76,8 +80,10 @@ nav svg,.ic{width:24px;height:24px;fill:currentColor}
   <div class="pbar">
     <button onclick="stop()" aria-label="Back"><svg class="ic" viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg></button>
     <span id="pt"></span>
+    <button onclick="openExternal()" aria-label="Open externally" style="width:auto;padding:0 12px;height:36px;border-radius:18px;background:#1a1a1a;font-weight:700;font-size:12px">OPEN ↗</button>
   </div>
   <div class="pframe" id="pf"></div>
+  <div id="psrc"></div>
 </div>
 <div id="toast"></div>
 <script>
@@ -89,6 +95,9 @@ const sv = (k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 let LIST = ld("pm_list",[]);
 let PROG = ld("pm_prog",{});
 let tab="home", q="", cur=null, heroI=0, C=[];
+let providers = [];
+let curProv = 0;
+let externalUrl = "";
 const ICO = {home:"M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z",search:"M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z",list:"M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z",me:"M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3 0-8 1.5-8 4v2h16v-2c0-2.5-5-4-8-4z"};
 const NAV = [["home","Home"],["search","Search"],["list","My List"],["me","Profile"]];
 
@@ -224,21 +233,65 @@ async function play(id, type){
   $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#888">Loading player…</div>`;
   try{
     const data = await apiGet("/play?id=" + encodeURIComponent(id) + "&type=" + (type || "movie"));
-    if(!data.ok || !data.url){ $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#f66;padding:20px;text-align:center">Stream not available</div>`; return; }
-    $("#pf").innerHTML = `<iframe src="${esc(data.url)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="origin"></iframe>`;
+    if(!data.ok || !data.url){
+      $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#f66;padding:20px;text-align:center">Stream not available</div>`;
+      return;
+    }
+    providers = data.providers || [{name: "default", url: data.url}];
+    curProv = 0;
+    renderSrcBar();
+    loadProvider(0);
   }catch(e){
     $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#f66;padding:20px;text-align:center">Connection error</div>`;
   }
 }
+
+function renderSrcBar(){
+  const bar = $("#psrc");
+  if(!bar) return;
+  if(providers.length < 2){
+    bar.classList.remove("on");
+    bar.innerHTML = "";
+    return;
+  }
+  bar.classList.add("on");
+  bar.innerHTML = providers.map((p, i) =>
+    `<button class="${i === curProv ? "on" : ""}" onclick="loadProvider(${i})">${esc(p.name)}</button>`
+  ).join("");
+}
+
+function loadProvider(i){
+  curProv = i;
+  externalUrl = providers[i].url;
+  $("#pf").innerHTML =
+    `<iframe src="${esc(externalUrl)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-presentation allow-forms allow-popups"></iframe>`;
+  renderSrcBar();
+}
+
+function openExternal(){
+  if(externalUrl) window.open(externalUrl, "_blank", "noopener,noreferrer");
+}
+
 function playTrailer(key, title){
   $("#pt").textContent = title + " — Trailer";
   $("#pl").classList.add("on");
   history.pushState({p:1}, "");
-  $("#pf").innerHTML = `<iframe src="https://www.youtube.com/embed/${esc(key)}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
+  providers = [];
+  curProv = 0;
+  externalUrl = "https://www.youtube.com/watch?v=" + key;
+  const bar = $("#psrc");
+  if(bar){ bar.classList.remove("on"); bar.innerHTML = ""; }
+  $("#pf").innerHTML = `<iframe src="https://www.youtube.com/embed/${esc(key)}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
 }
+
 function stop(){
   $("#pl").classList.remove("on");
   $("#pf").innerHTML = "";
+  const bar = $("#psrc");
+  if(bar){ bar.classList.remove("on"); bar.innerHTML = ""; }
+  providers = [];
+  curProv = 0;
+  externalUrl = "";
   if(cur && cur.id && PROG[cur.id]) sv("pm_prog", PROG);
 }
 
