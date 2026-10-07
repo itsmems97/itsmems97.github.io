@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="hi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>Pika Movie</title>
+<title>पिका मूवी</title>
 <style>
 :root{--red:#e50914;--bg:#000;--mut:#a8a8a8;--card:#1a1a1a;--sa:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:#fff;font-family:Roboto,system-ui,sans-serif;overflow-x:hidden;padding-bottom:calc(66px + var(--sb));user-select:none}
+body{background:var(--bg);color:#fff;font-family:'Noto Sans Devanagari',Roboto,system-ui,sans-serif;overflow-x:hidden;padding-bottom:calc(66px + var(--sb));user-select:none}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #splash{position:fixed;inset:0;background:#000;z-index:99;display:grid;place-items:center;transition:opacity .5s}
 #splash b{font:900 15vw/1 Impact,'Arial Black',sans-serif;color:var(--red);letter-spacing:.04em;animation:z 1.4s ease-out}
@@ -16,6 +16,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:10;padding:calc(10px + var(--
 header.s{background:#000}
 .top{display:flex;justify-content:space-between;align-items:center}
 .logo{font:900 26px Impact,'Arial Black',sans-serif;color:var(--red);letter-spacing:.03em}
+.langtog{display:flex;gap:0;background:#222;border-radius:20px;overflow:hidden;border:1px solid #444}
+.langtog button{padding:5px 14px;font-size:13px;font-weight:700;color:#aaa}
+.langtog button.on{background:var(--red);color:#fff}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-top:8px;scrollbar-width:none}
 .chip{border:1px solid #fff8;border-radius:20px;padding:5px 14px;font-size:14px;white-space:nowrap}
 .chip.on{background:#fff;color:#000;border-color:#fff}
@@ -72,34 +75,41 @@ nav svg,.ic{width:24px;height:24px;fill:currentColor}
 #toast.on{opacity:1}
 </style></head><body>
 <div id="splash"><b>PIKA MOVIE</b></div>
-<header id="hd"><div class="top"><span class="logo">PIKA MOVIE</span></div><div class="chips" id="chips"></div></header>
+<header id="hd">
+  <div class="top">
+    <span class="logo">PIKA MOVIE</span>
+    <div class="langtog" id="langtog"></div>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div id="sh"><div class="sheet" id="shc"></div></div>
 <div id="pl">
   <div class="pbar">
-    <button onclick="stop()" aria-label="Back"><svg class="ic" viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg></button>
+    <button onclick="stop()" aria-label="वापस"><svg class="ic" viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg></button>
     <span id="pt"></span>
-    <button onclick="openExternal()" aria-label="Open externally" style="width:auto;padding:0 12px;height:36px;border-radius:18px;background:#1a1a1a;font-weight:700;font-size:12px">OPEN ↗</button>
+    <button onclick="openExternal()" aria-label="बाहर खोलें" style="width:auto;padding:0 12px;height:36px;border-radius:18px;background:#e50914;color:#fff;font-weight:700;font-size:12px">बाहर खोलें ↗</button>
   </div>
   <div class="pframe" id="pf"></div>
   <div id="psrc"></div>
 </div>
 <div id="toast"></div>
 <script>
-/* ===== Pika Movie — TMDB Powered ===== */
+/* ===== पिका मूवी — TMDB संचालित ===== */
 const API = "https://144-24-218-100.nip.io/movies-api";
 const $ = s => document.querySelector(s);
 const ld = (k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
 const sv = (k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 let LIST = ld("pm_list",[]);
 let PROG = ld("pm_prog",{});
+let LANG = ld("pm_lang","hi");
 let tab="home", q="", cur=null, heroI=0, C=[];
 let providers = [];
 let curProv = 0;
 let externalUrl = "";
 const ICO = {home:"M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z",search:"M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z",list:"M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z",me:"M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3 0-8 1.5-8 4v2h16v-2c0-2.5-5-4-8-4z"};
-const NAV = [["home","Home"],["search","Search"],["list","My List"],["me","Profile"]];
+const NAV = [["home","होम"],["search","खोज"],["list","मेरी लिस्ट"],["me","प्रोफ़ाइल"]];
 
 function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e.t);e.t=setTimeout(()=>e.classList.remove("on"),1800)}
 const inList = id => LIST.indexOf(id) !== -1;
@@ -111,6 +121,18 @@ async function apiGet(path){
   return r.json();
 }
 
+function langTog(){
+  const el = $("#langtog");
+  if(!el) return;
+  el.innerHTML = `<button class="${LANG==="en"?"on":""}" onclick="setLang('en')">EN</button><button class="${LANG==="hi"?"on":""}" onclick="setLang('hi')">हिं</button>`;
+}
+function setLang(l){
+  LANG = l;
+  sv("pm_lang", LANG);
+  heroI = 0;
+  toast(l === "hi" ? "हिंदी चुनी गई" : "English selected");
+  loadHome();
+}
 function nav(){$("#nav").innerHTML = NAV.map(([k,l])=>`<button class="${tab==k?"on":""}" onclick="go('${k}')"><svg viewBox="0 0 24 24"><path d="${ICO[k]}"/></svg>${l}</button>`).join("")}
 function go(t){tab=t;scrollTo(0,0);render()}
 function chips(){$("#chips").style.display="none"}
@@ -124,60 +146,60 @@ function card(m){
 function row(t, arr){ return arr.length ? `<h2>${t}</h2><div class="row">${arr.map(card).join("")}</div>` : ""; }
 
 function render(){
-  nav(); chips();
+  nav(); langTog(); chips();
   const a = $("#app");
   if(tab=="home") a.innerHTML = homeV();
   else if(tab=="search") a.innerHTML = searchV();
   else if(tab=="list"){
     const l = C.filter(m => inList(m.id));
-    a.innerHTML = `<div class="pad"><h2 style="margin-top:0">My List</h2>${l.length?`<div class="grid">${l.map(card).join("")}</div>`:`<div class="empty">Your list is empty.<br>Tap "My List" on any title to save it here.</div>`}</div>`;
+    a.innerHTML = `<div class="pad"><h2 style="margin-top:0">मेरी लिस्ट</h2>${l.length?`<div class="grid">${l.map(card).join("")}</div>`:`<div class="empty">आपकी लिस्ट खाली है।<br>किसी भी फ़िल्म पर "मेरी लिस्ट" दबाकर उसे यहाँ सेव करें।</div>`}</div>`;
   } else {
-    a.innerHTML = `<div class="pad"><h2 style="margin-top:0">Profile</h2><div class="empty" style="padding:20px 30px">Saved titles: ${LIST.length}<br>Titles in progress: ${Object.keys(PROG).length}</div><div style="padding:0 14px;display:grid;gap:10px"><button class="btn g" onclick="PROG={};sv('pm_prog',PROG);toast('History cleared');render()">Clear watch history</button><button class="btn g" onclick="LIST=[];sv('pm_list',LIST);toast('My List cleared');render()">Clear My List</button></div><div class="empty">Pika Movie v2.0 — TMDB</div></div>`;
+    a.innerHTML = `<div class="pad"><h2 style="margin-top:0">प्रोफ़ाइल</h2><div class="empty" style="padding:20px 30px">सेव की गई फ़िल्में: ${LIST.length}<br>चल रही फ़िल्में: ${Object.keys(PROG).length}</div><div style="padding:0 14px;display:grid;gap:10px"><button class="btn g" onclick="PROG={};sv('pm_prog',PROG);toast('इतिहास मिट गया');render()">देखने का इतिहास मिटाएँ</button><button class="btn g" onclick="LIST=[];sv('pm_list',LIST);toast('लिस्ट मिट गई');render()">मेरी लिस्ट मिटाएँ</button></div><div class="empty">पिका मूवी v2.0 — TMDB</div></div>`;
   }
 }
 function homeV(){
-  if(!C.length) return `<div class="pad"><div class="empty">Loading movies…</div></div>`;
+  if(!C.length) return `<div class="pad"><div class="empty">फ़िल्में लोड हो रही हैं…</div></div>`;
   const h = C[heroI % C.length];
-  if(!h) return `<div class="pad"><div class="empty">No content</div></div>`;
+  if(!h) return `<div class="pad"><div class="empty">कोई कंटेंट नहीं</div></div>`;
   const heroImg = h.backdrop || h.poster;
   const meta = [h.year, h.type].filter(Boolean).join(" • ");
   return `<div class="hero" style="background-image:url('${esc(heroImg)}')">
     <h1>${esc(h.title)}</h1>
     <p>${esc(meta)}</p>
     <div class="acts">
-      <button class="btn w" onclick="play('${esc(h.id)}','${esc(h.mediaType||'movie')}')">▶ Play</button>
-      <button class="btn g" onclick="tg('${esc(h.id)}')">${inList(h.id)?"✓ My List":"＋ My List"}</button>
+      <button class="btn w" onclick="play('${esc(h.id)}','${esc(h.mediaType||'movie')}')">▶ चलाएँ</button>
+      <button class="btn g" onclick="tg('${esc(h.id)}')">${inList(h.id)?"✓ लिस्ट में है":"＋ मेरी लिस्ट"}</button>
       <button class="btn g" style="flex:0 0 48px" onclick="openD('${esc(h.id)}','${esc(h.mediaType||'movie')}')">ⓘ</button>
     </div>
   </div>`
-  + row("Trending Now", C.slice(0, 20))
-  + row("More from TMDB", C.slice(20, 60));
+  + row(LANG==="hi" ? "ट्रेंडिंग" : "Trending Now", C.slice(0, 20))
+  + row(LANG==="hi" ? "और फ़िल्में" : "More from TMDB", C.slice(20, 60));
 }
 function searchV(){
   return `<div class="pad"><div class="sb">
     <svg class="ic" viewBox="0 0 24 24" style="fill:#aaa"><path d="${ICO.search}"/></svg>
-    <input id="qi" value="${esc(q)}" placeholder="Search movies, TV shows…" oninput="onSearch(this.value)">
+    <input id="qi" value="${esc(q)}" placeholder="फ़िल्में, टीवी शो खोजें…" oninput="onSearch(this.value)">
   </div><div id="res">${resV(C)}</div></div>`;
 }
 function resV(arr){
-  if(!q) return `<h2 style="margin-top:0">Trending</h2><div class="grid">${arr.slice(0,12).map(card).join("")}</div>`;
-  return arr.length ? `<div class="grid">${arr.map(card).join("")}</div>` : `<div class="empty">No results for "${esc(q)}".<br>Try a different title.</div>`;
+  if(!q) return `<h2 style="margin-top:0">ट्रेंडिंग</h2><div class="grid">${arr.slice(0,12).map(card).join("")}</div>`;
+  return arr.length ? `<div class="grid">${arr.map(card).join("")}</div>` : `<div class="empty">"${esc(q)}" के लिए कोई परिणाम नहीं।<br>कोई और नाम आज़माएँ।</div>`;
 }
 let searchTimer = null;
 async function onSearch(v){
   q = v;
   clearTimeout(searchTimer);
   const r = $("#res");
-  if(r) r.innerHTML = `<div class="empty">Searching…</div>`;
+  if(r) r.innerHTML = `<div class="empty">खोज रहे हैं…</div>`;
   searchTimer = setTimeout(async ()=>{
     try{
-      const data = await apiGet("/search?q=" + encodeURIComponent(q));
+      const data = await apiGet("/search?q=" + encodeURIComponent(q) + "&lang=" + LANG);
       C = data.items || [];
       const rr = $("#res");
       if(rr) rr.innerHTML = resV(C);
     }catch(e){
       const rr = $("#res");
-      if(rr) rr.innerHTML = `<div class="empty">Search failed</div>`;
+      if(rr) rr.innerHTML = `<div class="empty">खोज विफल</div>`;
     }
   }, 400);
 }
@@ -186,17 +208,17 @@ function tg(id){
   const i = LIST.indexOf(id);
   if(i < 0) LIST.push(id); else LIST.splice(i, 1);
   sv("pm_list", LIST);
-  toast(i < 0 ? "Added to My List" : "Removed");
+  toast(i < 0 ? "लिस्ट में जोड़ा गया" : "हटाया गया");
   const y = scrollY; render(); scrollTo(0, y);
 }
 
 async function openD(id, type){
   $("#sh").classList.add("on");
   history.pushState({d:1}, "");
-  $("#shc").innerHTML = `<div class="inf" style="padding-top:60px"><div class="empty">Loading…</div></div>`;
+  $("#shc").innerHTML = `<div class="inf" style="padding-top:60px"><div class="empty">लोड हो रहा है…</div></div>`;
   try{
-    const data = await apiGet("/detail?id=" + encodeURIComponent(id) + "&type=" + (type || "movie"));
-    if(!data.ok || !data.item){ $("#shc").innerHTML = `<div class="inf" style="padding-top:60px"><div class="empty">Could not load</div></div>`; return; }
+    const data = await apiGet("/detail?id=" + encodeURIComponent(id) + "&type=" + (type || "movie") + "&lang=" + LANG);
+    if(!data.ok || !data.item){ $("#shc").innerHTML = `<div class="inf" style="padding-top:60px"><div class="empty">लोड नहीं हो सका</div></div>`; return; }
     const m = data.item;
     m.mediaType = type || m.mediaType || "movie";
     const p = PROG[m.id];
@@ -204,7 +226,7 @@ async function openD(id, type){
     const meta = [m.year, m.type, m.duration].filter(Boolean);
     $("#shc").innerHTML = `
       <div class="bd" style="background-image:url('${esc(bg)}')">
-        <button class="x" onclick="history.back()" aria-label="Close">✕</button>
+        <button class="x" onclick="history.back()" aria-label="बंद करें">✕</button>
       </div>
       <div class="inf">
         <h1>${esc(m.title)}</h1>
@@ -213,28 +235,28 @@ async function openD(id, type){
           ${meta.map(x => `<span>${esc(x)}</span>`).join("")}
           <b>HD</b>
         </div>
-        <button class="btn w" onclick="play('${esc(m.id)}','${esc(m.mediaType)}')">▶ ${p && p.t > 3 ? "Resume" : "Play"}</button>
-        <button class="btn g" onclick="tg('${esc(m.id)}')">${inList(m.id) ? "✓ In My List" : "＋ Add to My List"}</button>
-        ${m.trailerKey ? `<button class="btn g" onclick="playTrailer('${esc(m.trailerKey)}','${esc(m.title)}')">▶ Watch Trailer</button>` : ""}
+        <button class="btn w" onclick="play('${esc(m.id)}','${esc(m.mediaType)}')">▶ ${p && p.t > 3 ? "जारी रखें" : "चलाएँ"}</button>
+        <button class="btn g" onclick="tg('${esc(m.id)}')">${inList(m.id) ? "✓ लिस्ट में है" : "＋ मेरी लिस्ट में जोड़ें"}</button>
+        ${m.trailerKey ? `<button class="btn g" onclick="playTrailer('${esc(m.trailerKey)}','${esc(m.title)}')">▶ ट्रेलर देखें</button>` : ""}
         ${m.description ? `<p>${esc(m.description)}</p>` : ""}
         ${m.genres && m.genres.length ? `<div class="meta">${m.genres.map(g => `<span>${esc(g)}</span>`).join("")}</div>` : ""}
       </div>`;
     $("#shc").scrollTop = 0;
   }catch(e){
-    $("#shc").innerHTML = `<div class="inf" style="padding-top:60px"><div class="empty">Connection error</div></div>`;
+    $("#shc").innerHTML = `<div class="inf" style="padding-top:60px"><div class="empty">कनेक्शन त्रुटि</div></div>`;
   }
 }
 
 async function play(id, type){
-  cur = C.find(x => x.id === id) || {id, title: "Movie", mediaType: type};
-  $("#pt").textContent = cur.title || "Playing";
+  cur = C.find(x => x.id === id) || {id, title: "फ़िल्म", mediaType: type};
+  $("#pt").textContent = cur.title || "चल रहा है";
   $("#pl").classList.add("on");
   history.pushState({p:1}, "");
-  $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#888">Loading player…</div>`;
+  $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#888">प्लेयर लोड हो रहा है…</div>`;
   try{
     const data = await apiGet("/play?id=" + encodeURIComponent(id) + "&type=" + (type || "movie"));
     if(!data.ok || !data.url){
-      $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#f66;padding:20px;text-align:center">Stream not available</div>`;
+      $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#f66;padding:20px;text-align:center">स्ट्रीम उपलब्ध नहीं</div>`;
       return;
     }
     providers = data.providers || [{name: "default", url: data.url}];
@@ -242,7 +264,7 @@ async function play(id, type){
     renderSrcBar();
     loadProvider(0);
   }catch(e){
-    $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#f66;padding:20px;text-align:center">Connection error</div>`;
+    $("#pf").innerHTML = `<div style="display:grid;place-items:center;height:100%;color:#f66;padding:20px;text-align:center">कनेक्शन त्रुटि</div>`;
   }
 }
 
@@ -273,7 +295,7 @@ function openExternal(){
 }
 
 function playTrailer(key, title){
-  $("#pt").textContent = title + " — Trailer";
+  $("#pt").textContent = title + " — ट्रेलर";
   $("#pl").classList.add("on");
   history.pushState({p:1}, "");
   providers = [];
@@ -295,6 +317,14 @@ function stop(){
   if(cur && cur.id && PROG[cur.id]) sv("pm_prog", PROG);
 }
 
+async function loadHome(){
+  try{
+    const data = await apiGet("/home?lang=" + LANG);
+    C = data.items || [];
+  }catch(e){ C = []; }
+  render();
+}
+
 addEventListener("popstate", ()=>{ if($("#pl").classList.contains("on")) stop(); else $("#sh").classList.remove("on"); });
 $("#sh").addEventListener("click", e => { if(e.target.id == "sh") history.back(); });
 addEventListener("scroll", ()=> $("#hd").classList.toggle("s", scrollY > 40), {passive:true});
@@ -305,11 +335,7 @@ setInterval(()=>{
 }, 8000);
 
 (async function(){
-  try{
-    const data = await apiGet("/home");
-    C = data.items || [];
-  }catch(e){ C = []; }
-  render();
+  await loadHome();
   setTimeout(()=> $("#splash").classList.add("off"), 1200);
 })();
 </script></body></html>
