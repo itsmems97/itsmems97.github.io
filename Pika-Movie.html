@@ -572,7 +572,7 @@ html[data-theme="dark"] .sheet-hero::after { background: linear-gradient(to top,
 .player-loading p { font-size: 13px; opacity: 0.7; letter-spacing: 1px; }
 .player-bottom { display: flex; align-items: center; gap: 10px; padding: 10px 12px calc(12px + var(--safe-bottom)); background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0)); z-index: 3; position: relative; }
 .provider-row { flex: 1; display: flex; gap: 8px; overflow-x: auto; min-width: 0; padding: 2px; }
-.provider-row .chip { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.18); color: #fff; }
+.provider-row .chip { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.18); color: #fff; flex: 0 0 auto; min-width: 76px; justify-content: center; }
 .player-bottom .icon-btn { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: #fff; }
 .player-top .icon-btn { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: #fff; }
 #ep-drawer { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; max-height: 72%; overflow-y: auto; padding: 20px 16px calc(24px + var(--safe-bottom)); border-radius: var(--radius-xl) var(--radius-xl) 0 0; background: rgba(20,20,22,0.82); -webkit-backdrop-filter: blur(40px) saturate(190%); backdrop-filter: blur(40px) saturate(190%); border-top: 1px solid var(--glass-border); transform: translateY(105%); transition: transform 0.6s cubic-bezier(0.34, 1.35, 0.64, 1); color: #fff; }
@@ -1913,6 +1913,8 @@ function renderEpisodeSection(host, item, season, inPlayer) {
 /* ============================================
    SECTION 13 — VIDEO PLAYER
    ============================================ */
+let playerHistoryPushed = false;
+
 function openPlayer(item, opts = {}) {
   if (!item) return;
   const p = state.player;
@@ -1932,8 +1934,16 @@ $('#player-pip').classList.toggle('hidden', !!opts.trailer);
   $('#ep-drawer').classList.remove('open');
   closeSheet(true);
   $('#player').classList.add('open');
-  document.body.classList.add('no-scroll');
-  stopHeroTimer();
+if (!playerHistoryPushed) {
+  try {
+    history.pushState({ modal: 'player' }, '', location.hash || '#home');
+    playerHistoryPushed = true;
+  } catch (err) {
+    playerHistoryPushed = false;
+  }
+}
+document.body.classList.add('no-scroll');
+stopHeroTimer();
   if (opts.trailer) { loadFrame(`https://www.youtube.com/embed/${encodeURIComponent(item.trailerKey)}?autoplay=1&rel=0&playsinline=1`); return; }
   loadFrame(embedUrl(item, p.season, p.episode));
   recordWatch(item, true);
@@ -1964,8 +1974,7 @@ function loadFrame(url) {
   ifr.title = state.player.item ? state.player.item.title : 'Video';
   ifr.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
   ifr.allowFullscreen = true;
-ifr.setAttribute('referrerpolicy', 'no-referrer');
-ifr.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+  ifr.setAttribute('referrerpolicy', 'no-referrer');
   ifr.addEventListener('load', () => {
     state.player.loadedOk = true;
     if (state.player.loadTimer) clearTimeout(state.player.loadTimer);
@@ -2083,8 +2092,18 @@ function recordWatch(item, initial) {
   persistCacheFor([item.id]);
 }
 
-function closePlayer() {
+function closePlayer(fromPopstate) {
   const p = state.player;
+  const isOpen = $('#player').classList.contains('open');
+  if (!isOpen && !fromPopstate) return;
+
+  /* If closing from UI and we pushed history, go back (popstate will close it) */
+  if (!fromPopstate && playerHistoryPushed) {
+    playerHistoryPushed = false;
+    try { history.back(); return; } catch (err) { /* fall through */ }
+  }
+
+  playerHistoryPushed = false;
   if (p.timer) { clearInterval(p.timer); p.timer = null; }
   if (p.loadTimer) { clearTimeout(p.loadTimer); p.loadTimer = null; }
   hidePlayerError();
@@ -2348,10 +2367,17 @@ $('#player-pip').addEventListener('click', togglePip);
   });
 
   window.addEventListener('popstate', () => {
-    if ($('#player').classList.contains('open')) closePlayer();
-    else if ($('#sheet').classList.contains('open')) closeSheet();
-    else { const h = location.hash.replace('#', ''); if (SCREENS.includes(h)) navigate(h, { silent: true }); }
-  });
+  if ($('#player').classList.contains('open')) {
+    closePlayer(true);
+    return;
+  }
+  if ($('#sheet').classList.contains('open')) {
+    closeSheet();
+    return;
+  }
+  const h = location.hash.replace('#', '');
+  if (SCREENS.includes(h)) navigate(h, { silent: true });
+});
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) stopHeroTimer(); else if (state.screen === 'home' && state.homeLoaded) startHeroTimer();
