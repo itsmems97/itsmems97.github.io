@@ -995,9 +995,10 @@ async function fetchDetail(item) {
 async function fetchPlay(item) {
   return apiGet('/play', { id: item.id, type: item.type }, { cache: true });
 }
-function embedUrl(item, season, episode) {
+function embedUrl(item, season, episode, providerIdx) {
   let u = `${CONFIG.API_BASE}/proxy/embed?id=${encodeURIComponent(item.id)}&type=${item.type}`;
   if (item.type === 'tv') u += `&season=${season || 1}&episode=${episode || 1}`;
+  u += `&provider=${providerIdx || 0}`;
   return u;
 }
 
@@ -1963,7 +1964,8 @@ function loadFrame(url) {
   ifr.title = state.player.item ? state.player.item.title : 'Video';
   ifr.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
   ifr.allowFullscreen = true;
-  ifr.setAttribute('referrerpolicy', 'no-referrer');
+ifr.setAttribute('referrerpolicy', 'no-referrer');
+ifr.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
   ifr.addEventListener('load', () => {
     state.player.loadedOk = true;
     if (state.player.loadTimer) clearTimeout(state.player.loadTimer);
@@ -2041,8 +2043,12 @@ function renderProviders() {
 function switchProvider(index) {
   const p = state.player;
   p.currentProvider = index;
-  if (index === -1) loadFrame(embedUrl(p.item, p.season, p.episode));
-  else if (p.providers[index]) loadFrame(withEpisode(p.providers[index].url, p.item, p.season, p.episode));
+  if (index === -1) {
+    loadFrame(embedUrl(p.item, p.season, p.episode, 0));
+  } else {
+    /* Use our proxy/embed with provider index — keeps backend hidden */
+    loadFrame(embedUrl(p.item, p.season, p.episode, index));
+  }
   renderProviders();
 }
 function withEpisode(url, item, season, episode) {
@@ -2096,15 +2102,50 @@ function closePlayer() {
   if (state.screen === 'profile') renderProfileScreen();
 }
 
-function toggleFullscreen() {
+async function toggleFullscreen() {
   const el = $('#player');
+  const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+
   try {
-    if (document.fullscreenElement || document.webkitFullscreenElement) {
-      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    if (isFullscreen) {
+      /* Exit fullscreen */
+      try {
+        if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+          screen.orientation.unlock();
+        }
+      } catch (err) { /* ignore */ }
+      const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+      if (exit) await exit.call(document);
     } else {
-      (el.requestFullscreen || el.webkitRequestFullscreen || function () { throw new Error('unsupported'); }).call(el);
+      /* Enter fullscreen */
+      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+      if (!req) throw new Error('unsupported');
+      await req.call(el);
+
+      /* Force landscape orientation (works on Android Chrome, most Android browsers) */
+      setTimeout(async () => {
+        try {
+          if (screen.orientation && typeof screen.orientation.lock === 'function') {
+            await screen.orientation.lock('landscape');
+          } else if (screen.lockOrientation) {
+            screen.lockOrientation('landscape');
+          } else if (screen.mozLockOrientation) {
+            screen.mozLockOrientation('landscape');
+          } else if (screen.msLockOrientation) {
+            screen.msLockOrientation('landscape');
+          } else {
+            /* iOS Safari or unsupported browser — ask user manually */
+            toast('Please rotate your device to landscape', 'info');
+          }
+        } catch (err) {
+          /* Browser ne lock reject kiya — user ko manually rotate karne bolo */
+          toast('Please rotate your device to landscape', 'info');
+        }
+      }, 350);
     }
-  } catch (err) { toast('Fullscreen is not supported here', 'info'); }
+  } catch (err) {
+    toast('Fullscreen is not supported here', 'info');
+  }
 }
 
 async function togglePip() {
