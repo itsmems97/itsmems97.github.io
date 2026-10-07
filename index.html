@@ -1796,6 +1796,97 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
   font-size:13px; font-weight:700; cursor:pointer;
   box-shadow:0 12px 24px -12px rgba(255,152,0,.7);
 }
+/* ============ ENTERTAINMENT POPUP (iOS Liquid Glass) ============ */
+#ent-overlay{
+  position:fixed; inset:0; z-index:230;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(22px) saturate(180%);
+  -webkit-backdrop-filter:blur(22px) saturate(180%);
+  display:flex; align-items:center; justify-content:center;
+  padding:24px;
+  animation:entFadeIn .28s ease-out;
+}
+@keyframes entFadeIn{ from{opacity:0} to{opacity:1} }
+
+.ent-card{
+  position:relative;
+  width:100%; max-width:340px;
+  border-radius:32px;
+  padding:26px 20px 18px;
+  background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:
+    0 30px 70px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.35),
+    inset 0 -1px 0 rgba(255,255,255,.08);
+  backdrop-filter:blur(40px) saturate(190%);
+  -webkit-backdrop-filter:blur(40px) saturate(190%);
+  overflow:hidden;
+  color:#fff;
+  animation:entPop .48s cubic-bezier(.22,1.4,.36,1);
+}
+@keyframes entPop{
+  from{ opacity:0; transform:scale(.86) translateY(24px); }
+  to  { opacity:1; transform:scale(1) translateY(0); }
+}
+.ent-card::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255,198,26,.22), transparent 55%),
+    radial-gradient(circle at 0% 100%, rgba(51,224,193,.18), transparent 55%);
+}
+.ent-title{ font-size:20px; font-weight:800; text-align:center; margin:0 0 4px; letter-spacing:-.01em; position:relative; z-index:2; }
+.ent-sub{ font-size:12.5px; color:rgba(255,255,255,.62); text-align:center; margin:0 0 20px; position:relative; z-index:2; }
+
+.ent-btn{
+  width:100%;
+  display:flex; align-items:center; gap:14px;
+  padding:14px 15px;
+  margin-bottom:10px;
+  border-radius:20px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.20);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.30),
+    0 8px 20px rgba(0,0,0,.20);
+  color:#fff;
+  text-align:left;
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  transition:transform .15s cubic-bezier(.34,1.56,.64,1), background .2s;
+  font-family:inherit;
+  cursor:pointer;
+  position:relative; z-index:2;
+  -webkit-tap-highlight-color:transparent;
+}
+.ent-btn:active{ transform:scale(.96); background:rgba(255,255,255,.22); }
+.ent-btn-icon{
+  width:48px; height:48px; border-radius:16px;
+  display:grid; place-items:center;
+  flex-shrink:0;
+  box-shadow:0 8px 18px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.5);
+}
+.ent-btn-icon.music{ background:linear-gradient(135deg,#FFC61A,#FF8A00); color:#171200; }
+.ent-btn-icon.movies{ background:linear-gradient(135deg,#7a5df0,#5b3fd6); color:#fff; }
+.ent-btn-icon svg{ width:22px; height:22px; }
+.ent-btn-text{ flex:1; min-width:0; }
+.ent-btn-text b{ display:block; font-size:15px; font-weight:700; letter-spacing:-.01em; }
+.ent-btn-text small{ display:block; font-size:11.5px; color:rgba(255,255,255,.6); margin-top:2px; }
+.ent-btn-arrow{ color:rgba(255,255,255,.5); flex-shrink:0; }
+
+.ent-close{
+  width:100%; margin-top:6px; padding:13px;
+  border-radius:18px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.82);
+  font-size:14px; font-weight:700;
+  font-family:inherit;
+  position:relative; z-index:2;
+  cursor:pointer;
+  transition:transform .15s, background .18s;
+}
+.ent-close:active{ background:rgba(255,255,255,.14); transform:scale(.97); }
 </style>
 </head>
 <body>
@@ -2383,7 +2474,7 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
     <button class="nav-btn active" data-page="home-page"><svg><use href="#ic-home"/></svg>Home</button>
     <button class="nav-btn" data-page="channels-page"><svg><use href="#ic-channel"/></svg>Channels</button>
     <button class="nav-btn" data-page="users-page"><svg><use href="#ic-users"/></svg>Users</button>
-    <button class="nav-btn" data-page="__music"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Music</button>
+    <button class="nav-btn" data-page="__entertainment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>Entertainment</button>
   <button class="nav-btn" data-page="upload-page"><svg><use href="#ic-upload"/></svg>Upload</button>
   <button class="nav-btn" data-page="profile-page"><svg><use href="#ic-user"/></svg>Profile</button>
 </nav>
@@ -4599,7 +4690,10 @@ function initTheme(){
     });
   }
 }
-function openMusicPlayer(){
+function openMusicPlayer(url, title){
+  const embedUrl = url || "https://144-24-218-100.nip.io/music/music.html";
+  const headerTitle = title || "Pika Music";
+
   let overlay = document.getElementById("music-overlay");
   if(!overlay){
     document.body.insertAdjacentHTML("beforeend", `
@@ -4608,7 +4702,7 @@ function openMusicPlayer(){
           <button id="music-close-btn" type="button" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text);background:transparent;border:none;">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
-          <div style="flex:1;text-align:center;font-weight:700;font-size:15px;color:var(--text);">Pika Music</div>
+          <div id="music-title" style="flex:1;text-align:center;font-weight:700;font-size:15px;color:var(--text);">Pika Music</div>
           <div style="width:44px;"></div>
         </div>
         <iframe id="music-iframe" src="about:blank" allow="autoplay; encrypted-media; fullscreen; microphone" style="flex:1;width:100%;border:none;background:#0B0E14;"></iframe>
@@ -4617,11 +4711,16 @@ function openMusicPlayer(){
     overlay = document.getElementById("music-overlay");
     document.getElementById("music-close-btn").addEventListener("click", closeMusicPlayer);
   }
+
   const iframe = document.getElementById("music-iframe");
-  if(iframe.dataset.loaded !== "1"){
-    iframe.src = "https://144-24-218-100.nip.io/music/music.html";
-    iframe.dataset.loaded = "1";
+  const titleEl = document.getElementById("music-title");
+
+  if(iframe.dataset.currentUrl !== embedUrl){
+    iframe.src = embedUrl;
+    iframe.dataset.currentUrl = embedUrl;
   }
+  if(titleEl) titleEl.textContent = headerTitle;
+
   overlay.style.display = "flex";
   document.body.style.overflow = "hidden";
   try{ history.pushState({ music: true }, ""); }catch(e){}
@@ -4631,12 +4730,96 @@ function closeMusicPlayer(){
   if(overlay) overlay.style.display = "none";
   document.body.style.overflow = "";
 }
+function openEntertainmentPopup(){
+  if(document.getElementById("ent-overlay")) return;
+
+  // ✅ Scroll lock — background freeze karo
+  const _entScrollY = window.scrollY || window.pageYOffset || 0;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${_entScrollY}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
+  document.body.style.overflow = "hidden";
+  document.documentElement.style.overflow = "hidden";
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="ent-overlay">
+      <div class="ent-card">
+        <h3 class="ent-title">Entertainment</h3>
+        <p class="ent-sub">Choose what you want to enjoy</p>
+
+        <button class="ent-btn" id="ent-music">
+          <div class="ent-btn-icon music">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </svg>
+          </div>
+          <div class="ent-btn-text">
+            <b>Music &amp; Podcast</b>
+            <small>Stream songs, playlists &amp; podcasts</small>
+          </div>
+          <svg class="ent-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 6l6 6-6 6"/>
+          </svg>
+        </button>
+
+        <button class="ent-btn" id="ent-movies">
+          <div class="ent-btn-icon movies">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="M7 4v16M17 4v16M2 9h5M2 15h5M17 9h5M17 15h5"/>
+            </svg>
+          </div>
+          <div class="ent-btn-text">
+            <b>Movies &amp; Series</b>
+            <small>Watch the latest films &amp; shows</small>
+          </div>
+          <svg class="ent-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 6l6 6-6 6"/>
+          </svg>
+        </button>
+
+        <button class="ent-close" id="ent-close">Cancel</button>
+      </div>
+    </div>
+  `);
+
+  const ov = document.getElementById("ent-overlay");
+  const close = ()=>{
+    // ✅ Scroll unlock — body ko wapas normal karo
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
+    window.scrollTo(0, _entScrollY);
+
+    ov.style.animation = "entFadeIn .22s ease-in reverse";
+    setTimeout(()=> ov.remove(), 200);
+  };
+
+  document.getElementById("ent-close").addEventListener("click", close);
+  ov.addEventListener("click", e=>{ if(e.target === ov) close(); });
+
+  document.getElementById("ent-music").addEventListener("click", ()=>{
+    close();
+    setTimeout(()=> openMusicPlayer("https://144-24-218-100.nip.io/music/music.html", "Pika Music"), 130);
+  });
+
+  document.getElementById("ent-movies").addEventListener("click", ()=>{
+    close();
+    setTimeout(()=> openMusicPlayer("https://itsmems97.github.io/Pika-Movie.html", "Movies & Series"), 130);
+  });
+}
 function initNav(){
   $$(".nav-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const target = btn.dataset.page;
-if(target === "__music"){
-  openMusicPlayer();
+if(target === "__entertainment"){
+  openEntertainmentPopup();
   return;
 }
 if(target === "__categories"){ openCategoriesSheet(); return; }
@@ -10118,7 +10301,11 @@ async function discSearchAndAppend(q){
   let backExitTimer = null;
 
   function closeTopUI(){
-    // 1. Sheets / dialogs (chat, app detail, user, comments, edit, etc.)
+  // 0. Entertainment popup
+  const entOv = document.getElementById('ent-overlay');
+  if(entOv){ entOv.remove(); return true; }
+
+  // 1. Sheets / dialogs (chat, app detail, user, comments, edit, etc.)
     const sheets = document.querySelectorAll('.sheet-backdrop');
     if(sheets.length){
       sheets[sheets.length - 1].remove();
