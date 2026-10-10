@@ -2735,9 +2735,15 @@ async function ghGetSecrets(force){
   }
   const snap = await getDoc(doc(db, "secrets", "github"));
   if(!snap.exists()) throw new Error("GitHub upload config nahi mila. Firestore mein secrets/github doc banao (token, owner, repo, release).");
-  const d = snap.data();
+  const raw = snap.data();
+  // Trim everything — whitespace/newlines se upload fail hota hai
+  const d = {
+    token:   String(raw.token   || "").trim(),
+    owner:   String(raw.owner   || "").trim(),
+    repo:    String(raw.repo    || "").trim(),
+    release: String(raw.release || "Pika-Data").trim()
+  };
   if(!d.token || !d.owner || !d.repo) throw new Error("secrets/github mein token / owner / repo missing hai");
-  if(!d.release) d.release = "Pika-Data";
   GH_CACHE.secrets = d;
   GH_CACHE.secretsAt = Date.now();
   return d;
@@ -2806,15 +2812,19 @@ async function ghGetOrCreateRelease(secrets, tag){
   return await ghCreateRelease(secrets, tag);
 }
 
-function ghUploadAssetXHR(secrets, releaseId, assetName, file, onProgress){
+function ghUploadAssetXHR(secrets, releaseId, assetName, file, onProgress, opts){
+  opts = opts || {};
   return new Promise((resolve, reject)=>{
     const url = `https://uploads.github.com/repos/${secrets.owner}/${secrets.repo}/releases/${releaseId}/assets?name=${encodeURIComponent(assetName)}`;
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
+    xhr.open("POST", url, true);
     xhr.setRequestHeader("Authorization", "token " + secrets.token);
     xhr.setRequestHeader("Accept", "application/vnd.github+json");
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-    xhr.timeout = 30 * 60 * 1000;
+    // Content-Type optional — kuch mobile browsers preflight fail karte hain jab ye set ho
+    if(!opts.noContentType && file.type){
+      xhr.setRequestHeader("Content-Type", file.type);
+    }
+    xhr.timeout = 60 * 60 * 1000; // 60 minutes
     xhr.upload.onprogress = e=>{
       if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
     };
@@ -2823,10 +2833,30 @@ function ghUploadAssetXHR(secrets, releaseId, assetName, file, onProgress){
       try{ parsed = JSON.parse(xhr.responseText); }catch(_){}
       resolve({ status: xhr.status, data: parsed, raw: xhr.responseText || "" });
     };
-    xhr.onerror = ()=> reject(new Error("Network error reaching GitHub uploads"));
-    xhr.ontimeout = ()=> reject(new Error("GitHub upload timed out"));
-    xhr.send(file);
+    xhr.onerror = ()=>{
+      const err = new Error("NETWORK_ERROR");
+      err.code = "NETWORK_ERROR";
+      reject(err);
+    };
+    xhr.ontimeout = ()=> reject(new Error("GitHub upload timed out (60 minutes)"));
+    xhr.onabort = ()=> reject(new Error("Upload aborted"));
+    try{ xhr.send(file); }
+    catch(e){ reject(e); }
   });
+}
+
+async function ghUploadViaFetch(secrets, releaseId, assetName, file){
+  const url = `https://uploads.github.com/repos/${secrets.owner}/${secrets.repo}/releases/${releaseId}/assets?name=${encodeURIComponent(assetName)}`;
+  const headers = {
+    "Authorization": "token " + secrets.token,
+    "Accept": "application/vnd.github+json"
+  };
+  if(file.type) headers["Content-Type"] = file.type;
+  const res = await fetch(url, { method: "POST", headers, body: file });
+  const raw = await res.text().catch(()=> "");
+  let data = null;
+  try{ data = JSON.parse(raw); }catch(_){}
+  return { status: res.status, data, raw };
 }
 
 function ghTagFor(baseTag, n){
@@ -2843,22 +2873,46 @@ async function ghUploadWithRotation(secrets, file, baseAssetName, onProgress){
     catch(e){ lastErr = e; continue; }
 
     let assetName = baseAssetName;
-    for(let attempt = 0; attempt < 2; attempt++){
-      let r;
-      try{ r = await ghUploadAssetXHR(secrets, rel.id, assetName, file, onProgress); }
-      catch(e){ lastErr = e; break; }
+    let success = false;
 
+    // Try strategies: 1) XHR+CT, 2) XHR no CT, 3) fetch
+    const strategies = [
+      { name: "XHR+ContentType", fn: ()=> ghUploadAssetXHR(secrets, rel.id, assetName, file, onProgress, {}) },
+      { name: "XHR-no-ContentType", fn: ()=> ghUploadAssetXHR(secrets, rel.id, assetName, file, onProgress, { noContentType: true }) },
+      { name: "fetch", fn: ()=> ghUploadViaFetch(secrets, rel.id, assetName, file) }
+    ];
+
+    for(let s = 0; s < strategies.length && !success; s++){
+      let r;
+      try{
+        r = await strategies[s].fn();
+      }catch(e){
+        if(e && e.code === "NETWORK_ERROR"){
+          console.warn("GitHub upload strategy failed:", strategies[s].name);
+          // Wait, then try next strategy
+          await new Promise(res => setTimeout(res, 1200));
+          lastErr = new Error("Network error (" + strategies[s].name + ")");
+          continue;
+        }
+        lastErr = e;
+        break;
+      }
+
+      // Got a response (any HTTP status)
       if(r.status >= 200 && r.status < 300 && r.data && r.data.browser_download_url){
         if(rel.assets) rel.assets.push({ name: r.data.name, id: r.data.id });
+        onProgress && onProgress(100);
         return { tag, release: rel, asset: r.data };
       }
       if(r.status === 422){
         const isDuplicate = /already_exists|already exists/i.test(r.raw || "");
-        if(isDuplicate && attempt === 0){
+        if(isDuplicate){
           const dot = baseAssetName.lastIndexOf(".");
           const stem = dot > 0 ? baseAssetName.slice(0, dot) : baseAssetName;
           const ext  = dot > 0 ? baseAssetName.slice(dot) : "";
           assetName = `${stem}_${Date.now()}${ext}`;
+          // Retry same strategy with new name
+          s--;
           continue;
         }
         lastErr = new Error("Release asset limit reached on " + tag + " - rotating");
@@ -2869,8 +2923,10 @@ async function ghUploadWithRotation(secrets, file, baseAssetName, onProgress){
       lastErr = new Error("GitHub upload failed: HTTP " + r.status + " " + (r.raw || "").slice(0, 140));
       break;
     }
+
+    if(success) break;
   }
-  throw lastErr || new Error("GitHub upload failed after rotating releases");
+  throw lastErr || new Error("GitHub upload failed after retries");
 }
 
 async function uploadFileToServer(file, appId, kind, onProgress){
