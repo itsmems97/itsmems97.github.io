@@ -2948,19 +2948,44 @@ async function uploadFileToServer(file, appId, kind, onProgress){
     return { path:null, url: URL.createObjectURL(file), demo:true };
   }
   const secrets = await ghGetSecrets();
+  if(!secrets.workerUrl){
+    throw new Error("secrets/github mein workerUrl missing hai");
+  }
+
   const safeKind = ghSafeName(kind || "file");
   const safeApp  = ghSafeName(appId || "app");
   const safeFile = ghSafeName(file.name || "file.bin");
   const assetName = `${safeApp}_${safeKind}_${safeFile}`.slice(0, 200);
 
-  const result = await ghUploadWithRotation(secrets, file, assetName, onProgress);
+  const form = new FormData();
+  form.append("file", file, file.name);
+  form.append("assetName", assetName);
+  form.append("releaseTag", secrets.release || "Pika-Data");
+
+  const data = await new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", secrets.workerUrl);
+    xhr.setRequestHeader("X-Pika-Secret", secrets.workerSecret || "");
+    xhr.timeout = 60 * 60 * 1000;
+    xhr.upload.onprogress = e => {
+      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      try{ resolve(JSON.parse(xhr.responseText)); }
+      catch(e){ reject(new Error("Worker returned invalid response")); }
+    };
+    xhr.onerror = () => reject(new Error("Network error reaching upload worker"));
+    xhr.ontimeout = () => reject(new Error("Upload timed out"));
+    xhr.send(form);
+  });
+
+  if(!data.ok) throw new Error("Upload failed: " + (data.error || "unknown"));
   onProgress && onProgress(100);
   return {
-    path: result.asset.name,
-    fileName: result.asset.name,
-    fileSize: result.asset.size || file.size,
-    url: result.asset.browser_download_url,
-    releaseTag: result.tag
+    path: data.fileName,
+    fileName: data.fileName,
+    fileSize: data.fileSize || file.size,
+    url: data.url
   };
 }
 /* ============ /GITHUB RELEASES STORAGE ============ */
