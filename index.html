@@ -2681,11 +2681,8 @@ const CONFIG = {
     messagingSenderId: "393448449695",
     appId: "1:393448449695:web:3410c692e065a9d9cf64aa"
   },
-  storage: {
-    uploadUrl: "https://144-24-218-100.nip.io/upload",
-    filesBaseUrl: "https://144-24-218-100.nip.io/files",
-    uploadSecret: "2956a61d4fce32814ac5bbea36954f17349ee68c85233a53"
-  },
+  // VPS removed. Uploads ab GitHub Releases se hote hain.
+// Config Firestore mein hai: secrets/github
   oneSignalAppId: "feb72b66-1881-4cd0-ab67-cd2f898f8410",
   totalStorageGB: 150,
   ownerPublicName: "PIKAZOOARMY",
@@ -2725,43 +2722,179 @@ function generateAppId(){
   if(crypto.randomUUID) return crypto.randomUUID().replace(/-/g,"").slice(0,16);
   return "app" + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
 }
-function storageReady(){
-  const s = CONFIG.storage;
-  return s.uploadUrl && !s.uploadUrl.startsWith("PASTE_")
-      && s.filesBaseUrl && !s.filesBaseUrl.startsWith("PASTE_")
-      && s.uploadSecret && !s.uploadSecret.startsWith("PASTE_");
+/* ============ GITHUB RELEASES STORAGE ============ */
+const GH_CACHE = { secrets: null, secretsAt: 0, releases: {} };
+const GH_SECRET_TTL = 30 * 60 * 1000; // 30 minutes
+
+function githubReady(){ return firebaseReady; }
+function storageReady(){ return githubReady(); }
+
+async function ghGetSecrets(force){
+  if(!force && GH_CACHE.secrets && Date.now() - GH_CACHE.secretsAt < GH_SECRET_TTL){
+    return GH_CACHE.secrets;
+  }
+  const snap = await getDoc(doc(db, "secrets", "github"));
+  if(!snap.exists()) throw new Error("GitHub upload config nahi mila. Firestore mein secrets/github doc banao (token, owner, repo, release).");
+  const d = snap.data();
+  if(!d.token || !d.owner || !d.repo) throw new Error("secrets/github mein token / owner / repo missing hai");
+  if(!d.release) d.release = "Pika-Data";
+  GH_CACHE.secrets = d;
+  GH_CACHE.secretsAt = Date.now();
+  return d;
 }
+
+function ghSafeName(s){
+  return String(s || "file").replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 180) || "file";
+}
+
+function ghApiHeaders(token){
+  return {
+    "Authorization": "token " + token,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+}
+
+async function ghGetReleaseByTag(secrets, tag){
+  const cached = GH_CACHE.releases[tag];
+  if(cached && cached.id) return cached;
+  const url = `https://api.github.com/repos/${secrets.owner}/${secrets.repo}/releases/tags/${encodeURIComponent(tag)}`;
+  const res = await fetch(url, { headers: ghApiHeaders(secrets.token) });
+  if(res.status === 404) return null;
+  if(res.status === 401) throw new Error("GitHub token invalid / expired (401). Naya token Firestore mein daalo.");
+  if(res.status === 403) throw new Error("GitHub refused (403). Token scope ya rate limit check karo.");
+  if(!res.ok) throw new Error("GitHub release lookup failed: HTTP " + res.status);
+  const data = await res.json();
+  const rel = { id: data.id, tag: data.tag_name, assets: data.assets || [] };
+  GH_CACHE.releases[tag] = rel;
+  return rel;
+}
+
+async function ghCreateRelease(secrets, tag){
+  const url = `https://api.github.com/repos/${secrets.owner}/${secrets.repo}/releases`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { ...ghApiHeaders(secrets.token), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      tag_name: tag,
+      name: tag,
+      body: "Pika Store assets. Auto-managed - do not edit manually.",
+      draft: false,
+      prerelease: false
+    })
+  });
+  if(res.status === 422){
+    const existing = await ghGetReleaseByTag(secrets, tag);
+    if(existing) return existing;
+    throw new Error("GitHub release create conflict (422)");
+  }
+  if(res.status === 401) throw new Error("GitHub token invalid / expired (401). Naya token Firestore mein daalo.");
+  if(res.status === 403) throw new Error("GitHub refused (403). Token scope ya rate limit check karo.");
+  if(!res.ok){
+    const t = await res.text().catch(()=> "");
+    throw new Error("GitHub release create failed: HTTP " + res.status + " " + t.slice(0, 120));
+  }
+  const data = await res.json();
+  const rel = { id: data.id, tag: data.tag_name, assets: data.assets || [] };
+  GH_CACHE.releases[tag] = rel;
+  return rel;
+}
+
+async function ghGetOrCreateRelease(secrets, tag){
+  const rel = await ghGetReleaseByTag(secrets, tag);
+  if(rel) return rel;
+  return await ghCreateRelease(secrets, tag);
+}
+
+function ghUploadAssetXHR(secrets, releaseId, assetName, file, onProgress){
+  return new Promise((resolve, reject)=>{
+    const url = `https://uploads.github.com/repos/${secrets.owner}/${secrets.repo}/releases/${releaseId}/assets?name=${encodeURIComponent(assetName)}`;
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Authorization", "token " + secrets.token);
+    xhr.setRequestHeader("Accept", "application/vnd.github+json");
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.timeout = 30 * 60 * 1000;
+    xhr.upload.onprogress = e=>{
+      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = ()=>{
+      let parsed = null;
+      try{ parsed = JSON.parse(xhr.responseText); }catch(_){}
+      resolve({ status: xhr.status, data: parsed, raw: xhr.responseText || "" });
+    };
+    xhr.onerror = ()=> reject(new Error("Network error reaching GitHub uploads"));
+    xhr.ontimeout = ()=> reject(new Error("GitHub upload timed out"));
+    xhr.send(file);
+  });
+}
+
+function ghTagFor(baseTag, n){
+  return n === 1 ? baseTag : `${baseTag}-${n}`;
+}
+
+async function ghUploadWithRotation(secrets, file, baseAssetName, onProgress){
+  const baseTag = secrets.release || "Pika-Data";
+  let lastErr = null;
+  for(let n = 1; n <= 6; n++){
+    const tag = ghTagFor(baseTag, n);
+    let rel;
+    try{ rel = await ghGetOrCreateRelease(secrets, tag); }
+    catch(e){ lastErr = e; continue; }
+
+    let assetName = baseAssetName;
+    for(let attempt = 0; attempt < 2; attempt++){
+      let r;
+      try{ r = await ghUploadAssetXHR(secrets, rel.id, assetName, file, onProgress); }
+      catch(e){ lastErr = e; break; }
+
+      if(r.status >= 200 && r.status < 300 && r.data && r.data.browser_download_url){
+        if(rel.assets) rel.assets.push({ name: r.data.name, id: r.data.id });
+        return { tag, release: rel, asset: r.data };
+      }
+      if(r.status === 422){
+        const isDuplicate = /already_exists|already exists/i.test(r.raw || "");
+        if(isDuplicate && attempt === 0){
+          const dot = baseAssetName.lastIndexOf(".");
+          const stem = dot > 0 ? baseAssetName.slice(0, dot) : baseAssetName;
+          const ext  = dot > 0 ? baseAssetName.slice(dot) : "";
+          assetName = `${stem}_${Date.now()}${ext}`;
+          continue;
+        }
+        lastErr = new Error("Release asset limit reached on " + tag + " - rotating");
+        break;
+      }
+      if(r.status === 401) throw new Error("GitHub token invalid / expired (401). Naya token Firestore mein daalo.");
+      if(r.status === 403) throw new Error("GitHub refused (403). Token scope ya rate limit check karo.");
+      lastErr = new Error("GitHub upload failed: HTTP " + r.status + " " + (r.raw || "").slice(0, 140));
+      break;
+    }
+  }
+  throw lastErr || new Error("GitHub upload failed after rotating releases");
+}
+
 async function uploadFileToServer(file, appId, kind, onProgress){
-  if(!storageReady()){
+  if(!githubReady()){
     onProgress && onProgress(100);
     return { path:null, url: URL.createObjectURL(file), demo:true };
   }
-  const { uploadUrl, filesBaseUrl, uploadSecret } = CONFIG.storage;
-  const form = new FormData();
-  form.append("appId", appId);
-  form.append("kind", kind);
-  form.append("file", file, file.name);
-  const data = await new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", uploadUrl);
-    xhr.setRequestHeader("X-Upload-Secret", uploadSecret);
-    xhr.timeout = 300000;
-    xhr.upload.onprogress = e => {
-      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      try{ resolve(JSON.parse(xhr.responseText)); }
-      catch(e){ reject(new Error("Upload API returned an unexpected response")); }
-    };
-    xhr.onerror = () => reject(new Error("Network error reaching your VPS upload API"));
-    xhr.ontimeout = () => reject(new Error(`Upload of "${file.name}" timed out`));
-    xhr.send(form);
-  });
-  if(!data.ok) throw new Error("Upload failed: " + (data.error || "unknown error"));
+  const secrets = await ghGetSecrets();
+  const safeKind = ghSafeName(kind || "file");
+  const safeApp  = ghSafeName(appId || "app");
+  const safeFile = ghSafeName(file.name || "file.bin");
+  const assetName = `${safeApp}_${safeKind}_${safeFile}`.slice(0, 200);
+
+  const result = await ghUploadWithRotation(secrets, file, assetName, onProgress);
   onProgress && onProgress(100);
-  const url = `${filesBaseUrl}/${data.path}`;
-  return { path: data.path, fileName: data.fileName || file.name, fileSize: data.fileSize || file.size, url, demo:false };
+  return {
+    path: result.asset.name,
+    fileName: result.asset.name,
+    fileSize: result.asset.size || file.size,
+    url: result.asset.browser_download_url,
+    releaseTag: result.tag
+  };
 }
+/* ============ /GITHUB RELEASES STORAGE ============ */
 function withTimeout(promise, ms, label){
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
@@ -6063,7 +6196,7 @@ $("#file-dropzone").addEventListener("click", ()=> $("#file-input").click());
     if(guestBlock("upload apps")) return;
     if(!firebaseReady || !state.uid){ toast("Connect Firebase first","ic-close"); return; }
     if(state.users[state.uid] && state.users[state.uid].banned){ toast("You are not allowed to upload","ic-close"); return; }
-    if(!storageReady()){ toast("Connect your VPS upload API first","ic-close"); return; }
+    if(!storageReady()){ toast("Uploads ready nahi hain вҖ” secrets/github check karo", "ic-close"); return; }
     const btn = $("#wizard-next-btn");
     btn.setAttribute("disabled","true");
     const progWrap = $("#upload-progress-wrap");
@@ -9237,7 +9370,7 @@ function openChannelMessageEdit(m){
 async function saveChannelMessageEdit(m, newFile, newDesc, newThumbFile){
   const ch = state.channels.find(c=>c.id === m.channelId);
   if(!isChannelOwner(ch)){ toast("Only the channel owner can edit messages", "ic-close"); return; }
-  if(newFile && !storageReady()){ toast("Connect your VPS upload API first", "ic-close"); return; }
+  if(newFile && !storageReady()){ toast("Uploads ready nahi hain вҖ” secrets/github check karo", "ic-close"); return; }
 
   showTgUpload(newFile ? newFile.name : "Updating message…");
   try{
@@ -9540,7 +9673,7 @@ function openVoicePreview(blob, durationSec){
 }
 async function sendVoiceBlob(blob, durationSec, description){
   if(!state.tg.channelId) return;
-  if(!storageReady()){ toast("Connect your VPS upload API first", "ic-close"); return; }
+  if(!storageReady()){ toast("Uploads ready nahi hain вҖ” secrets/github check karo", "ic-close"); return; }
   const msgId = "chmsg_" + state.tg.channelId + "_" + generateAppId();
   const file = new File([blob], `voice_${Date.now()}.webm`, { type: blob.type || "audio/webm" });
   showTgUpload("Sending voice message…");
@@ -9688,7 +9821,7 @@ async function tgHandleFile(e, kind){
   if(!file) return;
   if(!state.tg.channelId){ toast("Open a channel first", "ic-close"); return; }
   if(guestBlock("broadcast in channels")) return;
-  if(!storageReady()){ toast("Connect your VPS upload API first", "ic-close"); return; }
+  if(!storageReady()){ toast("Uploads ready nahi hain вҖ” secrets/github check karo", "ic-close"); return; }
   openTgFilePreview(file, kind);
 }
 function openTgFilePreview(file, kind){
