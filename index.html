@@ -2866,6 +2866,8 @@ function ghTagFor(baseTag, n){
 async function ghUploadWithRotation(secrets, file, baseAssetName, onProgress){
   const baseTag = secrets.release || "Pika-Data";
   let lastErr = null;
+
+  // Only rotate releases on ASSET LIMIT (422), never on network errors.
   for(let n = 1; n <= 6; n++){
     const tag = ghTagFor(baseTag, n);
     let rel;
@@ -2873,32 +2875,33 @@ async function ghUploadWithRotation(secrets, file, baseAssetName, onProgress){
     catch(e){ lastErr = e; continue; }
 
     let assetName = baseAssetName;
-    let success = false;
+    let gotResponse = false;
+    let limitHit = false;
 
-    // Try strategies: 1) XHR+CT, 2) XHR no CT, 3) fetch
+    // Strategies: 1) XHR+CT, 2) XHR no CT, 3) fetch
     const strategies = [
-      { name: "XHR+ContentType", fn: ()=> ghUploadAssetXHR(secrets, rel.id, assetName, file, onProgress, {}) },
+      { name: "XHR+ContentType",    fn: ()=> ghUploadAssetXHR(secrets, rel.id, assetName, file, onProgress, {}) },
       { name: "XHR-no-ContentType", fn: ()=> ghUploadAssetXHR(secrets, rel.id, assetName, file, onProgress, { noContentType: true }) },
-      { name: "fetch", fn: ()=> ghUploadViaFetch(secrets, rel.id, assetName, file) }
+      { name: "fetch",              fn: ()=> ghUploadViaFetch(secrets, rel.id, assetName, file) }
     ];
 
-    for(let s = 0; s < strategies.length && !success; s++){
+    for(let s = 0; s < strategies.length; s++){
       let r;
       try{
         r = await strategies[s].fn();
+        gotResponse = true;
       }catch(e){
         if(e && e.code === "NETWORK_ERROR"){
-          console.warn("GitHub upload strategy failed:", strategies[s].name);
-          // Wait, then try next strategy
-          await new Promise(res => setTimeout(res, 1200));
-          lastErr = new Error("Network error (" + strategies[s].name + ")");
-          continue;
+          console.warn("Upload strategy failed (network):", strategies[s].name);
+          await new Promise(res => setTimeout(res, 1000));
+          lastErr = new Error("Network error");
+          continue; // try next strategy on SAME release
         }
         lastErr = e;
         break;
       }
 
-      // Got a response (any HTTP status)
+      // Got HTTP response
       if(r.status >= 200 && r.status < 300 && r.data && r.data.browser_download_url){
         if(rel.assets) rel.assets.push({ name: r.data.name, id: r.data.id });
         onProgress && onProgress(100);
@@ -2911,22 +2914,32 @@ async function ghUploadWithRotation(secrets, file, baseAssetName, onProgress){
           const stem = dot > 0 ? baseAssetName.slice(0, dot) : baseAssetName;
           const ext  = dot > 0 ? baseAssetName.slice(dot) : "";
           assetName = `${stem}_${Date.now()}${ext}`;
-          // Retry same strategy with new name
-          s--;
+          s--; // retry same strategy with new name
           continue;
         }
-        lastErr = new Error("Release asset limit reached on " + tag + " - rotating");
+        // Real limit hit — only NOW we rotate to next release
+        limitHit = true;
+        lastErr = new Error("Asset limit reached on " + tag);
         break;
       }
       if(r.status === 401) throw new Error("GitHub token invalid / expired (401). Naya token Firestore mein daalo.");
       if(r.status === 403) throw new Error("GitHub refused (403). Token scope ya rate limit check karo.");
       lastErr = new Error("GitHub upload failed: HTTP " + r.status + " " + (r.raw || "").slice(0, 140));
+      gotResponse = true;
       break;
     }
 
-    if(success) break;
+    // If we got a real HTTP response (401/403/other), stop immediately
+    if(gotResponse && !limitHit) break;
+    // If all strategies had network errors, don't create another release — retry same one
+    if(!gotResponse){
+      lastErr = new Error("Network error — upload could not reach GitHub. WiFi/VPN try karo.");
+      break;
+    }
+    // Otherwise limitHit = true, continue outer loop to next release
   }
-  throw lastErr || new Error("GitHub upload failed after retries");
+
+  throw lastErr || new Error("GitHub upload failed");
 }
 
 async function uploadFileToServer(file, appId, kind, onProgress){
