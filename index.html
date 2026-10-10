@@ -2734,16 +2734,16 @@ async function ghGetSecrets(force){
     return GH_CACHE.secrets;
   }
   const snap = await getDoc(doc(db, "secrets", "github"));
-  if(!snap.exists()) throw new Error("GitHub upload config nahi mila. Firestore mein secrets/github doc banao (token, owner, repo, release).");
+  if(!snap.exists()) throw new Error("Firestore mein secrets/github doc missing hai");
   const raw = snap.data();
-  // Trim everything — whitespace/newlines se upload fail hota hai
   const d = {
-    token:   String(raw.token   || "").trim(),
-    owner:   String(raw.owner   || "").trim(),
-    repo:    String(raw.repo    || "").trim(),
-    release: String(raw.release || "Pika-Data").trim()
+    workerUrl:    String(raw.workerUrl    || "").trim(),
+    workerSecret: String(raw.workerSecret || "").trim(),
+    release:      String(raw.release      || "Pika-Data").trim()
   };
-  if(!d.token || !d.owner || !d.repo) throw new Error("secrets/github mein token / owner / repo missing hai");
+  if(!d.workerUrl){
+    throw new Error("secrets/github mein workerUrl missing hai");
+  }
   GH_CACHE.secrets = d;
   GH_CACHE.secretsAt = Date.now();
   return d;
