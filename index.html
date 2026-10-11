@@ -2962,65 +2962,41 @@ async function uploadFileToServer(file, appId, kind, onProgress){
   const workerSecret = secrets.workerSecret || '';
   const releaseTag = secrets.release || "Pika-Data";
 
-  // Step 1: Get presigned URL from Worker
-  const presignRes = await fetch(workerBase + '/presign', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Pika-Secret': workerSecret },
-    body: JSON.stringify({
-      key: r2Key,
-      contentType: file.type || 'application/octet-stream'
-    })
-  });
-  const presignData = await presignRes.json().catch(() => ({}));
-  if(!presignRes.ok || !presignData.ok || !presignData.uploadUrl){
-    throw new Error("Presign failed: " + (presignData.error || presignRes.status));
-  }
+  // Step 1: Upload file to Worker (FormData) — Worker saves to R2 + dispatches GitHub Actions
+  const form = new FormData();
+  form.append("file", file, file.name);
+  form.append("key", r2Key);
+  form.append("assetName", assetName);
+  form.append("releaseTag", releaseTag);
 
-  // Step 2: Upload file DIRECTLY to R2 (browser → R2)
-  await new Promise((resolve, reject) => {
+  const uploadRes = await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", presignData.uploadUrl, true);
-    xhr.setRequestHeader("Content-Type", file.type || 'application/octet-stream');
-    xhr.timeout = 60 * 60 * 1000;
+    xhr.open("POST", workerBase + "/upload", true);
+    xhr.setRequestHeader("X-Pika-Secret", workerSecret);
+    xhr.timeout = 30 * 60 * 1000;
     xhr.upload.onprogress = e => {
       if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 85));
     };
     xhr.onload = () => {
-      if(xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error("R2 upload failed: HTTP " + xhr.status));
+      let parsed = null;
+      try { parsed = JSON.parse(xhr.responseText); } catch(_){}
+      resolve({ status: xhr.status, data: parsed, raw: xhr.responseText || "" });
     };
-    xhr.onerror = () => reject(new Error("Network error during R2 upload"));
-    xhr.ontimeout = () => reject(new Error("R2 upload timed out"));
-    xhr.send(file);
+    xhr.onerror = () => reject(new Error("Network error reaching upload worker"));
+    xhr.ontimeout = () => reject(new Error("Upload timed out"));
+    xhr.send(form);
   });
+
+  if(!uploadRes.data || !uploadRes.data.ok){
+    const errMsg = (uploadRes.data && uploadRes.data.error) || ('HTTP ' + uploadRes.status);
+    throw new Error("Upload failed: " + errMsg);
+  }
 
   onProgress && onProgress(88);
 
-  // Step 3: Dispatch GitHub Actions workflow
-  const dispRes = await fetch(workerBase + '/dispatch', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Pika-Secret': workerSecret },
-    body: JSON.stringify({
-      key: r2Key,
-      assetName: assetName,
-      releaseTag: releaseTag
-    })
-  });
-  const dispData = await dispRes.json().catch(() => ({}));
-  if(!dispRes.ok || !dispData.ok){
-    try {
-      await fetch(workerBase + '/cleanup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Pika-Secret': workerSecret },
-        body: JSON.stringify({ keys: [r2Key] })
-      });
-    } catch(_){}
-    throw new Error("Dispatch failed: " + (dispData.error || dispRes.status));
-  }
-
-  // Step 4: Poll /check until asset appears on GitHub
-  const POLL_INTERVAL_MS = 4000;   // every 4 sec
-  const MAX_WAIT_MS = 15 * 60 * 1000; // 15 minutes
+  // Step 2: Poll /check until asset appears on GitHub (max 15 min)
+  const POLL_INTERVAL_MS = 4000;
+  const MAX_WAIT_MS = 15 * 60 * 1000;
   const startTime = Date.now();
   let assetData = null;
 
@@ -3031,9 +3007,9 @@ async function uploadFileToServer(file, appId, kind, onProgress){
     onProgress && onProgress(pollPct);
 
     try {
-      const checkRes = await fetch(workerBase + '/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Pika-Secret': workerSecret },
+      const checkRes = await fetch(workerBase + "/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Pika-Secret": workerSecret },
         body: JSON.stringify({ assetName: assetName, releaseTag: releaseTag })
       });
       const checkData = await checkRes.json().catch(() => ({}));
@@ -3045,13 +3021,6 @@ async function uploadFileToServer(file, appId, kind, onProgress){
   }
 
   if(!assetData){
-    try {
-      await fetch(workerBase + '/cleanup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Pika-Secret': workerSecret },
-        body: JSON.stringify({ keys: [r2Key] })
-      });
-    } catch(_){}
     throw new Error("Upload timed out — GitHub Actions ne 15 min mein file upload nahi ki. GitHub Actions tab check karo.");
   }
 
