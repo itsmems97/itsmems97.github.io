@@ -2957,35 +2957,79 @@ async function uploadFileToServer(file, appId, kind, onProgress){
   const safeFile = ghSafeName(file.name || "file.bin");
   const assetName = `${safeApp}_${safeKind}_${safeFile}`.slice(0, 200);
 
-  const form = new FormData();
-  form.append("file", file, file.name);
-  form.append("assetName", assetName);
-  form.append("releaseTag", secrets.release || "Pika-Data");
+  const r2Key = "staging/" + Date.now() + "_" + Math.random().toString(36).slice(2,10) + "_" + safeFile;
+  const workerBase = secrets.workerUrl.replace(/\/+$/, '');
+  const workerSecret = secrets.workerSecret || '';
+  const releaseTag = secrets.release || "Pika-Data";
 
-  const data = await new Promise((resolve, reject) => {
+  // Step 1: Get presigned URL from Worker
+  const presignRes = await fetch(workerBase + '/presign', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Pika-Secret': workerSecret
+    },
+    body: JSON.stringify({
+      key: r2Key,
+      contentType: file.type || 'application/octet-stream'
+    })
+  });
+  const presignData = await presignRes.json().catch(() => ({}));
+  if(!presignRes.ok || !presignData.ok || !presignData.uploadUrl){
+    throw new Error("Presign failed: " + (presignData.error || presignRes.status));
+  }
+
+  // Step 2: Upload file DIRECTLY to R2 (browser → R2, no Worker, no 100MB limit)
+  await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", secrets.workerUrl);
-    xhr.setRequestHeader("X-Pika-Secret", secrets.workerSecret || "");
+    xhr.open("PUT", presignData.uploadUrl, true);
+    xhr.setRequestHeader("Content-Type", file.type || 'application/octet-stream');
     xhr.timeout = 60 * 60 * 1000;
     xhr.upload.onprogress = e => {
-      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 85));
     };
     xhr.onload = () => {
-      try{ resolve(JSON.parse(xhr.responseText)); }
-      catch(e){ reject(new Error("Worker returned invalid response")); }
+      if(xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error("R2 upload failed: HTTP " + xhr.status));
     };
-    xhr.onerror = () => reject(new Error("Network error reaching upload worker"));
-    xhr.ontimeout = () => reject(new Error("Upload timed out"));
-    xhr.send(form);
+    xhr.onerror = () => reject(new Error("Network error during R2 upload"));
+    xhr.ontimeout = () => reject(new Error("R2 upload timed out"));
+    xhr.send(file);
   });
 
-  if(!data.ok) throw new Error("Upload failed: " + (data.error || "unknown"));
+  onProgress && onProgress(88);
+
+  // Step 3: Worker background mein R2 → GitHub transfer karega
+  const transferRes = await fetch(workerBase + '/transfer', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Pika-Secret': workerSecret
+    },
+    body: JSON.stringify({
+      key: r2Key,
+      assetName: assetName,
+      releaseTag: releaseTag
+    })
+  });
+  const transferData = await transferRes.json().catch(() => ({}));
+  if(!transferRes.ok || !transferData.ok){
+    try {
+      await fetch(workerBase + '/cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Pika-Secret': workerSecret },
+        body: JSON.stringify({ keys: [r2Key] })
+      });
+    } catch(_){}
+    throw new Error("Transfer failed: " + (transferData.error || transferRes.status));
+  }
+
   onProgress && onProgress(100);
   return {
-    path: data.fileName,
-    fileName: data.fileName,
-    fileSize: data.fileSize || file.size,
-    url: data.url
+    path: transferData.fileName,
+    fileName: transferData.fileName,
+    fileSize: transferData.fileSize || file.size,
+    url: transferData.url
   };
 }
 /* ============ /GITHUB RELEASES STORAGE ============ */
