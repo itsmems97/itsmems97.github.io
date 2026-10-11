@@ -45,8 +45,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.client_payload.releaseTag }}
         run: |
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "$TAG" --notes "Pika Store assets. Auto-managed."
+          if ! gh release view "$TAG" --repo itsmems97/itsmems97.github.io >/dev/null 2>&1; then
+            gh release create "$TAG" --repo itsmems97/itsmems97.github.io --title "$TAG" --notes "Pika Store assets. Auto-managed."
           fi
 
       - name: Upload asset to release
@@ -55,7 +55,7 @@ jobs:
           TAG: ${{ github.event.client_payload.releaseTag }}
           ASSET_NAME: ${{ github.event.client_payload.assetName }}
         run: |
-          gh release upload "$TAG" "/tmp/pika_file#$ASSET_NAME" --clobber
+          gh release upload "$TAG" "/tmp/pika_file#$ASSET_NAME" --repo itsmems97/itsmems97.github.io --clobber
 
       - name: Delete from R2
         env:
