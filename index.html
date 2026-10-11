@@ -2965,10 +2965,7 @@ async function uploadFileToServer(file, appId, kind, onProgress){
   // Step 1: Get presigned URL from Worker
   const presignRes = await fetch(workerBase + '/presign', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Pika-Secret': workerSecret
-    },
+    headers: { 'Content-Type': 'application/json', 'X-Pika-Secret': workerSecret },
     body: JSON.stringify({
       key: r2Key,
       contentType: file.type || 'application/octet-stream'
@@ -2979,7 +2976,7 @@ async function uploadFileToServer(file, appId, kind, onProgress){
     throw new Error("Presign failed: " + (presignData.error || presignRes.status));
   }
 
-  // Step 2: Upload file DIRECTLY to R2 (browser → R2, no Worker, no 100MB limit)
+  // Step 2: Upload file DIRECTLY to R2 (browser → R2)
   await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", presignData.uploadUrl, true);
@@ -2999,21 +2996,18 @@ async function uploadFileToServer(file, appId, kind, onProgress){
 
   onProgress && onProgress(88);
 
-  // Step 3: Worker background mein R2 → GitHub transfer karega
-  const transferRes = await fetch(workerBase + '/transfer', {
+  // Step 3: Dispatch GitHub Actions workflow
+  const dispRes = await fetch(workerBase + '/dispatch', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Pika-Secret': workerSecret
-    },
+    headers: { 'Content-Type': 'application/json', 'X-Pika-Secret': workerSecret },
     body: JSON.stringify({
       key: r2Key,
       assetName: assetName,
       releaseTag: releaseTag
     })
   });
-  const transferData = await transferRes.json().catch(() => ({}));
-  if(!transferRes.ok || !transferData.ok){
+  const dispData = await dispRes.json().catch(() => ({}));
+  if(!dispRes.ok || !dispData.ok){
     try {
       await fetch(workerBase + '/cleanup', {
         method: 'POST',
@@ -3021,15 +3015,52 @@ async function uploadFileToServer(file, appId, kind, onProgress){
         body: JSON.stringify({ keys: [r2Key] })
       });
     } catch(_){}
-    throw new Error("Transfer failed: " + (transferData.error || transferRes.status));
+    throw new Error("Dispatch failed: " + (dispData.error || dispRes.status));
+  }
+
+  // Step 4: Poll /check until asset appears on GitHub
+  const POLL_INTERVAL_MS = 4000;   // every 4 sec
+  const MAX_WAIT_MS = 15 * 60 * 1000; // 15 minutes
+  const startTime = Date.now();
+  let assetData = null;
+
+  while(Date.now() - startTime < MAX_WAIT_MS){
+    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+    const elapsed = Date.now() - startTime;
+    const pollPct = Math.min(98, 88 + Math.round((elapsed / MAX_WAIT_MS) * 10));
+    onProgress && onProgress(pollPct);
+
+    try {
+      const checkRes = await fetch(workerBase + '/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Pika-Secret': workerSecret },
+        body: JSON.stringify({ assetName: assetName, releaseTag: releaseTag })
+      });
+      const checkData = await checkRes.json().catch(() => ({}));
+      if(checkData.ok && checkData.url){
+        assetData = checkData;
+        break;
+      }
+    } catch(e) { /* keep polling */ }
+  }
+
+  if(!assetData){
+    try {
+      await fetch(workerBase + '/cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Pika-Secret': workerSecret },
+        body: JSON.stringify({ keys: [r2Key] })
+      });
+    } catch(_){}
+    throw new Error("Upload timed out — GitHub Actions ne 15 min mein file upload nahi ki. GitHub Actions tab check karo.");
   }
 
   onProgress && onProgress(100);
   return {
-    path: transferData.fileName,
-    fileName: transferData.fileName,
-    fileSize: transferData.fileSize || file.size,
-    url: transferData.url
+    path: assetData.fileName,
+    fileName: assetData.fileName,
+    fileSize: assetData.fileSize || file.size,
+    url: assetData.url
   };
 }
 /* ============ /GITHUB RELEASES STORAGE ============ */
