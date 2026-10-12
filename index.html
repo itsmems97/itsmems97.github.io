@@ -2460,6 +2460,7 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
   <div class="row tap" id="row-maintenance" hidden><div class="row-left"><svg><use href="#ic-lock"/></svg> Maintenance Mode</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="maintenance-label">OFF</span></div>
 <div class="row tap" id="row-send-messages" hidden><div class="row-left"><svg><use href="#ic-chat"/></svg> Send Messages</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 <div class="row tap" id="row-console-detector" hidden><div class="row-left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> Console Detector</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="console-detector-label">OFF</span></div>
+<div class="row tap" id="row-fix-urls" hidden><div class="row-left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M4 10a8 8 0 0 1 14-5M20 14a8 8 0 0 1-14 5"/></svg> Fix Old URLs</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
   <div class="row tap" id="row-verify"><div class="row-left"><svg><use href="#ic-verified"/></svg> Enter blue-tick code</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
   <div class="row tap" id="row-logout"><div class="row-left"><svg><use href="#ic-close"/></svg> Log out</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 </div>
@@ -4686,6 +4687,10 @@ function listenMaintenance(){
 function updateMaintenanceUI(){
   const row = document.getElementById("row-maintenance");
   if(!row) return;
+  const fixRow = document.getElementById("row-fix-urls");
+if(fixRow){
+  fixRow.hidden = !state.isOwner;
+}
   if(state.isOwner){
     row.hidden = false;
     const lbl = document.getElementById("maintenance-label");
@@ -7241,6 +7246,8 @@ function initProfileActions(){
 if(_sendMsgRow) _sendMsgRow.addEventListener("click", openSendMessagesSheet);
 const _cdRow = document.getElementById("row-console-detector");
 if(_cdRow) _cdRow.addEventListener("click", toggleConsoleDetector);
+const _fixRow = document.getElementById("row-fix-urls");
+if(_fixRow) _fixRow.addEventListener("click", fixOldURLs);
   $("#profile-avatar").addEventListener("click", ()=> $("#profile-photo-input").click());
   $("#profile-photo-input").addEventListener("change", e=>{ changeMyPhoto(e.target.files[0]); e.target.value = ""; });
   $("#row-rename").addEventListener("click", renameMyself);
@@ -7263,6 +7270,70 @@ if(_cdRow) _cdRow.addEventListener("click", toggleConsoleDetector);
   const _invBtn = document.getElementById("invite-share-btn");
   if(_invBtn) _invBtn.addEventListener("click", shareInviteLink);
 }
+
+async function fixOldURLs(){
+  if(!state.isOwner){ toast("Only owner can do this", "ic-close"); return; }
+  if(!firebaseReady){ toast("Firebase not ready", "ic-close"); return; }
+  if(!(await confirmSheet("Fix Old URLs?", "Saare apps ke purane 144-24-218-100 wale URLs ko naye 193-122-76-131 se replace karega. Ye process 1-2 minute lega. Continue?", "Fix Now"))) return;
+
+  showLoading("Fixing old URLs…");
+  const OLD_IP = "144-24-218-100";
+  const NEW_IP = "193-122-76-131";
+  let totalFixed = 0;
+  let totalApps = 0;
+
+  const replaceIn = (s) => {
+    if(typeof s !== "string") return s;
+    return s.split(OLD_IP).join(NEW_IP);
+  };
+
+  try{
+    const snap = await getDocs(collection(db, "apps"));
+    for(const d of snap.docs){
+      const data = d.data();
+      const updates = {};
+      let changed = false;
+
+      if(typeof data.fileUrl === "string" && data.fileUrl.includes(OLD_IP)){
+        updates.fileUrl = replaceIn(data.fileUrl);
+        changed = true;
+      }
+      if(typeof data.thumbUrl === "string" && data.thumbUrl.includes(OLD_IP)){
+        updates.thumbUrl = replaceIn(data.thumbUrl);
+        changed = true;
+      }
+      if(typeof data.iconUrl === "string" && data.iconUrl.includes(OLD_IP)){
+        updates.iconUrl = replaceIn(data.iconUrl);
+        changed = true;
+      }
+      if(Array.isArray(data.screenshots)){
+        const newShots = data.screenshots.map(s => replaceIn(s));
+        if(JSON.stringify(newShots) !== JSON.stringify(data.screenshots)){
+          updates.screenshots = newShots;
+          changed = true;
+        }
+      }
+
+      if(changed){
+        await updateDoc(d.ref, updates);
+        totalApps++;
+        totalFixed += Object.keys(updates).length;
+      }
+    }
+
+    hideLoading();
+    await infoSheet(
+      "🎉 Done!",
+      `<b>${totalApps}</b> apps ke <b>${totalFixed}</b> URL fields update ho gaye.<br><br>Ab app reload karo aur download test karo.`,
+      "OK"
+    );
+  }catch(e){
+    hideLoading();
+    console.error(e);
+    toast("Fix failed: " + (e.code || e.message), "ic-close");
+  }
+}
+
 
 /* =====================================================================
    CHANNELS
