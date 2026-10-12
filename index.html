@@ -3866,15 +3866,20 @@ async function initAuth(){
     }
   }catch(e){}
   
-  // ⚡ NEW: Check maintenance BEFORE showing login gate
-  // Owner can bypass with ?owner=1 in URL (used from Maintenance.html)
-  const ownerBypass = new URLSearchParams(location.search).get("owner") === "1";
-  if(firebaseReady){
-    await loadMaintenanceStatus();
-    if(MAINTENANCE_MODE && !ownerBypass){
-      try{ await auth.authStateReady(); }catch(e){}
-      const cu = auth.currentUser;
-      const isOwnerUser = cu && !cu.isAnonymous
+  // ⚡ Maintenance check:
+//   - If a non-owner user is ALREADY logged in → redirect to maintenance page.
+//   - If NOBODY is logged in → show login page (do NOT redirect).
+//   - After login, completeLogin() will decide whether to allow or redirect.
+// Owner can still bypass with ?owner=1 in URL.
+const ownerBypass = new URLSearchParams(location.search).get("owner") === "1";
+if(firebaseReady){
+  await loadMaintenanceStatus();
+  if(MAINTENANCE_MODE && !ownerBypass){
+    try{ await auth.authStateReady(); }catch(e){}
+    const cu = auth.currentUser;
+    // ⚡ Only redirect if someone is already logged in AND is not the owner.
+    if(cu){
+      const isOwnerUser = !cu.isAnonymous
                         && String(cu.email || "").toLowerCase() === CONFIG.ownerEmail.toLowerCase()
                         && cu.emailVerified;
       if(!isOwnerUser){
@@ -3882,7 +3887,9 @@ async function initAuth(){
         return;
       }
     }
+    // If cu is null → fall through and show login gate
   }
+}
   
   // ✅ FIX: capture invite from URL immediately, before login happens
   try{
@@ -7274,57 +7281,120 @@ if(_fixRow) _fixRow.addEventListener("click", fixOldURLs);
 async function fixOldURLs(){
   if(!state.isOwner){ toast("Only owner can do this", "ic-close"); return; }
   if(!firebaseReady){ toast("Firebase not ready", "ic-close"); return; }
-  if(!(await confirmSheet("Fix Old URLs?", "Saare apps ke purane 144-24-218-100 wale URLs ko naye 193-122-76-131 se replace karega. Ye process 1-2 minute lega. Continue?", "Fix Now"))) return;
+  if(!(await confirmSheet("Fix All URLs?", "Saare collections (apps, users, channels, channelMessages, channelMessageMedia, chat) ke purane 144-24-218-100 wale URLs ko naye 193-122-76-131 se replace karega. Ye process 2-4 minute lega. Continue?", "Fix Now"))) return;
 
-  showLoading("Fixing old URLs…");
+  showLoading("Fixing all URLs…");
   const OLD_IP = "144-24-218-100";
   const NEW_IP = "193-122-76-131";
-  let totalFixed = 0;
-  let totalApps = 0;
+  let grandTotal = 0;
+  let totalDocs = 0;
 
   const replaceIn = (s) => {
     if(typeof s !== "string") return s;
+    if(!s.includes(OLD_IP)) return s;
     return s.split(OLD_IP).join(NEW_IP);
   };
 
-  try{
-    const snap = await getDocs(collection(db, "apps"));
-    for(const d of snap.docs){
-      const data = d.data();
-      const updates = {};
-      let changed = false;
+  const hasOld = (s) => (typeof s === "string" && s.includes(OLD_IP));
+  const hasOldArr = (arr) => Array.isArray(arr) && arr.some(s => hasOld(s));
 
-      if(typeof data.fileUrl === "string" && data.fileUrl.includes(OLD_IP)){
-        updates.fileUrl = replaceIn(data.fileUrl);
-        changed = true;
-      }
-      if(typeof data.thumbUrl === "string" && data.thumbUrl.includes(OLD_IP)){
-        updates.thumbUrl = replaceIn(data.thumbUrl);
-        changed = true;
-      }
-      if(typeof data.iconUrl === "string" && data.iconUrl.includes(OLD_IP)){
-        updates.iconUrl = replaceIn(data.iconUrl);
-        changed = true;
-      }
-      if(Array.isArray(data.screenshots)){
-        const newShots = data.screenshots.map(s => replaceIn(s));
-        if(JSON.stringify(newShots) !== JSON.stringify(data.screenshots)){
-          updates.screenshots = newShots;
-          changed = true;
+  async function fixCollection(colName, handler){
+    let colFixed = 0, colDocs = 0;
+    try{
+      const snap = await getDocs(collection(db, colName));
+      for(const d of snap.docs){
+        const data = d.data();
+        const updates = handler(data);
+        if(updates){
+          try{
+            await updateDoc(d.ref, updates);
+            colDocs++;
+            colFixed += Object.keys(updates).length;
+          }catch(err){
+            console.warn("Fix failed for " + colName + "/" + d.id, err);
+          }
         }
       }
+    }catch(e){
+      console.warn("Collection error: " + colName, e);
+    }
+    return { colFixed, colDocs };
+  }
 
-      if(changed){
-        await updateDoc(d.ref, updates);
-        totalApps++;
-        totalFixed += Object.keys(updates).length;
-      }
+  try{
+    // 1. apps — fileUrl, thumbUrl, iconUrl, screenshots[]
+    {
+      const r = await fixCollection("apps", (data) => {
+        const u = {}; let c = false;
+        if(hasOld(data.fileUrl)){ u.fileUrl = replaceIn(data.fileUrl); c = true; }
+        if(hasOld(data.thumbUrl)){ u.thumbUrl = replaceIn(data.thumbUrl); c = true; }
+        if(hasOld(data.iconUrl)){ u.iconUrl = replaceIn(data.iconUrl); c = true; }
+        if(hasOld(data.downloadUrl)){ u.downloadUrl = replaceIn(data.downloadUrl); c = true; }
+        if(hasOldArr(data.screenshots)){
+          const ns = data.screenshots.map(s => replaceIn(s));
+          if(JSON.stringify(ns) !== JSON.stringify(data.screenshots)){ u.screenshots = ns; c = true; }
+        }
+        return c ? u : null;
+      });
+      grandTotal += r.colFixed; totalDocs += r.colDocs;
+    }
+
+    // 2. users — photoURL (profile pictures)
+    {
+      const r = await fixCollection("users", (data) => {
+        if(hasOld(data.photoURL)) return { photoURL: replaceIn(data.photoURL) };
+        return null;
+      });
+      grandTotal += r.colFixed; totalDocs += r.colDocs;
+    }
+
+    // 3. channels — photoURL (channel profile photos)
+    {
+      const r = await fixCollection("channels", (data) => {
+        if(hasOld(data.photoURL)) return { photoURL: replaceIn(data.photoURL) };
+        return null;
+      });
+      grandTotal += r.colFixed; totalDocs += r.colDocs;
+    }
+
+    // 4. channelMessages — previewThumbUrl, iconUrl, appThumb
+    {
+      const r = await fixCollection("channelMessages", (data) => {
+        const u = {}; let c = false;
+        if(hasOld(data.previewThumbUrl)){ u.previewThumbUrl = replaceIn(data.previewThumbUrl); c = true; }
+        if(hasOld(data.iconUrl)){ u.iconUrl = replaceIn(data.iconUrl); c = true; }
+        if(hasOld(data.appThumb)){ u.appThumb = replaceIn(data.appThumb); c = true; }
+        if(hasOld(data.mediaUrl)){ u.mediaUrl = replaceIn(data.mediaUrl); c = true; }
+        if(hasOld(data.fileUrl)){ u.fileUrl = replaceIn(data.fileUrl); c = true; }
+        return c ? u : null;
+      });
+      grandTotal += r.colFixed; totalDocs += r.colDocs;
+    }
+
+    // 5. channelMessageMedia — mediaUrl (THIS fixes channel downloads + image showing)
+    {
+      const r = await fixCollection("channelMessageMedia", (data) => {
+        const u = {}; let c = false;
+        if(hasOld(data.mediaUrl)){ u.mediaUrl = replaceIn(data.mediaUrl); c = true; }
+        if(hasOld(data.fileUrl)){ u.fileUrl = replaceIn(data.fileUrl); c = true; }
+        return c ? u : null;
+      });
+      grandTotal += r.colFixed; totalDocs += r.colDocs;
+    }
+
+    // 6. chat — appThumb (group chat shared apps)
+    {
+      const r = await fixCollection("chat", (data) => {
+        if(hasOld(data.appThumb)) return { appThumb: replaceIn(data.appThumb) };
+        return null;
+      });
+      grandTotal += r.colFixed; totalDocs += r.colDocs;
     }
 
     hideLoading();
     await infoSheet(
-      "🎉 Done!",
-      `<b>${totalApps}</b> apps ke <b>${totalFixed}</b> URL fields update ho gaye.<br><br>Ab app reload karo aur download test karo.`,
+      "🎉 All Fixed!",
+      `<b>${totalDocs}</b> documents ke <b>${grandTotal}</b> URL fields update ho gaye.<br><br>Ab app reload karo. Profile pictures, channel images, downloads — sab kaam karega.`,
       "OK"
     );
   }catch(e){
