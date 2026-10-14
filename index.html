@@ -318,6 +318,27 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .icon-del svg{ width:16px; height:16px; color:var(--danger) !important; }
 .section-title{ font-size:15px; font-weight:800; padding:6px 18px 10px; margin:0; display:flex; align-items:center; gap:6px; }
 .uav.xl{ width:64px; height:64px; font-size:24px; margin-right:0; }
+.uav-wrap{ position:relative; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; vertical-align:middle; }
+.online-dot{
+  position:absolute;
+  right:-2px;
+  bottom:-2px;
+  width:11px;
+  height:11px;
+  border-radius:50%;
+  background:#22c55e;
+  border:2px solid var(--bg-elevated);
+  box-shadow:0 0 0 0 rgba(34,197,94,.7);
+  animation:onlinePulse 1.8s ease-out infinite;
+  pointer-events:none;
+}
+.uav-wrap .uav.lg + .online-dot{ width:13px; height:13px; right:-1px; bottom:-1px; }
+.uav-wrap .uav.xl + .online-dot{ width:16px; height:16px; right:0; bottom:0; }
+@keyframes onlinePulse{
+  0%   { box-shadow:0 0 0 0 rgba(34,197,94,.75); }
+  70%  { box-shadow:0 0 0 8px rgba(34,197,94,0); }
+  100% { box-shadow:0 0 0 0 rgba(34,197,94,0); }
+}
 .mini-row.tap{ cursor:pointer; }
 .mini-row.tap:active{ background:var(--surface-2); }
 .danger-note{ margin:22px 18px 0; padding:12px 14px; border-radius:14px; background:rgba(255,92,108,.1); border:1px solid rgba(255,92,108,.3); font-size:12px; line-height:1.55; color:var(--text-dim); }
@@ -3404,12 +3425,16 @@ function guestEmojiFor(name){
   for(let i = 0; i < s.length; i++) hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
   return GUEST_EMOJIS[Math.abs(hash) % GUEST_EMOJIS.length];
 }
-function avatarHtml(name, photo, cls="", isGuest){
+function avatarHtml(name, photo, cls="", isGuest, showOnline=false){
+  let inner;
   if(isGuest && !photo){
     const emoji = guestEmojiFor(name);
-    return `<span class="uav ${cls}" style="background:linear-gradient(135deg,#E0C3FC,#8EC5FC);font-size:1.35em;line-height:1;text-shadow:0 2px 6px rgba(0,0,0,.2);">${emoji}</span>`;
+    inner = `<span class="uav ${cls}" style="background:linear-gradient(135deg,#E0C3FC,#8EC5FC);font-size:1.35em;line-height:1;text-shadow:0 2px 6px rgba(0,0,0,.2);">${emoji}</span>`;
+  } else {
+    inner = `<span class="uav ${cls}">${photo ? `<img src="${escapeHtml(photo)}" alt="">` : escapeHtml((name||"?").trim().slice(0,1).toUpperCase())}</span>`;
   }
-  return `<span class="uav ${cls}">${photo ? `<img src="${escapeHtml(photo)}" alt="">` : escapeHtml((name||"?").trim().slice(0,1).toUpperCase())}</span>`;
+  if(!showOnline) return inner;
+  return `<span class="uav-wrap">${inner}<span class="online-dot"></span></span>`;
 }
 function resizeImage(file, size=256){
   return new Promise((resolve, reject)=>{
@@ -3590,11 +3615,11 @@ function lastSeenMs(u){
 }
 const ONLINE_WINDOW_MS = 70*1000;
 function presenceText(x){
-  if(SPOOF_ONLINE_MODE) return "Active now";
+  if(SPOOF_ONLINE_MODE) return "Online";
   const ms = (x && typeof x === "object") ? lastSeenMs(x) : x;
   if(!ms) return "Offline";
   const diff = serverNow() - ms;
-  if(diff < ONLINE_WINDOW_MS) return "Active now";
+  if(diff < ONLINE_WINDOW_MS) return "Online";
   const m = Math.floor(diff/60000);
   if(m < 1) return "Last seen just now";
   if(m < 60) return `Last seen ${m} min ago`;
@@ -7063,20 +7088,21 @@ function renderUsersPage(){
   });
 
   list.innerHTML = allEntries.map(([uid,u])=>{
-    const isSpoof = !!u.__spoof;
-    const status = isSpoof
-      ? (u.__tier === 1 || u.__tier === 0 ? "Active now" : presenceText(u.lastActiveMs))
-      : presenceText(u);
-    const n = isSpoof ? (u.uploadsCount || 0) : (counts[uid]||0);
-    const unread = isSpoof ? 0 : ((state.dmUnread && state.dmUnread[uid]) || 0);
-    return `<div class="mini-row tap" data-user-open="${isSpoof ? '__spoof__' : uid}">
-      ${avatarHtml(u.name, u.photoURL, "lg", u.guest)}
-      <div class="mini-main"><b>${escapeHtml(u.name||"—")}${u.guest ? GUEST_TAG : ""}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
-        <small class="${status==="Active now" ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small></div>
-      ${unread ? `<span class="dm-badge">${unread>99?"99+":unread}</span>` : ""}
-      <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
-    </div>`;
-  }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
+  const isSpoof = !!u.__spoof;
+  const status = isSpoof
+    ? (u.__tier === 1 || u.__tier === 0 ? "Online" : presenceText(u.lastActiveMs))
+    : presenceText(u);
+  const isOnline = status === "Online";
+  const n = isSpoof ? (u.uploadsCount || 0) : (counts[uid]||0);
+  const unread = isSpoof ? 0 : ((state.dmUnread && state.dmUnread[uid]) || 0);
+  return `<div class="mini-row tap" data-user-open="${isSpoof ? '__spoof__' : uid}">
+    ${avatarHtml(u.name, u.photoURL, "lg", u.guest, isOnline)}
+    <div class="mini-main"><b>${escapeHtml(u.name||"—")}${u.guest ? GUEST_TAG : ""}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
+      <small class="${isOnline ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small></div>
+    ${unread ? `<span class="dm-badge">${unread>99?"99+":unread}</span>` : ""}
+    <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
+  </div>`;
+}).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
 }
 function initUsersPage(){
   $("#users-list").addEventListener("click", e=>{
@@ -7115,9 +7141,9 @@ function openUserSheet(uid){
       <div class="sheet-handle"></div>
       <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       <div style="display:flex;align-items:center;gap:14px;padding:24px 18px 14px;">
-        ${avatarHtml(u.name, u.photo, "xl", u.guest)}
+        ${avatarHtml(u.name, u.photo, "xl", u.guest, presenceText(raw)==="Online")}
 <div><h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center">${escapeHtml(u.name)}${raw.guest ? GUEST_TAG : ""}${tick(u.verified)}</h2>
-        <div class="${presenceText(raw)==="Active now" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div></div>
+        <div class="${presenceText(raw)==="Online" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div></div>
       </div>
       <div class="profile-stats"><div class="stat"><b>${apps.length}</b><span>Uploads</span></div><div class="stat"><b>${fmtCount(dl)}</b><span>Downloads</span></div></div>
       ${contactBtns}
