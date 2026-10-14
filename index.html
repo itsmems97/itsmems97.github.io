@@ -814,6 +814,29 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .dm-tick.delivered{ color:#ff8fc7; }
 .dm-tick.seen{ color:#20c56b; }
 .guest-tag{ font-size:11px; font-weight:700; color:var(--text-faint); margin-left:4px; }
+.vip-badge{
+  display:inline-flex; align-items:center; justify-content:center;
+  margin-left:6px; padding:2px 8px;
+  border-radius:10px;
+  background: linear-gradient(90deg, #FFD700 0%, #FFA500 25%, #FFEE58 50%, #FFA500 75%, #FFD700 100%);
+  background-size: 200% 100%;
+  animation: vipShine 2.4s linear infinite;
+  color:#171200; font-size:10px; font-weight:900;
+  letter-spacing:0.6px; vertical-align:middle;
+  box-shadow: 0 0 10px rgba(255,215,0,.5), inset 0 1px 0 rgba(255,255,255,.6);
+  text-shadow: 0 1px 0 rgba(255,255,255,.4);
+}
+@keyframes vipShine{
+  0%   { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+.vip-line{
+  display:block; font-size:10.5px; font-weight:800;
+  color:#FFD700; margin-top:2px;
+  letter-spacing:0.3px;
+  text-shadow: 0 0 8px rgba(255,215,0,.55);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
 #ip-overlay{ position:fixed; inset:0; z-index:104; display:flex; justify-content:center; align-items:center; padding:20px; background:rgba(0,0,0,.4); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); animation:ipFade .3s ease-out forwards; }
 #ip-overlay, #ip-overlay *{ box-sizing:border-box; font-family:'VIP',-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",sans-serif; -webkit-tap-highlight-color:transparent; }
 #ip-overlay .ip-card{ position:relative; width:100%; max-width:320px; background:rgba(255,255,255,.15); border-radius:28px; padding:24px 20px 20px; backdrop-filter:blur(25px) saturate(190%); -webkit-backdrop-filter:blur(25px) saturate(190%); border:1px solid rgba(255,255,255,.25); box-shadow:0 20px 40px rgba(0,0,0,.4), inset 0 1px 1px rgba(255,255,255,.4); display:flex; flex-direction:column; align-items:center; text-align:center; color:#fff; transform:scale(.9); animation:ipSpring .4s cubic-bezier(.175,.885,.32,1.275) forwards; }
@@ -2452,13 +2475,20 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
     </section>
 
     <section id="users-page" class="page" hidden>
-      <div class="section">
-        <div class="section-head"><h2>Members</h2></div>
-        <div style="margin-bottom:12px"><button class="btn btn-ghost btn-block" id="verify-cta-btn"><svg><use href="#ic-verified"/></svg> <span id="verify-cta-label">Get Free Verification</span></button></div>
+  <div class="section">
+    <div class="section-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <h2 style="margin:0;flex-shrink:0">Members</h2>
+      <div style="flex:1;max-width:220px;display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:8px 14px">
+        <svg width="14" height="14" style="color:var(--text-faint);flex-shrink:0"><use href="#ic-search"/></svg>
+        <input id="members-search-input" type="text" placeholder="Search members…" autocomplete="off" spellcheck="false" style="flex:1;background:none;border:none;color:var(--text);font-size:13px;outline:none;min-width:0" />
+        <button id="members-search-clear" type="button" style="display:none;width:18px;height:18px;padding:0;border-radius:50%;background:rgba(128,128,128,.25);color:var(--text-dim);align-items:center;justify-content:center;flex-shrink:0"><svg width="10" height="10"><use href="#ic-close"/></svg></button>
       </div>
-      <div class="settings-list" id="users-list"></div>
-      <div style="height:30px"></div>
-    </section>
+    </div>
+    <div style="margin-bottom:12px"><button class="btn btn-ghost btn-block" id="verify-cta-btn"><svg><use href="#ic-verified"/></svg> <span id="verify-cta-label">Get Free Verification</span></button></div>
+  </div>
+  <div class="settings-list" id="users-list"></div>
+  <div style="height:30px"></div>
+</section>
 
     <section id="channels-page" class="page" hidden>
       <div class="section">
@@ -4489,6 +4519,49 @@ setTimeout(()=>{
 }, 15000);
 initAuthWithRetry();
 }
+/* ⚡ Backfill VIP badges for users who joined channels before VIP feature existed */
+async function backfillVipChannels(){
+  if(!firebaseReady) return;
+  if(state.isOwner) return;              // owner is excluded
+  if(!state.uid) return;
+  if(!state.channelsLoaded) return;      // wait until channels are loaded
+  if(!Array.isArray(state.channels) || state.channels.length === 0) return;
+
+  const memberKey = myMemberKey();
+  if(!memberKey) return;
+
+  try{
+    // Current vipChannels snapshot from the live users listener
+    const me = state.users[state.uid] || {};
+    const existingVip = Array.isArray(me.vipChannels) ? me.vipChannels.slice() : [];
+
+    // Find every channel where this user has an active (not blocked) membership
+    const memberChannelNames = [];
+    for(const ch of state.channels){
+      if(!ch || !ch.id || !ch.name) continue;
+      try{
+        const snap = await getDoc(doc(db, "channels", ch.id, "members", memberKey));
+        if(snap.exists() && !snap.data().blocked){
+          memberChannelNames.push(ch.name);
+        }
+      }catch(e){ /* skip individual channel errors */ }
+    }
+
+    // Which channel names are missing from vipChannels?
+    const missing = memberChannelNames.filter(n => !existingVip.includes(n));
+    if(missing.length === 0) return;
+
+    // Add them all at once with arrayUnion
+    await updateDoc(doc(db, "users", state.uid), {
+      vipChannels: arrayUnion(...missing),
+      updatedAt: serverTimestamp()
+    });
+
+    console.log("[VIP Backfill] Added VIP for:", missing.join(", "));
+  }catch(e){
+    console.warn("VIP backfill failed:", e && e.code ? e.code : e);
+  }
+}
 let booted = false;
 
 function boot(){
@@ -4502,6 +4575,12 @@ function boot(){
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: preview & download only", "ic-lock"); }
   if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelMembers(); migrateChannelMessageMedia(); toast("Owner control enabled", "ic-check"); }
+
+  // ⚡ Auto-backfill VIP badges — users who joined channels BEFORE the VIP feature
+  // Runs 2.5s after boot so listenChannels() has finished loading channel data.
+  if(!state.isOwner){
+    setTimeout(()=>{ backfillVipChannels(); }, 2500);
+  }
 
   // ⚡ PWA Shortcut trigger — safe navigation after boot
   setTimeout(()=>{
@@ -6853,34 +6932,33 @@ function spoofHash(s){
   return Math.abs(hash);
 }
 
+const AVATAR_BASE_URL = "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/ProfilePNG/";
+
+// 3 avatar pools — Male / Female / Feminine
+function buildAvatarList(prefix, count){
+  const arr = [];
+  for(let i = 1; i <= count; i++){
+    const n = i < 10 ? "0" + i : String(i);
+    arr.push(prefix + n + ".png");
+  }
+  return arr;
+}
+const AVATAR_POOLS = {
+  male:     buildAvatarList("M", 20),
+  female:   buildAvatarList("F", 20),
+  feminine: buildAvatarList("FE", 20)
+};
+
+function avatarUrl(gender, index){
+  const pool = AVATAR_POOLS[gender] || AVATAR_POOLS.male;
+  const n = ((index % pool.length) + pool.length) % pool.length;
+  return AVATAR_BASE_URL + pool[n];
+}
+
 function getSpoofAvatarUrl(name, gender){
-  const h = spoofHash(name);
-  const seed = encodeURIComponent(name.replace(/\s+/g, '').slice(0, 22));
-
-  // Pakistani skin tones (light brown → deep brown)
-  const skinColors = ['f2d3b1','ecad80','d8a373','c68642','a56b3d','8d5524','763900'];
-  // Pakistani hair colors (black / dark brown only)
-  const hairColors = ['0e0e0e','180e0e','1c1c1c','2c1b18','3e2218','562306'];
-  const bgs = ['b6e3f4','c0aede','d1d4f9','ffdfbf','c8e6c9','ffe0b2','b2dfdb','e8eaf6'];
-
-  const skin = skinColors[h % skinColors.length];
-  const hair = hairColors[(h >> 3) % hairColors.length];
-  const bg   = bgs[(h >> 5) % bgs.length];
-
-  const themes = ['personas','avataaars','adventurer','micah','open-peeps'];
-  const theme  = themes[(h >> 7) % themes.length];
-
-  const isMale = gender === 'male';
-  const facialHairP = isMale ? 60 : 0;
-  const accP = 15;
-
-  return `https://api.dicebear.com/9.x/${theme}/svg?seed=${seed}` +
-         `&backgroundColor=${bg}` +
-         `&skinColor=${skin}` +
-         `&hairColor=${hair}` +
-         `&facialHairProbability=${facialHairP}` +
-         `&accessoriesProbability=${accP}` +
-         `&radius=50`;
+  const h = spoofHash(name + (gender || ""));
+  const g = (gender === "female") ? "female" : "male";
+  return avatarUrl(g, h);
 }
 
 let _spoofCache = null;
@@ -7220,6 +7298,128 @@ updateSpoofUI();
     </div>`;
   }).join("") : `<div class="mini-row" style="color:var(--text-faint)">No uploads yet.</div>`;
 }
+/* ⚡ Avatar Picker Popup — 3 tabs (Male / Female / Feminine) + gallery button */
+function openAvatarPicker(opts){
+  opts = opts || {};
+  const targetUid = opts.uid || state.uid;
+  const onPicked = opts.onPicked || null;
+  const onUploaded = opts.onUploaded || null;
+
+  if(document.getElementById("avatar-picker-backdrop")) return;
+
+  const TABS = [
+    { key: "male",     label: "👨 Male",     pool: AVATAR_POOLS.male },
+    { key: "female",   label: "👩 Female",   pool: AVATAR_POOLS.female },
+    { key: "feminine", label: "✨ Feminine", pool: AVATAR_POOLS.feminine }
+  ];
+  let activeTab = "male";
+
+  const renderGrid = (pool) => pool.map((png) => {
+    const url = AVATAR_BASE_URL + png;
+    return `<button type="button" class="avatar-pick-cell" data-avatar-url="${url}" style="
+      border:0;background:transparent;padding:0;cursor:pointer;
+      border-radius:50%;overflow:hidden;aspect-ratio:1;
+      position:relative;
+    "><img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:50%;background:linear-gradient(135deg,#E0C3FC,#8EC5FC)" loading="lazy"/></button>`;
+  }).join("");
+
+  const renderTabs = () => TABS.map(t => {
+    const active = t.key === activeTab;
+    const bg = active ? "linear-gradient(135deg,#FFD700,#FFA800)" : "var(--surface-2)";
+    const fg = active ? "#171200" : "var(--text-dim)";
+    return `<button type="button" class="avatar-tab" data-tab="${t.key}" style="
+      flex:1;padding:10px 8px;border-radius:14px;
+      border:1px solid ${active ? 'transparent' : 'var(--border)'};
+      background:${bg};color:${fg};
+      font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;
+      transition:all .2s;
+      box-shadow:${active ? '0 6px 16px rgba(255,168,0,.4)' : 'none'};
+    ">${t.label}</button>`;
+  }).join("");
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="avatar-picker-backdrop" style="z-index:210">
+      <div class="sheet" style="padding:22px 16px calc(22px + var(--safe-bottom));max-height:88vh;overflow-y:auto">
+        <div class="sheet-handle"></div>
+        <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+        <h3 style="text-align:center;font-size:17px;margin:8px 0 4px">Choose your avatar</h3>
+        <p style="text-align:center;font-size:12px;color:var(--text-dim);margin:0 0 14px;line-height:1.5">
+          Pick a 3D avatar — or choose your own photo from gallery.
+        </p>
+
+        <div id="avatar-tabs" style="display:flex;gap:8px;margin-bottom:16px">
+          ${renderTabs()}
+        </div>
+
+        <div id="avatar-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px">
+          ${renderGrid(AVATAR_POOLS[activeTab])}
+        </div>
+
+        <button class="btn btn-primary btn-block" id="avatar-pick-gallery" type="button" style="justify-content:center;margin-bottom:8px">
+          <svg width="16" height="16"><use href="#ic-image"/></svg> Choose from Gallery
+        </button>
+        <button class="btn btn-ghost btn-block" id="avatar-pick-upload" type="button" style="justify-content:center">
+          <svg width="16" height="16"><use href="#ic-camera"/></svg> Take Photo / Upload
+        </button>
+      </div>
+    </div>
+  `);
+
+  const wrap = document.getElementById("avatar-picker-backdrop");
+  const close = () => { if(wrap.parentNode) wrap.remove(); };
+
+  const refreshGrid = () => {
+    const grid = document.getElementById("avatar-grid");
+    if(grid) grid.innerHTML = renderGrid(AVATAR_POOLS[activeTab]);
+    const tabs = document.getElementById("avatar-tabs");
+    if(tabs) tabs.innerHTML = renderTabs();
+  };
+
+  wrap.addEventListener("click", async e => {
+    if(e.target === wrap || e.target.closest("[data-close]")){ close(); return; }
+
+    // Tab switch
+    const tabBtn = e.target.closest("[data-tab]");
+    if(tabBtn){
+      const k = tabBtn.dataset.tab;
+      if(k !== activeTab){ activeTab = k; refreshGrid(); }
+      return;
+    }
+
+    // Avatar pick → instant Firestore update
+    const cell = e.target.closest("[data-avatar-url]");
+    if(cell){
+      const url = cell.dataset.avatarUrl;
+      try{
+        await updateDoc(doc(db,"users",targetUid), { photoURL: url, updatedAt: serverTimestamp() });
+        if(onPicked) onPicked(url);
+        toast("Avatar updated");
+        close();
+      }catch(err){
+        toast("Failed: " + (err.code || err.message), "ic-close");
+      }
+      return;
+    }
+
+    // Gallery / camera
+    if(e.target.closest("#avatar-pick-gallery") || e.target.closest("#avatar-pick-upload")){
+      close();
+      const inp = document.createElement("input");
+      inp.type = "file"; inp.accept = "image/*"; inp.style.display = "none";
+      inp.onchange = async (ev)=>{
+        const f = ev.target.files && ev.target.files[0];
+        if(!f) return;
+        if(onUploaded){ onUploaded(f); }
+        else { await changeMyPhoto(f); }
+      };
+      document.body.appendChild(inp);
+      inp.click();
+      setTimeout(()=> inp.remove(), 1500);
+    }
+  });
+}
+
+/* ⚡ Change my own profile photo (from gallery/camera) */
 async function changeMyPhoto(file){
   if(!file) return;
   if(guestBlock("change your photo")) return;
@@ -7287,6 +7487,10 @@ async function deleteMyAccount(){
 const userShuffleWeight = {};
 function userShuffle(id){ if(!(id in userShuffleWeight)) userShuffleWeight[id] = Math.random(); return userShuffleWeight[id]; }
 const GUEST_TAG = ' <span class="guest-tag">Guest</span>';
+function isVipUser(u){
+  return !!(u && Array.isArray(u.vipChannels) && u.vipChannels.length);
+}
+
 function renderUsersPage(){
   const list = $("#users-list"); if(!list) return;
   const ctaLabel = $("#verify-cta-label"); if(ctaLabel) ctaLabel.textContent = state.isOwner ? "Manage blue-tick codes" : "Get Free Verification";
@@ -7296,72 +7500,114 @@ function renderUsersPage(){
   const counts = {};
   state.apps.forEach(a=>{ if(a.uploaderUid) counts[a.uploaderUid] = (counts[a.uploaderUid]||0) + 1; });
 
- // ⚡ Spoof members inject karo (sirf owner ke liye)
-const spoofEnabled = state.isOwner && SPOOF_MEMBERS_CONFIG.enabled && SPOOF_MEMBERS_CONFIG.targetCount > 0;
-let spoofEntries = [];
-if(spoofEnabled){
-  const needed = Math.max(0, SPOOF_MEMBERS_CONFIG.targetCount - entries.length);
-  if(needed > 0){
-    const gen = generateSpoofMembers(needed);
-    spoofEntries = gen.map(s => [s.uid, { ...s.data, __spoof: true, __tier: s.tier }]);
-    // ⚡ Preload avatars in background (only once per cache key)
-    if(_lastPreloadKey !== _spoofCacheKey){
-      _lastPreloadKey = _spoofCacheKey;
-      preloadSpoofAvatars(gen);
+  // ⚡ Spoof members inject karo (sirf owner ke liye)
+  const spoofEnabled = state.isOwner && SPOOF_MEMBERS_CONFIG.enabled && SPOOF_MEMBERS_CONFIG.targetCount > 0;
+  let spoofEntries = [];
+  if(spoofEnabled){
+    const needed = Math.max(0, SPOOF_MEMBERS_CONFIG.targetCount - entries.length);
+    if(needed > 0){
+      const gen = generateSpoofMembers(needed);
+      spoofEntries = gen.map(s => [s.uid, { ...s.data, __spoof: true, __tier: s.tier }]);
+      if(_lastPreloadKey !== _spoofCacheKey){
+        _lastPreloadKey = _spoofCacheKey;
+        preloadSpoofAvatars(gen);
+      }
+    } else {
+      SPOOF_LOAD_STATE = 'ready';
     }
   } else {
     SPOOF_LOAD_STATE = 'ready';
   }
-} else {
-  // Real user / guest → instant ready so popup auto-closes after 4s
-  SPOOF_LOAD_STATE = 'ready';
-}
-const allEntries = [...entries, ...spoofEntries];
+  const allEntries = [...entries, ...spoofEntries];
 
   function userTier(uid, u){
-  if(!u.__spoof && u.verified && !u.banned) return 0;
-  return 1;
-}
-allEntries.sort((a,b)=>{
-  const ta = userTier(a[0], a[1]);
-  const tb = userTier(b[0], b[1]);
-  if(ta !== tb) return ta - tb;
-  return userShuffle(a[0]) - userShuffle(b[0]);
-});
+    if(!u.__spoof && u.verified && !u.banned) return 0;    // Real blue-tick first
+    if(!u.__spoof && isVipUser(u) && !u.banned) return 1;  // VIP second
+    return 2;                                               // Everyone else
+  }
+  allEntries.sort((a,b)=>{
+    const ta = userTier(a[0], a[1]);
+    const tb = userTier(b[0], b[1]);
+    if(ta !== tb) return ta - tb;
+    return userShuffle(a[0]) - userShuffle(b[0]);
+  });
 
-function spoofLastSeenText(ms){
-  const minAgo = Math.floor((serverNow() - ms) / 60000);
-  if(minAgo < 1) return "Last seen just now";
-  if(minAgo < 60) return "Last seen " + minAgo + " min ago";
-  const h = Math.floor(minAgo / 60);
-  if(h < 24) return "Last seen " + h + " hour" + (h===1?"":"s") + " ago";
-  const d = Math.floor(h / 24);
-  if(d === 1) return "Last seen yesterday";
-  if(d < 7) return "Last seen " + d + " days ago";
-  const w = Math.floor(d / 7);
-  if(w < 5) return "Last seen " + w + " week" + (w===1?"":"s") + " ago";
-  return "Last seen " + new Date(ms).toLocaleDateString();
+  function spoofLastSeenText(ms){
+    const minAgo = Math.floor((serverNow() - ms) / 60000);
+    if(minAgo < 1) return "Last seen just now";
+    if(minAgo < 60) return "Last seen " + minAgo + " min ago";
+    const h = Math.floor(minAgo / 60);
+    if(h < 24) return "Last seen " + h + " hour" + (h===1?"":"s") + " ago";
+    const d = Math.floor(h / 24);
+    if(d === 1) return "Last seen yesterday";
+    if(d < 7) return "Last seen " + d + " days ago";
+    const w = Math.floor(d / 7);
+    if(w < 5) return "Last seen " + w + " week" + (w===1?"":"s") + " ago";
+    return "Last seen " + new Date(ms).toLocaleDateString();
+  }
+
+  list.innerHTML = allEntries.map(([uid,u])=>{
+    const isSpoof = !!u.__spoof;
+    const status = isSpoof
+      ? (u.__tier === 1 ? "Online" : spoofLastSeenText(u.lastActiveMs))
+      : presenceText(u);
+    const isOnline = status === "Online";
+    const n = isSpoof ? (u.uploadsCount || 0) : (counts[uid]||0);
+    const unread = isSpoof ? 0 : ((state.dmUnread && state.dmUnread[uid]) || 0);
+    const showGuest = !isSpoof && u.guest;
+    const showTick = !isSpoof && u.verified;
+    const isVip = !isSpoof && isVipUser(u);
+    const vipChannel = isVip ? String(u.vipChannels[0]) : "";
+    const vipBadgeHtml = isVip ? `<span class="vip-badge">VIP</span>` : "";
+    const vipLineHtml = isVip
+      ? `<span class="vip-line">VIP Member Of ${escapeHtml(vipChannel || "PIKAZOO ARMY")}</span>`
+      : "";
+    return `<div class="mini-row tap" data-user-open="${isSpoof ? '__spoof__' : uid}" data-search-name="${escapeHtml(u.name||"")}">
+      ${avatarHtml(u.name, u.photoURL, "lg", showGuest, isOnline)}
+      <div class="mini-main"><b>${escapeHtml(u.name||"—")}${showGuest ? GUEST_TAG : ""}${showTick ? tick(true) : ""}${vipBadgeHtml}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
+        <small class="${isOnline ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small>
+        ${vipLineHtml}</div>
+      ${unread ? `<span class="dm-badge">${unread>99?"99+":unread}</span>` : ""}
+      <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
+    </div>`;
+  }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
+
+  // ⚡ Re-apply active search filter after render
+  if(typeof applyMembersSearch === "function" && _membersSearchQuery){
+    applyMembersSearch();
+  }
+}
+let _membersSearchQuery = "";
+
+function applyMembersSearch(){
+  const list = $("#users-list"); if(!list) return;
+  const q = _membersSearchQuery.trim();
+  const rows = list.querySelectorAll(".mini-row[data-search-name]");
+  let shown = 0;
+  rows.forEach(el => {
+    const name = el.dataset.searchName || "";
+    if(!q){ el.style.display = ""; shown++; return; }
+    const score = name ? fuzzyScore(q, name) : 0;
+    if(score >= 40){ el.style.display = ""; shown++; }
+    else el.style.display = "none";
+  });
+  let empty = list.querySelector(".members-no-result");
+  if(!shown && q){
+    if(!empty){
+      empty = document.createElement("div");
+      empty.className = "mini-row members-no-result";
+      empty.style.cssText = "color:var(--text-faint);justify-content:center;text-align:center;padding:18px";
+      empty.textContent = 'No members found for "' + q + '"';
+      list.appendChild(empty);
+    } else {
+      empty.textContent = 'No members found for "' + q + '"';
+      empty.style.display = "";
+    }
+  } else if(empty){
+    empty.style.display = "none";
+  }
 }
 
-list.innerHTML = allEntries.map(([uid,u])=>{
-  const isSpoof = !!u.__spoof;
-  const status = isSpoof
-    ? (u.__tier === 1 ? "Online" : spoofLastSeenText(u.lastActiveMs))
-    : presenceText(u);
-  const isOnline = status === "Online";
-  const n = isSpoof ? (u.uploadsCount || 0) : (counts[uid]||0);
-  const unread = isSpoof ? 0 : ((state.dmUnread && state.dmUnread[uid]) || 0);
-  const showGuest = !isSpoof && u.guest;
-  const showTick = !isSpoof && u.verified;
-  return `<div class="mini-row tap" data-user-open="${isSpoof ? '__spoof__' : uid}">
-    ${avatarHtml(u.name, u.photoURL, "lg", showGuest, isOnline)}
-    <div class="mini-main"><b>${escapeHtml(u.name||"—")}${showGuest ? GUEST_TAG : ""}${showTick ? tick(true) : ""}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
-      <small class="${isOnline ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small></div>
-    ${unread ? `<span class="dm-badge">${unread>99?"99+":unread}</span>` : ""}
-    <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
-  </div>`;
-}).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
-}
 function initUsersPage(){
   $("#users-list").addEventListener("click", e=>{
     const r = e.target.closest("[data-user-open]");
@@ -7371,6 +7617,27 @@ function initUsersPage(){
     openUserSheet(uid);
   });
   $("#verify-cta-btn").addEventListener("click", ()=> state.isOwner ? openCodesSheet() : openGetVerifiedSheet());
+
+  // ⚡ Members search bar
+  const searchInput = document.getElementById("members-search-input");
+  const clearBtn = document.getElementById("members-search-clear");
+  if(searchInput){
+    searchInput.addEventListener("input", ()=>{
+      _membersSearchQuery = searchInput.value || "";
+      if(clearBtn){
+        clearBtn.style.display = _membersSearchQuery ? "flex" : "none";
+      }
+      applyMembersSearch();
+    });
+  }
+  if(clearBtn){
+    clearBtn.addEventListener("click", ()=>{
+      if(searchInput) searchInput.value = "";
+      _membersSearchQuery = "";
+      clearBtn.style.display = "none";
+      applyMembersSearch();
+    });
+  }
 }
 function joinedMs(u){ return u && u.joinedAt && u.joinedAt.toMillis ? u.joinedAt.toMillis() : 0; }
 function openUserSheet(uid){
@@ -7386,23 +7653,28 @@ function openUserSheet(uid){
         ${canWa ? `<button class="btn btn-primary" style="flex:1" id="us-wa" type="button" hidden><svg><use href="#ic-chat"/></svg> WhatsApp</button>` : ""}
         <button class="btn btn-ghost" style="flex:1" id="us-dm" type="button"><svg><use href="#ic-chat"/></svg> Private chat</button>
       </div>` : "";
-  const controls = (state.isOwner && uid !== state.uid && !raw.owner) ? `
-    <h3 class="section-title">Owner controls</h3>
-    <div class="settings-list" style="margin-bottom:20px" id="owner-actions">
-      <div class="mini-row tap" data-act="rename"><div class="mini-main"><b>Rename</b><small>Any name, emojis, symbols — no limits</small></div></div>
-      <div class="mini-row tap" data-act="photo"><div class="mini-main"><b>Change profile photo</b><small>Replace inappropriate or harmful picture</small></div></div>
-      <div class="mini-row tap" data-act="${u.verified ? "untick" : "tick"}"><div class="mini-main"><b>${u.verified ? "Remove blue tick" : "Give blue tick"}</b></div></div>
-      <div class="mini-row tap" data-act="${raw.banned ? "unban" : "ban"}"><div class="mini-main"><b style="color:var(--danger)">${raw.banned ? "Unban user" : "Ban user"}</b></div></div>
-      <div class="mini-row tap" data-act="logout"><div class="mini-main"><b>Log out from their browser</b></div></div>
-    </div>` : "";
+  const hasVip = Array.isArray(raw.vipChannels) && raw.vipChannels.length > 0;
+const controls = (state.isOwner && uid !== state.uid && !raw.owner) ? `
+  <h3 class="section-title">Owner controls</h3>
+  <div class="settings-list" style="margin-bottom:20px" id="owner-actions">
+    <div class="mini-row tap" data-act="rename"><div class="mini-main"><b>Rename</b><small>Any name, emojis, symbols — no limits</small></div></div>
+    <div class="mini-row tap" data-act="photo"><div class="mini-main"><b>Change profile photo</b><small>Replace inappropriate or harmful picture</small></div></div>
+    <div class="mini-row tap" data-act="${u.verified ? "untick" : "tick"}"><div class="mini-main"><b>${u.verified ? "Remove blue tick" : "Give blue tick"}</b></div></div>
+    <div class="mini-row tap" data-act="${hasVip ? "removevip" : "givevip"}"><div class="mini-main"><b style="color:#FFD700">${hasVip ? "Remove VIP badge" : "Give VIP badge"}</b><small>${hasVip ? "Remove golden VIP label" : "Show golden VIP label under name"}</small></div></div>
+    <div class="mini-row tap" data-act="${raw.banned ? "unban" : "ban"}"><div class="mini-main"><b style="color:var(--danger)">${raw.banned ? "Unban user" : "Ban user"}</b></div></div>
+    <div class="mini-row tap" data-act="logout"><div class="mini-main"><b>Log out from their browser</b></div></div>
+  </div>` : "";
   const html = `
   <div class="sheet-backdrop" id="user-backdrop"><div class="sheet">
       <div class="sheet-handle"></div>
       <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       <div style="display:flex;align-items:center;gap:14px;padding:24px 18px 14px;">
         ${avatarHtml(u.name, u.photo, "xl", u.guest, presenceText(raw)==="Online")}
-<div><h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center">${escapeHtml(u.name)}${raw.guest ? GUEST_TAG : ""}${tick(u.verified)}</h2>
-        <div class="${presenceText(raw)==="Online" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div></div>
+<div style="min-width:0;flex:1">
+  <h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center;flex-wrap:wrap">${escapeHtml(u.name)}${raw.guest ? GUEST_TAG : ""}${tick(u.verified)}${(Array.isArray(raw.vipChannels) && raw.vipChannels.length) ? ' <span class="vip-badge">VIP</span>' : ''}</h2>
+  <div class="${presenceText(raw)==="Online" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div>
+  ${(Array.isArray(raw.vipChannels) && raw.vipChannels.length) ? `<span class="vip-line">VIP Member Of ${escapeHtml(String(raw.vipChannels[0]))}</span>` : ''}
+</div>
       </div>
       <div class="profile-stats"><div class="stat"><b>${apps.length}</b><span>Uploads</span></div><div class="stat"><b>${fmtCount(dl)}</b><span>Downloads</span></div></div>
       ${contactBtns}
@@ -7472,10 +7744,38 @@ async function ownerAction(act, uid){
       return true;
     }
     if(act === "tick"){
-      await setDoc(doc(db,"verifiedClaims",uid), { code:"owner", at: serverTimestamp() });
-      await updateDoc(doc(db,"users",uid), { verified: true, updatedAt: serverTimestamp() });
-      toast("Blue tick given"); return true;
-    }
+  await setDoc(doc(db,"verifiedClaims",uid), { code:"owner", at: serverTimestamp() });
+  await updateDoc(doc(db,"users",uid), { verified: true, updatedAt: serverTimestamp() });
+  toast("Blue tick given"); return true;
+}
+if(act === "givevip"){
+  const v = await askText({
+    title: "Give VIP badge",
+    value: "",
+    placeholder: "Channel name e.g. PUBG 4.5 PREMIUM SLOT",
+    max: 60,
+    okLabel: "Give VIP"
+  });
+  if(v === null) return false;
+  const channel = String(v || "").trim();
+  if(!channel){ toast("Channel name required", "ic-close"); return false; }
+  const existing = Array.isArray(raw.vipChannels) ? raw.vipChannels : [];
+  if(existing.includes(channel)){ toast("Already VIP in this channel", "ic-close"); return false; }
+  await updateDoc(doc(db,"users",uid), {
+    vipChannels: arrayUnion(channel),
+    updatedAt: serverTimestamp()
+  });
+  toast("VIP badge given");
+  return true;
+}
+if(act === "removevip"){
+  await updateDoc(doc(db,"users",uid), {
+    vipChannels: [],
+    updatedAt: serverTimestamp()
+  });
+  toast("VIP badge removed");
+  return true;
+}
     if(act === "untick"){
       await deleteDoc(doc(db,"verifiedClaims",uid));
       await updateDoc(doc(db,"users",uid), { verified: false, updatedAt: serverTimestamp() });
@@ -7503,39 +7803,38 @@ async function ownerAction(act, uid){
   return false;
 }
 
-/* ⚡ Owner changes another user's profile photo */
+/* ⚡ Owner changes another user's profile photo (with 3-tab picker) */
 function ownerChangeUserPhoto(uid, raw, sheetWrap){
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.style.display = "none";
-  input.onchange = async (ev)=>{
-    const file = ev.target.files && ev.target.files[0];
-    if(!file) return;
-    let croppedBlob;
-    try{
-      croppedBlob = await cropImageToFile(file, { aspect: 1, size: 256 });
-    }catch(err){
-      if(err && err.message === "Crop cancelled") return;
-      toast("Could not open image", "ic-close"); return;
-    }
-    toast("Uploading photo…", "ic-upload");
-    try{
-      const cropFile = new File([croppedBlob], "avatar.jpg", { type: "image/jpeg" });
-      const url = await uploadAvatar(cropFile);
-      await updateDoc(doc(db,"users",uid), { photoURL: url, updatedAt: serverTimestamp() });
-      toast("Profile photo updated");
-      // Refresh sheet with new avatar
+  openAvatarPicker({
+    uid: uid,
+    onPicked: (url)=>{
       if(sheetWrap && document.body.contains(sheetWrap)) sheetWrap.remove();
-      setTimeout(()=> openUserSheet(uid), 120);
-    }catch(e){
-      toast("Failed: " + (e.code || e.message), "ic-close");
+      setTimeout(()=> openUserSheet(uid), 150);
+    },
+    onUploaded: async (file)=>{
+      let croppedBlob;
+      try{
+        croppedBlob = await cropImageToFile(file, { aspect: 1, size: 256 });
+      }catch(err){
+        if(err && err.message === "Crop cancelled") return;
+        toast("Could not open image", "ic-close"); return;
+      }
+      toast("Uploading photo…", "ic-upload");
+      try{
+        const cropFile = new File([croppedBlob], "avatar.jpg", { type: "image/jpeg" });
+        const url = await uploadAvatar(cropFile);
+        await updateDoc(doc(db,"users",uid), { photoURL: url, updatedAt: serverTimestamp() });
+        toast("Profile photo updated");
+        if(sheetWrap && document.body.contains(sheetWrap)) sheetWrap.remove();
+        setTimeout(()=> openUserSheet(uid), 150);
+      }catch(e){
+        toast("Failed: " + (e.code || e.message), "ic-close");
+      }
     }
-  };
-  document.body.appendChild(input);
-  input.click();
-  setTimeout(()=> input.remove(), 1500);
+  });
 }
+
+/* ⚡ Rename my own store name */
 async function renameMyself(){
   if(guestBlock("change your store name")) return;
   if(!state.uid || !firebaseReady) return;
@@ -7967,7 +8266,7 @@ async function createCategoryQuick(){
   catch(err){ toast("Failed", "ic-close"); }
 }
 function initProfileActions(){
-  $("#row-change-photo").addEventListener("click", ()=> $("#profile-photo-input").click());
+  $("#row-change-photo").addEventListener("click", ()=> openAvatarPicker());
   const _maintRow = document.getElementById("row-maintenance");
 if(_maintRow) _maintRow.addEventListener("click", toggleMaintenance);
   const _spoofRow = document.getElementById("row-spoof-online");
@@ -7980,8 +8279,7 @@ const _cdRow = document.getElementById("row-console-detector");
 if(_cdRow) _cdRow.addEventListener("click", toggleConsoleDetector);
 const _fixRow = document.getElementById("row-fix-urls");
 if(_fixRow) _fixRow.addEventListener("click", fixOldURLs);
-  $("#profile-avatar").addEventListener("click", ()=> $("#profile-photo-input").click());
-  $("#profile-photo-input").addEventListener("change", e=>{ changeMyPhoto(e.target.files[0]); e.target.value = ""; });
+  $("#profile-avatar").addEventListener("click", ()=> openAvatarPicker());
   $("#row-rename").addEventListener("click", renameMyself);
   $("#row-theme").addEventListener("click", ()=> $("#theme-toggle-btn").click());
   $("#row-verify").addEventListener("click", enterTickCode);
@@ -8352,23 +8650,35 @@ async function joinChannelWithCode(channel, codeRaw){
   const memberKey = myMemberKey();
   try{
     await runTransaction(db, async tx=>{
-  const codeRef = doc(db,"channelCodes",code);
-  const codeSnap = await tx.get(codeRef);
-  if(!codeSnap.exists() || codeSnap.data().channelId !== channel.id || codeSnap.data().used){
-    const e = new Error("Wrong code"); e.code = "WRONGCODE"; throw e;
-  }
-  const channelRef = doc(db,"channels",channel.id);
-  const channelSnap = await tx.get(channelRef);
-  const isCustom = channelSnap.exists() && channelSnap.data().customMemberCount === true;
-  tx.update(codeRef, { used:true, usedBy: memberKey, usedAt: serverTimestamp() });
-  tx.set(doc(db,"channels",channel.id,"members",memberKey), {
-    uid: state.uid, name: state.username, photoURL: state.photoURL || "",
-    role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
-  });
-  if(!isCustom){
-    tx.update(channelRef, { memberCount: increment(1) });
-  }
-});
+      const codeRef = doc(db,"channelCodes",code);
+      const codeSnap = await tx.get(codeRef);
+      if(!codeSnap.exists() || codeSnap.data().channelId !== channel.id || codeSnap.data().used){
+        const e = new Error("Wrong code"); e.code = "WRONGCODE"; throw e;
+      }
+      const channelRef = doc(db,"channels",channel.id);
+      const channelSnap = await tx.get(channelRef);
+      const isCustom = channelSnap.exists() && channelSnap.data().customMemberCount === true;
+      tx.update(codeRef, { used:true, usedBy: memberKey, usedAt: serverTimestamp() });
+      tx.set(doc(db,"channels",channel.id,"members",memberKey), {
+        uid: state.uid, name: state.username, photoURL: state.photoURL || "",
+        role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
+      });
+      if(!isCustom){
+        tx.update(channelRef, { memberCount: increment(1) });
+      }
+      // ⚡ Auto VIP badge for joining member
+      const userRef = doc(db,"users", state.uid);
+      const userSnap = await tx.get(userRef);
+      if(userSnap.exists()){
+        const existing = Array.isArray(userSnap.data().vipChannels) ? userSnap.data().vipChannels : [];
+        if(!existing.includes(channel.name)){
+          tx.update(userRef, {
+            vipChannels: arrayUnion(channel.name),
+            updatedAt: serverTimestamp()
+          });
+        }
+      }
+    });
     toast("Joined " + channel.name);
     if(window.__pikaOneSignal){ try{ await window.__pikaOneSignal.User.addTag("channel_"+channel.id, "joined"); }catch(e){} }
     await refreshMyChannels();
@@ -8551,6 +8861,17 @@ else if(a === "members"){ wrap.remove(); openChannelMembersSheet(channelId); }
       if(!ch.customMemberCount){
         await updateDoc(doc(db,"channels",channelId), { memberCount: increment(1) });
       }
+      // ⚡ Auto VIP badge
+      try{
+        const userRef = doc(db,"users", u.id);
+        const userSnap = await getDoc(userRef);
+        if(userSnap.exists()){
+          const existing = Array.isArray(userSnap.data().vipChannels) ? userSnap.data().vipChannels : [];
+          if(!existing.includes(ch.name)){
+            await updateDoc(userRef, { vipChannels: arrayUnion(ch.name), updatedAt: serverTimestamp() });
+          }
+        }
+      }catch(e){ console.warn("VIP update failed", e); }
       toast("Added to channel");
     }catch(err){ toast("Failed", "ic-close"); }
   });
