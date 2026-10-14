@@ -4562,6 +4562,75 @@ async function backfillVipChannels(){
     console.warn("VIP backfill failed:", e && e.code ? e.code : e);
   }
 }
+/* ⚡ OWNER-ONLY: Bulk VIP backfill — scans ALL users × ALL channels
+   and fixes vipChannels field for everyone who joined but didn't get badge */
+async function ownerBulkBackfillVip(){
+  if(!state.isOwner) return;
+  if(!firebaseReady) return;
+  if(!state.channelsLoaded) return;
+  if(!Array.isArray(state.channels) || state.channels.length === 0){
+    console.log("[Owner VIP Backfill] No channels loaded yet");
+    return;
+  }
+
+  console.log("[Owner VIP Backfill] Starting bulk scan…");
+  toast("Scanning all members for VIP badges…", "ic-users");
+
+  let fixedCount = 0;
+  let checkedCount = 0;
+
+  try{
+    const usersSnap = await getDocs(collection(db, "users"));
+
+    for(const userDoc of usersSnap.docs){
+      const uid = userDoc.id;
+      if(uid === "owner") continue;           // skip owner doc
+      const udata = userDoc.data();
+      if(udata.banned) continue;              // skip banned
+      if(udata.guest) continue;               // skip guests
+
+      checkedCount++;
+
+      const existingVip = Array.isArray(udata.vipChannels) ? udata.vipChannels : [];
+      const memberChannelNames = [];
+
+      for(const ch of state.channels){
+        if(!ch || !ch.id || !ch.name) continue;
+        try{
+          const msnap = await getDoc(doc(db, "channels", ch.id, "members", uid));
+          if(msnap.exists() && !msnap.data().blocked){
+            memberChannelNames.push(ch.name);
+          }
+        }catch(e){ /* skip individual errors */ }
+      }
+
+      const missing = memberChannelNames.filter(n => !existingVip.includes(n));
+      if(missing.length === 0) continue;
+
+      try{
+        await updateDoc(doc(db, "users", uid), {
+          vipChannels: arrayUnion(...missing),
+          updatedAt: serverTimestamp()
+        });
+        fixedCount++;
+        console.log("[Owner VIP Backfill] Fixed:", udata.name || uid, "→", missing.join(", "));
+      }catch(e){
+        console.warn("[Owner VIP Backfill] Failed for", uid, e && e.code);
+      }
+    }
+
+    if(fixedCount > 0){
+      toast(`VIP badges fixed for ${fixedCount} user(s) ✅`, "ic-check");
+    } else {
+      toast(`All ${checkedCount} members already have correct VIP badges`, "ic-check");
+    }
+    console.log(`[Owner VIP Backfill] Done. Fixed: ${fixedCount} / Checked: ${checkedCount}`);
+  }catch(e){
+    console.warn("[Owner VIP Backfill] Bulk scan failed:", e && e.code ? e.code : e);
+    toast("VIP backfill failed — check console", "ic-close");
+  }
+}
+
 let booted = false;
 
 function boot(){
@@ -4577,10 +4646,14 @@ function boot(){
   if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelMembers(); migrateChannelMessageMedia(); toast("Owner control enabled", "ic-check"); }
 
   // ⚡ Auto-backfill VIP badges — users who joined channels BEFORE the VIP feature
-  // Runs 2.5s after boot so listenChannels() has finished loading channel data.
-  if(!state.isOwner){
-    setTimeout(()=>{ backfillVipChannels(); }, 2500);
-  }
+// Runs 2.5s after boot so listenChannels() has finished loading channel data.
+if(state.isOwner){
+  // Owner: bulk scan — fix ALL users at once
+  setTimeout(()=>{ ownerBulkBackfillVip(); }, 3000);
+} else {
+  // Regular users: self-backfill only
+  setTimeout(()=>{ backfillVipChannels(); }, 2500);
+}
 
   // ⚡ PWA Shortcut trigger — safe navigation after boot
   setTimeout(()=>{
