@@ -3643,9 +3643,93 @@ function lastSeenMs(u){
   if(u.lastSeen && typeof u.lastSeen.toMillis === "function") return u.lastSeen.toMillis();
   return u.lastActiveMs || 0;
 }
+/* ============ DYNAMIC SPOOF ONLINE — Hour + Day based ============ */
+// Ye function current ratio (10%-90%) nikalta hai — hour of day + day of week ke hisaab se
+function getSpoofOnlineRatio(){
+  const now = new Date();
+  const hour = now.getHours();        // 0-23
+  const day = now.getDay();           // 0=Sunday, 1=Mon, ..., 5=Friday, 6=Sat
+  const dayNum = Math.floor(Date.now() / 86400000);
+
+  // Base ratio per hour bucket
+  let base = 40;
+  if(hour < 5)        base = 12;      // 12am-4am: so rahe hain (12% online)
+  else if(hour < 9)   base = 25;      // 5am-8am: uthte hue (25%)
+  else if(hour < 12)  base = 40;      // 9am-11am: kaam pe (40%)
+  else if(hour < 17)  base = 48;      // 12pm-4pm: lunch+afternoon (48%)
+  else if(hour < 20)  base = 62;      // 5pm-7pm: evening start (62%)
+  else                base = 78;      // 8pm-11pm: prime time (78%)
+
+  // Day-based bonus
+  let dayBonus = 0;
+  if(day === 5 && hour >= 16) dayBonus += 15;   // Friday evening = Jumma holiday
+  if(day === 0)               dayBonus += 12;   // Sunday = full holiday
+  if(day === 6 && hour >= 14) dayBonus += 8;    // Saturday evening
+
+  // Per-day randomness (-10 to +10)
+  const dayVariance = (((dayNum * 7919 + 101) % 100) / 100) * 20 - 10;
+
+  // Per-hour randomness (-5 to +5)
+  const hourVariance = (((dayNum * 31 + hour * 13 + 991) % 100) / 100) * 10 - 5;
+
+  const final = base + dayBonus + dayVariance + hourVariance;
+  return Math.max(10, Math.min(90, final));
+}
+
+// Determine: ye user abhi "Online" dikhana chahiye ya nahi? (deterministic per hour)
+function spoofUserOnline(uid){
+  if(!uid) return false;
+  const hourKey = Math.floor(Date.now() / 3600000);   // har 1 ghante mein badalta hai
+  let h = 0;
+  const s = String(uid) + "|on|" + hourKey;
+  for(let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  const userRandom = Math.abs(h) % 100;
+  return userRandom < getSpoofOnlineRatio();
+}
+
+// Fake "Last seen" text for offline users (per uid + hour deterministic)
+function spoofFakeLastSeen(uid){
+  if(!uid) return "Offline";
+  const hourKey = Math.floor(Date.now() / 3600000);
+  let h = 0;
+  const s = String(uid) + "|ls|" + hourKey;
+  for(let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  const r = Math.abs(h) % 100;
+
+  if(r < 15) return "Last seen just now";
+  if(r < 40) return "Last seen " + (2 + (Math.abs(h) % 25)) + " min ago";
+  if(r < 65) {
+    const hrs = 1 + (Math.abs(h) % 3);
+    return "Last seen " + hrs + " hour" + (hrs === 1 ? "" : "s") + " ago";
+  }
+  if(r < 85) return "Last seen " + (4 + (Math.abs(h) % 8)) + " hours ago";
+  return "Last seen yesterday";
+}
 const ONLINE_WINDOW_MS = 70*1000;
-function presenceText(x){
-  if(SPOOF_ONLINE_MODE) return "Online";
+function presenceText(x, uid){
+  // ⚡ Owner: ALWAYS real status (never spoofed)
+  if(uid === "owner"){
+    const ms = (x && typeof x === "object") ? lastSeenMs(x) : x;
+    if(!ms) return "Offline";
+    const diff = serverNow() - ms;
+    if(diff < ONLINE_WINDOW_MS) return "Online";
+    const m = Math.floor(diff/60000);
+    if(m < 1) return "Last seen just now";
+    if(m < 60) return `Last seen ${m} min ago`;
+    const h = Math.floor(m/60);
+    if(h < 24) return `Last seen ${h} hour${h===1?"":"s"} ago`;
+    const d = Math.floor(h/24);
+    if(d === 1) return "Last seen yesterday";
+    if(d < 30) return `Last seen ${d} days ago`;
+    return "Last seen " + new Date(ms).toLocaleDateString();
+  }
+
+  // ⚡ Non-owner + Spoof Online ON: dynamic time-based fake status
+  if(SPOOF_ONLINE_MODE && uid){
+    return spoofUserOnline(uid) ? "Online" : spoofFakeLastSeen(uid);
+  }
+
+  // ⚡ Fallback: real status
   const ms = (x && typeof x === "object") ? lastSeenMs(x) : x;
   if(!ms) return "Offline";
   const diff = serverNow() - ms;
@@ -6203,7 +6287,7 @@ function renderSearch(term){
   }
   if(members.length){
     html += `<h4>Members</h4><div class="settings-list">${members.map(({id,u})=>`
-      <div class="mini-row tap" data-s-user="${escapeHtml(id)}">${avatarHtml(u.name, u.photoURL, "lg")}<div class="mini-main"><b>${escapeHtml(u.name)}${tick(u.verified)}</b><small>${presenceText(u)}</small></div></div>`).join("")}</div>`;
+      <div class="mini-row tap" data-s-user="${escapeHtml(id)}">${avatarHtml(u.name, u.photoURL, "lg")}<div class="mini-main"><b>${escapeHtml(u.name)}${tick(u.verified)}</b><small>${presenceText(u, id)}</small></div></div>`).join("")}</div>`;
   }
   if(discoverResults.length){
     html += `<h4>Discover</h4><div class="settings-list">${discoverResults.map(app=>`
@@ -7622,8 +7706,8 @@ function renderUsersPage(){
   list.innerHTML = allEntries.map(([uid,u])=>{
     const isSpoof = !!u.__spoof;
     const status = isSpoof
-      ? (u.__tier === 1 ? "Online" : spoofLastSeenText(u.lastActiveMs))
-      : presenceText(u);
+  ? (u.__tier === 1 ? "Online" : spoofLastSeenText(u.lastActiveMs))
+  : presenceText(u, uid);
     const isOnline = status === "Online";
     const n = isSpoof ? (u.uploadsCount || 0) : (counts[uid]||0);
     const unread = isSpoof ? 0 : ((state.dmUnread && state.dmUnread[uid]) || 0);
@@ -7742,10 +7826,10 @@ const controls = (state.isOwner && uid !== state.uid && !raw.owner) ? `
       <div class="sheet-handle"></div>
       <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       <div style="display:flex;align-items:center;gap:14px;padding:24px 18px 14px;">
-        ${avatarHtml(u.name, u.photo, "xl", u.guest, presenceText(raw)==="Online")}
+        ${avatarHtml(u.name, u.photo, "xl", u.guest, presenceText(raw, uid)==="Online")}
 <div style="min-width:0;flex:1">
   <h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center;flex-wrap:wrap">${escapeHtml(u.name)}${raw.guest ? GUEST_TAG : ""}${tick(u.verified)}${(Array.isArray(raw.vipChannels) && raw.vipChannels.length) ? ' <span class="vip-badge">VIP</span>' : ''}</h2>
-  <div class="${presenceText(raw)==="Online" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div>
+  <div class="${presenceText(raw, uid)==="Online" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw, uid)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div>
   ${(Array.isArray(raw.vipChannels) && raw.vipChannels.length) ? `<span class="vip-line">VIP Member Of ${escapeHtml(String(raw.vipChannels[0]))}</span>` : ''}
 </div>
       </div>
@@ -8080,7 +8164,22 @@ async function setMyPhone(){
   }catch(e){ toast("Failed", "ic-close"); }
 }
 const threadIdFor = (a,b)=> [a,b].sort().join("__");
-function isOnlineUid(uid){ const u = state.users[uid]; const t = lastSeenMs(u); return !!(t && (serverNow()-t) < ONLINE_WINDOW_MS); }
+function isOnlineUid(uid){
+  // Owner always uses real status
+  if(uid === "owner"){
+    const u = state.users[uid]; 
+    const t = lastSeenMs(u); 
+    return !!(t && (serverNow()-t) < ONLINE_WINDOW_MS);
+  }
+  // Spoof ON → use dynamic spoof
+  if(SPOOF_ONLINE_MODE && uid){
+    return spoofUserOnline(uid);
+  }
+  // Fallback: real status
+  const u = state.users[uid]; 
+  const t = lastSeenMs(u); 
+  return !!(t && (serverNow()-t) < ONLINE_WINDOW_MS);
+}
 function isViewingThread(uid, tid){ const u = state.users[uid]; return isOnlineUid(uid) && u && u.activeThreadId === tid; }
 function dmTickIcon(m, otherId, tid){
   if(m.from !== state.uid) return "";
