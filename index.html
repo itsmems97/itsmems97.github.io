@@ -6675,25 +6675,68 @@ async function setSpoofMembersCount(){
   }catch(e){ toast("Failed: " + (e.code || e.message), "ic-close"); }
 }
 
-const SPOOF_NAMES = [
-  "Aarav Khan", "Zara Ali", "Rohan Sharma", "Priya Singh", "Kabir Ahmed",
-  "Aisha Malik", "Dev Patel", "Riya Verma", "Arjun Kumar", "Sana Fatima",
-  "Vikram Rao", "Neha Gupta", "Imran Sheikh", "Meera Joshi", "Aryan Khan",
-  "Fatima Noor", "Hasan Raza", "Ishita Roy", "Karan Mehta", "Layla Ibrahim",
-  "Omar Farooq", "Sara Khan", "Tariq Aziz", "Ayesha Siddiqui", "Bilal Hussain",
-  "Dania Iqbal", "Faisal Baig", "Hira Nawaz", "Junaid Akhtar", "Kiran Shah",
-  "Mehak Riaz", "Nabeel Chaudhry", "Palwasha Khan", "Qasim Ali", "Rabia Aslam",
-  "Salman Yousuf", "Tooba Anwar", "Umair Khalid", "Warda Zaman", "Yasir Mahmood",
-  "Zainab Bashir", "Adnan Sethi", "Bushra Naeem", "Cyrus Mirza", "Danish Qureshi",
-  "Eman Tariq", "Farhan Zaidi", "Gulzar Hussain", "Hina Butt", "Ibrahim Dar",
-  "Javeria Sohail", "Kamran Rasheed", "Laiba Khalil", "Muneeb Sattar",
-  "Nida Hayat", "Osama Jamil", "Parveen Akhtar", "Rayan Hameed", "Sundus Malik",
-  "Talha Najam", "Urooj Aftab", "Waqas Ahmed", "Yumna Sheikh", "Zoya Rehman",
-  "Ahmed Raza", "Beenish Khan", "Daniyal Amir", "Eisha Farooq", "Gohar Khan",
-  "Haroon Yousaf", "Iqra Bano", "Jibran Alam", "Komal Javed", "Lubna Ilyas",
-  "Murtaza Haider", "Nashit Rehman", "Orhan Ali", "Pakeeza Noor", "Rohail Shah",
-  "Sadia Iqbal", "Taimoor Baig", "Ujala Naz", "Vania Khan", "Wajiha Aslam"
+const PK_FEMALE_FIRST = [
+  "Ayesha","Fatima","Zainab","Maryam","Hira","Sana","Aisha","Zara","Sara","Areeba",
+  "Anaya","Laiba","Iqra","Hania","Eman","Mahnoor","Warda","Rabia","Dua","Aleena",
+  "Noor","Amna","Hafsa","Khadija","Nimra","Esha","Minal","Alina","Rida","Sehar",
+  "Isra","Areesha","Malaika","Zoya","Aiman","Meher","Rameen","Hadia","Saba","Nida",
+  "Yusra","Safa","Anum","Farah","Sadia","Komal","Bushra","Noreen","Shazia","Rukhsana",
+  "Nasreen","Shamim","Parveen","Zahida","Abida","Saima","Samina","Uzma","Nazia","Aqsa"
 ];
+
+const PK_MALE_FIRST = [
+  "Ahmed","Muhammad","Ali","Hassan","Hussain","Usman","Bilal","Hamza","Umer","Saad",
+  "Faisal","Danish","Asad","Salman","Taimoor","Arsalan","Kashif","Zain","Talha","Umair",
+  "Haris","Huzaifa","Ayan","Rehan","Shayan","Abdullah","Ibrahim","Yusuf","Ismail","Yaqoob",
+  "Farhan","Kamran","Imran","Adnan","Nabeel","Waqas","Faizan","Rizwan","Shahzeb","Shehryar",
+  "Ahsan","Zeeshan","Rehman","Muneeb","Junaid","Amir","Rashid","Naveed","Fahad","Waseem",
+  "Sohail","Rauf","Jamil","Iftikhar","Tariq","Asif","Nasir","Ilyas","Akram","Sajid"
+];
+
+const PK_LAST = [
+  "Khan","Ahmed","Malik","Sheikh","Chaudhry","Butt","Mughal","Qureshi","Siddiqui","Baig",
+  "Raza","Hussain","Iqbal","Abbas","Shah","Dar","Mirza","Bhatti","Javed","Saeed",
+  "Tariq","Riaz","Aslam","Yousuf","Nazir","Karim","Akhtar","Anwar","Ashraf","Farooq",
+  "Habib","Hamid","Idrees","Islam","Latif","Mahmood","Nadeem","Rafiq","Rashid","Sadiq",
+  "Sarwar","Shafiq","Sultan","Wahid","Yaqoob","Zahid","Amin","Anjum","Arif","Bashir",
+  "Chishti","Ejaz","Farid","Gulzar","Haider","Ismail","Jahangir","Kazmi","Liaqat","Mehmood"
+];
+
+function spoofHash(s){
+  let hash = 0;
+  for(let i = 0; i < s.length; i++) hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
+  return Math.abs(hash);
+}
+
+function getSpoofAvatarUrl(name, gender){
+  const h = spoofHash(name);
+  const seed = encodeURIComponent(name.replace(/\s+/g, '').slice(0, 22));
+
+  // Pakistani skin tones (light brown → deep brown)
+  const skinColors = ['f2d3b1','ecad80','d8a373','c68642','a56b3d','8d5524','763900'];
+  // Pakistani hair colors (black / dark brown only)
+  const hairColors = ['0e0e0e','180e0e','1c1c1c','2c1b18','3e2218','562306'];
+  const bgs = ['b6e3f4','c0aede','d1d4f9','ffdfbf','c8e6c9','ffe0b2','b2dfdb','e8eaf6'];
+
+  const skin = skinColors[h % skinColors.length];
+  const hair = hairColors[(h >> 3) % hairColors.length];
+  const bg   = bgs[(h >> 5) % bgs.length];
+
+  const themes = ['personas','avataaars','adventurer','micah','open-peeps'];
+  const theme  = themes[(h >> 7) % themes.length];
+
+  const isMale = gender === 'male';
+  const facialHairP = isMale ? 60 : 0;
+  const accP = 15;
+
+  return `https://api.dicebear.com/9.x/${theme}/svg?seed=${seed}` +
+         `&backgroundColor=${bg}` +
+         `&skinColor=${skin}` +
+         `&hairColor=${hair}` +
+         `&facialHairProbability=${facialHairP}` +
+         `&accessoriesProbability=${accP}` +
+         `&radius=50`;
+}
 
 let _spoofCache = null;
 let _spoofCacheKey = "";
@@ -6702,16 +6745,41 @@ function generateSpoofMembers(count){
   const key = String(count);
   if(_spoofCache && _spoofCacheKey === key) return _spoofCache;
   const arr = [];
+  const usedFemale = new Set();
+  const usedMale = new Set();
   const nowMs = Date.now();
   const MIN = 60 * 1000;
   const HOUR = 60 * MIN;
   const DAY = 24 * HOUR;
+
+  function makeUniqueName(gender, usedSet){
+    const firstPool = gender === 'female' ? PK_FEMALE_FIRST : PK_MALE_FIRST;
+    for(let attempt = 0; attempt < 200; attempt++){
+      const first = firstPool[Math.floor(Math.random() * firstPool.length)];
+      const last  = PK_LAST[Math.floor(Math.random() * PK_LAST.length)];
+      const full  = first + " " + last;
+      if(!usedSet.has(full)){
+        usedSet.add(full);
+        return full;
+      }
+    }
+    const first = firstPool[Math.floor(Math.random() * firstPool.length)];
+    const last  = PK_LAST[Math.floor(Math.random() * PK_LAST.length)];
+    const mid   = PK_LAST[Math.floor(Math.random() * PK_LAST.length)];
+    const full  = first + " " + mid.charAt(0) + ". " + last;
+    usedSet.add(full);
+    return full;
+  }
+
   for(let i = 0; i < count; i++){
-    const name = SPOOF_NAMES[Math.floor(Math.random() * SPOOF_NAMES.length)];
-    const uid = "spoof_" + i + "_" + Math.random().toString(36).slice(2, 6);
+    const isFemale = Math.random() < 0.45;
+    const gender   = isFemale ? 'female' : 'male';
+    const name     = makeUniqueName(gender, isFemale ? usedFemale : usedMale);
+    const uid      = "spoof_" + i + "_" + Math.random().toString(36).slice(2, 6);
+
     const roll = Math.random();
     let tier, lastActiveMs;
-    if(roll < 0.70){
+    if(roll < 0.40){
       tier = 1;
       lastActiveMs = nowMs - Math.floor(Math.random() * 30 * 1000);
     } else {
@@ -6723,12 +6791,13 @@ function generateSpoofMembers(count){
       else if(sub < 0.90) lastActiveMs = nowMs - (1 * DAY  + Math.random() * 6 * DAY);
       else                lastActiveMs = nowMs - (7 * DAY  + Math.random() * 23 * DAY);
     }
+
     arr.push({
       uid,
       tier,
       data: {
         name,
-        photoURL: "",
+        photoURL: getSpoofAvatarUrl(name, gender),
         guest: false,
         verified: false,
         lastActiveMs,
