@@ -2496,7 +2496,8 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
   <div class="row tap" id="row-change-photo"><div class="row-left"><svg><use href="#ic-image"/></svg> Change profile photo</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
   <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
   <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
-  <div class="row tap" id="row-maintenance" hidden><div class="row-left"><svg><use href="#ic-lock"/></svg> Maintenance Mode</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="maintenance-label">OFF</span></div>
+  <div class="row tap" id="row-spoof-online" hidden><div class="row-left"><svg><use href="#ic-users"/></svg> Spoof Online</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="spoof-online-label">OFF</span></div>
+<div class="row tap" id="row-maintenance" hidden><div class="row-left"><svg><use href="#ic-lock"/></svg> Maintenance Mode</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="maintenance-label">OFF</span></div>
 <div class="row tap" id="row-send-messages" hidden><div class="row-left"><svg><use href="#ic-chat"/></svg> Send Messages</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 <div class="row tap" id="row-console-detector" hidden><div class="row-left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> Console Detector</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="console-detector-label">OFF</span></div>
 <div class="row tap" id="row-fix-urls" hidden><div class="row-left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M4 10a8 8 0 0 1 14-5M20 14a8 8 0 0 1-14 5"/></svg> Fix Old URLs</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
@@ -3332,6 +3333,7 @@ function fmtDuration(sec){
 }
 function appCreatedMs(app){
   if(!app) return 0;
+  if(app.displayDateMs) return app.displayDateMs;
   if(app.createdAtMs) return app.createdAtMs;
   if(app.createdAt && typeof app.createdAt.toMillis === "function") return app.createdAt.toMillis();
   return 0;
@@ -3390,10 +3392,22 @@ function userView(uid, fallbackName, fallbackVerified){
     name: (u && u.name) || fallbackName || "member",
     photo: (u && u.photoURL) || "",
     verified: !!(u ? u.verified : fallbackVerified),
-    banned: !!(u && u.banned)
+    banned: !!(u && u.banned),
+    guest: !!(u && u.guest)
   };
 }
-function avatarHtml(name, photo, cls=""){
+const GUEST_EMOJIS = ['🦊','🐼','🐨','🦁','🐯','🐸','🐙','🦄','🐺','🐱','🐶','🐰','🐻','🐧','🦉','🦋','🐢','🦜','🦩','🐬','🐳','🦖','🐲','🦕'];
+function guestEmojiFor(name){
+  let hash = 0;
+  const s = String(name || "Guest");
+  for(let i = 0; i < s.length; i++) hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
+  return GUEST_EMOJIS[Math.abs(hash) % GUEST_EMOJIS.length];
+}
+function avatarHtml(name, photo, cls="", isGuest){
+  if(isGuest && !photo){
+    const emoji = guestEmojiFor(name);
+    return `<span class="uav ${cls}" style="background:linear-gradient(135deg,#E0C3FC,#8EC5FC);font-size:1.35em;line-height:1;text-shadow:0 2px 6px rgba(0,0,0,.2);">${emoji}</span>`;
+  }
   return `<span class="uav ${cls}">${photo ? `<img src="${escapeHtml(photo)}" alt="">` : escapeHtml((name||"?").trim().slice(0,1).toUpperCase())}</span>`;
 }
 function resizeImage(file, size=256){
@@ -3575,6 +3589,7 @@ function lastSeenMs(u){
 }
 const ONLINE_WINDOW_MS = 70*1000;
 function presenceText(x){
+  if(SPOOF_ONLINE_MODE) return "Active now";
   const ms = (x && typeof x === "object") ? lastSeenMs(x) : x;
   if(!ms) return "Offline";
   const diff = serverNow() - ms;
@@ -4265,7 +4280,7 @@ async function getDeviceDetails(){
   d.fingerprintId = await sha256("pika-hw|" + stable);
   return d;
 }
-const GUEST_TTL_MS = 3*24*60*60*1000;
+const GUEST_TTL_MS = 7*24*60*60*1000;
 function guestCreatedMs(){ const u = auth.currentUser; return (u && u.metadata && Date.parse(u.metadata.creationTime)) || Date.now(); }
 function guestExpiryMs(){ return guestCreatedMs() + GUEST_TTL_MS; }
 async function guestExpired(){
@@ -4456,7 +4471,7 @@ function boot(){
   initOwnerConsole();
   initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); initTelegramUI(); initHomeCategories();
   if(!state.isGuest) loadMyPhone();
-  listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance();
+  listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance(); listenSpoofSetting();
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: preview & download only", "ic-lock"); }
@@ -5523,7 +5538,8 @@ function ghRenderLatest(){
     const grad = palette[i % palette.length];
     const thumb = a.thumbUrl ? `url('${escapeHtml(a.thumbUrl)}')` : `linear-gradient(140deg,${grad})`;
     const letter = escapeHtml((a.name || 'A').trim()[0].toUpperCase());
-    const ago = a.createdAtMs ? fmtAgo(a.createdAtMs) : '';
+    const _dm = appCreatedMs(a);
+const ago = _dm ? fmtAgo(_dm) : '';
     return `
     <div class="gh-aitem" data-gh-open="${escapeHtml(a.id)}">
       <div class="gh-aicon" style="background:${thumb}; background-size:cover; background-position:center;">
@@ -6415,7 +6431,8 @@ if(state.upload.replaceAppId){
     fileUrl: fileRes.url, filePath: fileRes.path,
     contactPhone, hasPassword: !!state.upload.hasPassword, passwordHash,
     sizeLabel: (state.upload.file.size/1024/1024).toFixed(1)+" MB",
-    updatedAt: serverTimestamp(), updatedAtMs: Date.now(), edited: true
+    updatedAt: serverTimestamp(), updatedAtMs: Date.now(), edited: true,
+    displayDateMs: Date.now()
   };
   if(thumbUrl) updData.thumbUrl = thumbUrl;
   if(screenshotUrls.length) updData.screenshots = screenshotUrls;
@@ -6463,6 +6480,40 @@ if(state.upload.replaceAppId){
 }
 
 let chatUnread = 0, chatPanelOpen = false;
+
+let SPOOF_ONLINE_MODE = false;
+function listenSpoofSetting(){
+  if(!firebaseReady) return;
+  onSnapshot(doc(db, "config", "spoof"), s => {
+    SPOOF_ONLINE_MODE = s.exists() ? !!s.data().enabled : false;
+    try{ renderUsersPage(); }catch(_){}
+  }, err => console.warn("spoof listener", err));
+}
+async function toggleSpoofOnline(){
+  if(!state.isOwner) return;
+  const next = !SPOOF_ONLINE_MODE;
+  try{
+    await setDoc(doc(db, "config", "spoof"), {
+      enabled: next,
+      updatedAt: serverTimestamp(),
+      updatedBy: state.authUid || state.uid
+    }, { merge: true });
+    SPOOF_ONLINE_MODE = next;
+    renderUsersPage();
+    updateSpoofUI();
+    toast(next ? "Spoof Online ON" : "Spoof Online OFF");
+  }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+}
+function updateSpoofUI(){
+  const row = document.getElementById("row-spoof-online");
+  const lbl = document.getElementById("spoof-online-label");
+  if(!row) return;
+  row.hidden = !state.isOwner;
+  if(lbl){
+    lbl.textContent = SPOOF_ONLINE_MODE ? "ON" : "OFF";
+    lbl.style.color = SPOOF_ONLINE_MODE ? "var(--accent-2)" : "var(--text-faint)";
+  }
+}
 function listenChat(){
   if(!firebaseReady) return;
   const q = query(collection(db,"chat"), orderBy("createdAt","asc"), limit(300));
@@ -6674,7 +6725,13 @@ function renderProfile(){
   const nameEl = $("#profile-name"); if(!nameEl) return;
   nameEl.innerHTML = `${escapeHtml(state.username || "—")}${tick(state.verified)}`;
   $("#profile-role").textContent = state.isOwner ? "Store Owner" : (state.isGuest ? "Guest — download only" : (state.verified ? "Verified member" : "Member of Pika Store"));
+  if(state.isGuest && !state.photoURL){
+  $("#profile-avatar").innerHTML = `<span style="font-size:1.8em;line-height:1;text-shadow:0 3px 10px rgba(0,0,0,.25);">${guestEmojiFor(state.username)}</span>`;
+  $("#profile-avatar").style.background = "linear-gradient(135deg,#E0C3FC,#8EC5FC)";
+} else {
   $("#profile-avatar").innerHTML = state.photoURL ? `<img alt="" src="${escapeHtml(state.photoURL)}" />` : escapeHtml((state.username||"P").slice(0,1).toUpperCase());
+  $("#profile-avatar").style.background = "";
+}
   const mine = state.apps.filter(a=> a.uploaderUid === state.uid);
   const myCats = state.categories.filter(c=> c.ownerUid === state.uid);
   $("#profile-uploads-count").textContent = mine.length;
@@ -6692,6 +6749,7 @@ renderAccountDetails();
 updateMaintenanceUI();
 updateSendMessagesUI();
 updateConsoleDetectorUI();
+updateSpoofUI();
   const list = state.isOwner ? state.apps : mine;
   $("#my-uploads-title").textContent = state.isOwner ? "All uploads (Owner)" : "My uploads";
   $("#my-uploads-list").innerHTML = list.length ? list.map(a=>{
@@ -6780,15 +6838,26 @@ function renderUsersPage(){
   if(!state.isOwner) entries = entries.filter(([,u])=> !u.banned);
   const counts = {};
   state.apps.forEach(a=>{ if(a.uploaderUid) counts[a.uploaderUid] = (counts[a.uploaderUid]||0) + 1; });
-  const tier = u => u.banned ? 3 : (u.guest ? 2 : (u.verified ? 0 : 1));
-  entries.sort((a,b)=> tier(a[1]) - tier(b[1]) || userShuffle(a[0]) - userShuffle(b[0]));
+  function userTier(uid, u){
+  if(u.banned) return 3;
+  if(u.verified) return 0;
+  const ms = lastSeenMs(u);
+  const isActive = (serverNow() - ms) < ONLINE_WINDOW_MS || SPOOF_ONLINE_MODE;
+  return isActive ? 1 : 2;
+}
+entries.sort((a,b)=>{
+  const ta = userTier(a[0], a[1]);
+  const tb = userTier(b[0], b[1]);
+  if(ta !== tb) return ta - tb;
+  return userShuffle(a[0]) - userShuffle(b[0]);
+});
   list.innerHTML = entries.map(([uid,u])=>{
     const status = presenceText(u);
     const n = counts[uid]||0;
     const unread = (state.dmUnread && state.dmUnread[uid]) || 0;
     return `<div class="mini-row tap" data-user-open="${uid}">
-      ${avatarHtml(u.name, u.photoURL, "lg")}
-      <div class="mini-main"><b>${escapeHtml(u.name||"—")}${u.guest ? GUEST_TAG : ""}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
+      ${avatarHtml(u.name, u.photoURL, "lg", u.guest)}
+<div class="mini-main"><b>${escapeHtml(u.name||"—")}${u.guest ? GUEST_TAG : ""}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
         <small class="${status==="Active now" ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small></div>
       ${unread ? `<span class="dm-badge">${unread>99?"99+":unread}</span>` : ""}
       <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
@@ -6826,8 +6895,8 @@ function openUserSheet(uid){
       <div class="sheet-handle"></div>
       <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       <div style="display:flex;align-items:center;gap:14px;padding:24px 18px 14px;">
-        ${avatarHtml(u.name, u.photo, "xl")}
-        <div><h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center">${escapeHtml(u.name)}${raw.guest ? GUEST_TAG : ""}${tick(u.verified)}</h2>
+        ${avatarHtml(u.name, u.photo, "xl", u.guest)}
+<div><h2 style="margin:0 0 3px;font-size:19px;display:flex;align-items:center">${escapeHtml(u.name)}${raw.guest ? GUEST_TAG : ""}${tick(u.verified)}</h2>
         <div class="${presenceText(raw)==="Active now" ? "online" : ""}" style="font-size:12px;color:var(--text-faint)">${presenceText(raw)}${jm ? " • Joined " + new Date(jm).toLocaleDateString() : ""}</div></div>
       </div>
       <div class="profile-stats"><div class="stat"><b>${apps.length}</b><span>Uploads</span></div><div class="stat"><b>${fmtCount(dl)}</b><span>Downloads</span></div></div>
@@ -7315,7 +7384,9 @@ async function createCategoryQuick(){
 function initProfileActions(){
   $("#row-change-photo").addEventListener("click", ()=> $("#profile-photo-input").click());
   const _maintRow = document.getElementById("row-maintenance");
-  if(_maintRow) _maintRow.addEventListener("click", toggleMaintenance);
+if(_maintRow) _maintRow.addEventListener("click", toggleMaintenance);
+const _spoofRow = document.getElementById("row-spoof-online");
+if(_spoofRow) _spoofRow.addEventListener("click", toggleSpoofOnline);
   const _sendMsgRow = document.getElementById("row-send-messages");
 if(_sendMsgRow) _sendMsgRow.addEventListener("click", openSendMessagesSheet);
 const _cdRow = document.getElementById("row-console-detector");
@@ -7899,19 +7970,27 @@ else if(a === "members"){ wrap.remove(); openChannelMembersSheet(channelId); }
 } else if(a === "keys"){ wrap.remove(); openChannelKeysManagementSheet(channelId); }
 else if(a === "codes"){ wrap.remove(); openChannelCodesSheet(channelId); }
 else if(a === "setmembers"){
-  const v = await askText({ title:"Set member count", value: String(ch.memberCount || 1), placeholder:"Enter number (0 = reset to real)", max:8, okLabel:"Save" });
+  const v = await askText({ title:"Set member count", value: String(ch.memberCount || 1), placeholder:"Enter number (0 = reset to real)", max:8, okLabel:"Next" });
   if(v === null) return;
   const n = parseInt(v.trim(), 10);
   if(!Number.isFinite(n) || n < 0){ toast("Enter a valid number", "ic-close"); return; }
+  let activeN = ch.activeMemberCount || 0;
+  if(n > 0){
+    const av = await askText({ title:"Active members count", value: String(activeN||Math.floor(n*0.9)), placeholder:"e.g. 2300 (0 = hide)", max:8, okLabel:"Save" });
+    if(av !== null){
+      const an = parseInt(av.trim(), 10);
+      if(Number.isFinite(an) && an >= 0) activeN = an;
+    }
+  }
   try{
     if(n === 0){
       const memSnap = await getDocs(collection(db,"channels",channelId,"members"));
       const realCount = Math.max(1, memSnap.size);
-      await updateDoc(doc(db,"channels",channelId), { memberCount: realCount, customMemberCount: false });
+      await updateDoc(doc(db,"channels",channelId), { memberCount: realCount, activeMemberCount: 0, customMemberCount: false });
       toast("Reset to real count: " + realCount);
     } else {
-      await updateDoc(doc(db,"channels",channelId), { memberCount: n, customMemberCount: true });
-      toast("Member count set to " + fmtCount(n));
+      await updateDoc(doc(db,"channels",channelId), { memberCount: n, activeMemberCount: activeN, customMemberCount: true });
+      toast("Members: " + fmtCount(n) + " • Active: " + fmtCount(activeN));
     }
     wrap.remove();
   }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
@@ -9099,9 +9178,11 @@ async function openTelegramChannel(channelId, opts = {}){
   $("#pktg-rec-bar").classList.remove("active");
   $("#pktg-conv").classList.toggle("pktg-preview-mode", preview);
   $("#pktg-title").textContent = ch.name;
-  $("#pktg-subs").textContent = preview
-    ? `Preview • ${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}`
-    : `${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}`;
+  const _mem = fmtCount(ch.memberCount||1);
+const _act = ch.activeMemberCount ? ` • ${fmtCount(ch.activeMemberCount)} active` : "";
+$("#pktg-subs").textContent = preview
+  ? `Preview • ${_mem} member${(ch.memberCount||1)===1?"":"s"}${_act}`
+  : `${_mem} member${(ch.memberCount||1)===1?"":"s"}${_act}`;
   const av = $("#pktg-avatar");
   av.innerHTML = ch.photoURL ? `<img src="${escapeHtml(ch.photoURL)}" alt="">` : escapeHtml((ch.name||"?").trim().slice(0,1).toUpperCase());
   $("#pktg-input").placeholder = `Message ${ch.name}…`;
@@ -9150,12 +9231,14 @@ async function openTelegramChannel(channelId, opts = {}){
     if(active){
       const u = state.users[d.byUid];
       sub.textContent = (u && u.name ? u.name : "Someone") + " is typing…";
-    } else {
-      sub.textContent = preview
-        ? `Preview • ${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}`
-        : `${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}`;
-    }
-  }, ()=>{});
+      } else {
+    const _m2 = fmtCount(ch.memberCount||1);
+    const _a2 = ch.activeMemberCount ? ` • ${fmtCount(ch.activeMemberCount)} active` : "";
+    sub.textContent = preview
+      ? `Preview • ${_m2} member${(ch.memberCount||1)===1?"":"s"}${_a2}`
+      : `${_m2} member${(ch.memberCount||1)===1?"":"s"}${_a2}`;
+  }
+}, ()=>{});
 }
 let viewsInFlight = false;
 async function countViews(messages){
