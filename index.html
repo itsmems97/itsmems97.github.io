@@ -6886,9 +6886,25 @@ function getSpoofAvatarUrl(name, gender){
 let _spoofCache = null;
 let _spoofCacheKey = "";
 
+/* ⚡ Daily online ratio — deterministic per day, changes every 24 hours.
+   Range: 10% → 45% online (so sometimes 90% offline, sometimes 55% offline). */
+function getDailyOnlineRatio(){
+  const dayNum = Math.floor(Date.now() / 86400000);
+  // Simple LCG — same seed same day → same ratio
+  const seed = (dayNum * 9301 + 49297) % 233280;
+  const rnd = seed / 233280;
+  return 0.10 + rnd * 0.35; // 0.10 → 0.45
+}
+function getCurrentDayNum(){ return Math.floor(Date.now() / 86400000); }
+
 function generateSpoofMembers(count){
-  const key = String(count);
+  const dayNum = getCurrentDayNum();
+  const key = String(count) + "_" + dayNum;   // ⚡ Cache invalidates daily
   if(_spoofCache && _spoofCacheKey === key) return _spoofCache;
+
+  const onlineRatio = getDailyOnlineRatio();
+  console.log("[Pika Spoof] Daily online ratio:", (onlineRatio * 100).toFixed(1) + "%");
+
   const arr = [];
   const usedFemale = new Set();
   const usedMale = new Set();
@@ -6924,7 +6940,8 @@ function generateSpoofMembers(count){
 
     const roll = Math.random();
     let tier, lastActiveMs;
-    if(roll < 0.40){
+    // ⚡ Use daily-computed ratio instead of fixed 0.40
+    if(roll < onlineRatio){
       tier = 1;
       lastActiveMs = nowMs - Math.floor(Math.random() * 30 * 1000);
     } else {
@@ -7370,13 +7387,14 @@ function openUserSheet(uid){
         <button class="btn btn-ghost" style="flex:1" id="us-dm" type="button"><svg><use href="#ic-chat"/></svg> Private chat</button>
       </div>` : "";
   const controls = (state.isOwner && uid !== state.uid && !raw.owner) ? `
-      <h3 class="section-title">Owner controls</h3>
-      <div class="settings-list" style="margin-bottom:20px" id="owner-actions">
-        <div class="mini-row tap" data-act="rename"><div class="mini-main"><b>Rename</b><small>Change an inappropriate name</small></div></div>
-        <div class="mini-row tap" data-act="${u.verified ? "untick" : "tick"}"><div class="mini-main"><b>${u.verified ? "Remove blue tick" : "Give blue tick"}</b></div></div>
-        <div class="mini-row tap" data-act="${raw.banned ? "unban" : "ban"}"><div class="mini-main"><b style="color:var(--danger)">${raw.banned ? "Unban user" : "Ban user"}</b></div></div>
-        <div class="mini-row tap" data-act="logout"><div class="mini-main"><b>Log out from their browser</b></div></div>
-      </div>` : "";
+    <h3 class="section-title">Owner controls</h3>
+    <div class="settings-list" style="margin-bottom:20px" id="owner-actions">
+      <div class="mini-row tap" data-act="rename"><div class="mini-main"><b>Rename</b><small>Any name, emojis, symbols — no limits</small></div></div>
+      <div class="mini-row tap" data-act="photo"><div class="mini-main"><b>Change profile photo</b><small>Replace inappropriate or harmful picture</small></div></div>
+      <div class="mini-row tap" data-act="${u.verified ? "untick" : "tick"}"><div class="mini-main"><b>${u.verified ? "Remove blue tick" : "Give blue tick"}</b></div></div>
+      <div class="mini-row tap" data-act="${raw.banned ? "unban" : "ban"}"><div class="mini-main"><b style="color:var(--danger)">${raw.banned ? "Unban user" : "Ban user"}</b></div></div>
+      <div class="mini-row tap" data-act="logout"><div class="mini-main"><b>Log out from their browser</b></div></div>
+    </div>` : "";
   const html = `
   <div class="sheet-backdrop" id="user-backdrop"><div class="sheet">
       <div class="sheet-handle"></div>
@@ -7407,34 +7425,51 @@ function openUserSheet(uid){
     if(d) d.addEventListener("click", ()=>{ wrap.remove(); openDmPanel(uid); });
   }
   wrap.addEventListener("click", async e=>{
-    if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
-    const r = e.target.closest("[data-open-app]");
-    if(r){ wrap.remove(); openAppDetail(r.dataset.openApp); return; }
-    const act = e.target.closest("[data-act]");
-    if(act){ const done = await ownerAction(act.dataset.act, uid); if(done) wrap.remove(); }
-  });
+  if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
+  const r = e.target.closest("[data-open-app]");
+  if(r){ wrap.remove(); openAppDetail(r.dataset.openApp); return; }
+  const act = e.target.closest("[data-act]");
+  if(!act) return;
+  const action = act.dataset.act;
+  // ⚡ Photo action — sheet ko close na karo, direct file picker kholo
+  if(action === "photo"){ ownerChangeUserPhoto(uid, raw, wrap); return; }
+  const done = await ownerAction(action, uid);
+  if(done) wrap.remove();
+});
 }
 async function ownerAction(act, uid){
   if(!state.isOwner) return false;
   const raw = state.users[uid] || {};
   try{
     if(act === "rename"){
-      const v = await askText({ title:"Rename member", value: raw.name || "", placeholder:"New name", max:NAME_MAX });
+      // ⚡ Owner rename — NO limits (any length, emojis, symbols)
+      const v = await askText({
+        title: "Rename member (Owner)",
+        value: raw.name || "",
+        placeholder: "Any name — emojis, symbols, no limits",
+        max: 100,
+        okLabel: "Save"
+      });
       if(v === null) return false;
-      const nn = v.trim(), e = validateName(nn);
-      if(e){ toast(e, "ic-close"); return false; }
+      const nn = String(v || "").trim();
+      if(!nn){ toast("Name cannot be empty", "ic-close"); return false; }
+      if(nn.length > 100){ toast("Maximum 100 characters", "ic-close"); return false; }
+
       const oldLower = raw.nameLower || lowerName(raw.name);
       const newLower = lowerName(nn);
-      if(newLower !== oldLower){
-        if(await findAccount(newLower)){ toast("Name already taken", "ic-close"); return false; }
-        const os = await getDoc(doc(db,"usernames",oldLower));
-        if(os.exists() && os.data().uid === uid){
+
+      // usernames collection — sirf tab jab real user ho (owner ke liye skip)
+      if(uid !== "owner" && newLower !== oldLower){
+        try{
           await setDoc(doc(db,"usernames",newLower), { uid, name: nn, nameLower: newLower, at: serverTimestamp() });
-          await deleteDoc(doc(db,"usernames",oldLower));
-        }
+          const os = await getDoc(doc(db,"usernames",oldLower));
+          if(os.exists() && os.data().uid === uid) await deleteDoc(doc(db,"usernames",oldLower));
+        }catch(e){ console.warn("username swap failed", e); }
       }
+
       await updateDoc(doc(db,"users",uid), { name: nn, nameLower: newLower, updatedAt: serverTimestamp() });
-      toast("Name changed"); return true;
+      toast("Name changed");
+      return true;
     }
     if(act === "tick"){
       await setDoc(doc(db,"verifiedClaims",uid), { code:"owner", at: serverTimestamp() });
@@ -7467,9 +7502,72 @@ async function ownerAction(act, uid){
   }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
   return false;
 }
+
+/* ⚡ Owner changes another user's profile photo */
+function ownerChangeUserPhoto(uid, raw, sheetWrap){
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.style.display = "none";
+  input.onchange = async (ev)=>{
+    const file = ev.target.files && ev.target.files[0];
+    if(!file) return;
+    let croppedBlob;
+    try{
+      croppedBlob = await cropImageToFile(file, { aspect: 1, size: 256 });
+    }catch(err){
+      if(err && err.message === "Crop cancelled") return;
+      toast("Could not open image", "ic-close"); return;
+    }
+    toast("Uploading photo…", "ic-upload");
+    try{
+      const cropFile = new File([croppedBlob], "avatar.jpg", { type: "image/jpeg" });
+      const url = await uploadAvatar(cropFile);
+      await updateDoc(doc(db,"users",uid), { photoURL: url, updatedAt: serverTimestamp() });
+      toast("Profile photo updated");
+      // Refresh sheet with new avatar
+      if(sheetWrap && document.body.contains(sheetWrap)) sheetWrap.remove();
+      setTimeout(()=> openUserSheet(uid), 120);
+    }catch(e){
+      toast("Failed: " + (e.code || e.message), "ic-close");
+    }
+  };
+  document.body.appendChild(input);
+  input.click();
+  setTimeout(()=> input.remove(), 1500);
+}
 async function renameMyself(){
   if(guestBlock("change your store name")) return;
   if(!state.uid || !firebaseReady) return;
+
+  // ⚡ OWNER MODE — no limits (emojis / symbols / any length)
+  if(state.isOwner){
+    const v = await askText({
+      title: "Change store name (Owner)",
+      value: state.username || "",
+      placeholder: "Any name — emojis, symbols, no limits",
+      max: 100,
+      okLabel: "Save"
+    });
+    if(v === null) return;
+    const nn = String(v || "").trim();
+    if(!nn){ toast("Name cannot be empty", "ic-close"); return; }
+    if(nn.length > 100){ toast("Maximum 100 characters", "ic-close"); return; }
+    try{
+      await updateDoc(doc(db,"users",state.uid), {
+        name: nn,
+        nameLower: lowerName(nn),
+        updatedAt: serverTimestamp()
+      });
+      state.username = nn;
+      localStorage.setItem("pika_username", nn);
+      renderProfile(); renderAccountDetails();
+      toast("Store name changed");
+    }catch(e){ toast("Failed: " + (e.code || e.message), "ic-close"); }
+    return;
+  }
+
+  // Regular user — limits apply
   const v = await askText({ title:"Change store name", value: state.username || "", placeholder:"New store name", max:NAME_MAX });
   if(v === null) return;
   const nn = v.trim(), errMsg = validateName(nn);
