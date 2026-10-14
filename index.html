@@ -6703,20 +6703,25 @@ function generateSpoofMembers(count){
   if(_spoofCache && _spoofCacheKey === key) return _spoofCache;
   const arr = [];
   const nowMs = Date.now();
+  const MIN = 60 * 1000;
+  const HOUR = 60 * MIN;
+  const DAY = 24 * HOUR;
   for(let i = 0; i < count; i++){
     const name = SPOOF_NAMES[Math.floor(Math.random() * SPOOF_NAMES.length)];
     const uid = "spoof_" + i + "_" + Math.random().toString(36).slice(2, 6);
     const roll = Math.random();
-    let tier, lastActiveMs, verified;
-    if(roll < 0.25){
-      tier = 0; verified = true;
-      lastActiveMs = nowMs - Math.floor(Math.random() * 60 * 60 * 1000);
-    } else if(roll < 0.60){
-      tier = 1; verified = false;
+    let tier, lastActiveMs;
+    if(roll < 0.70){
+      tier = 1;
       lastActiveMs = nowMs - Math.floor(Math.random() * 30 * 1000);
     } else {
-      tier = 2; verified = false;
-      lastActiveMs = nowMs - (60 * 1000 + Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000));
+      tier = 2;
+      const sub = Math.random();
+      if(sub < 0.20)      lastActiveMs = nowMs - (1 * MIN  + Math.random() * 4 * MIN);
+      else if(sub < 0.45) lastActiveMs = nowMs - (5 * MIN  + Math.random() * 55 * MIN);
+      else if(sub < 0.70) lastActiveMs = nowMs - (1 * HOUR + Math.random() * 11 * HOUR);
+      else if(sub < 0.90) lastActiveMs = nowMs - (1 * DAY  + Math.random() * 6 * DAY);
+      else                lastActiveMs = nowMs - (7 * DAY  + Math.random() * 23 * DAY);
     }
     arr.push({
       uid,
@@ -6724,8 +6729,8 @@ function generateSpoofMembers(count){
       data: {
         name,
         photoURL: "",
-        guest: true,
-        verified,
+        guest: false,
+        verified: false,
         lastActiveMs,
         uploadsCount: Math.floor(Math.random() * 8)
       }
@@ -7073,31 +7078,43 @@ function renderUsersPage(){
   const allEntries = [...entries, ...spoofEntries];
 
   function userTier(uid, u){
-    if(u.__spoof) return u.__tier !== undefined ? u.__tier : 2;
-    if(u.banned) return 3;
-    if(u.verified) return 0;
-    const ms = lastSeenMs(u);
-    const isActive = (serverNow() - ms) < ONLINE_WINDOW_MS || SPOOF_ONLINE_MODE;
-    return isActive ? 1 : 2;
-  }
-  allEntries.sort((a,b)=>{
-    const ta = userTier(a[0], a[1]);
-    const tb = userTier(b[0], b[1]);
-    if(ta !== tb) return ta - tb;
-    return userShuffle(a[0]) - userShuffle(b[0]);
-  });
+  if(!u.__spoof && u.verified && !u.banned) return 0;
+  return 1;
+}
+allEntries.sort((a,b)=>{
+  const ta = userTier(a[0], a[1]);
+  const tb = userTier(b[0], b[1]);
+  if(ta !== tb) return ta - tb;
+  return userShuffle(a[0]) - userShuffle(b[0]);
+});
 
-  list.innerHTML = allEntries.map(([uid,u])=>{
+function spoofLastSeenText(ms){
+  const minAgo = Math.floor((serverNow() - ms) / 60000);
+  if(minAgo < 1) return "Last seen just now";
+  if(minAgo < 60) return "Last seen " + minAgo + " min ago";
+  const h = Math.floor(minAgo / 60);
+  if(h < 24) return "Last seen " + h + " hour" + (h===1?"":"s") + " ago";
+  const d = Math.floor(h / 24);
+  if(d === 1) return "Last seen yesterday";
+  if(d < 7) return "Last seen " + d + " days ago";
+  const w = Math.floor(d / 7);
+  if(w < 5) return "Last seen " + w + " week" + (w===1?"":"s") + " ago";
+  return "Last seen " + new Date(ms).toLocaleDateString();
+}
+
+list.innerHTML = allEntries.map(([uid,u])=>{
   const isSpoof = !!u.__spoof;
   const status = isSpoof
-    ? (u.__tier === 1 || u.__tier === 0 ? "Online" : presenceText(u.lastActiveMs))
+    ? (u.__tier === 1 ? "Online" : spoofLastSeenText(u.lastActiveMs))
     : presenceText(u);
   const isOnline = status === "Online";
   const n = isSpoof ? (u.uploadsCount || 0) : (counts[uid]||0);
   const unread = isSpoof ? 0 : ((state.dmUnread && state.dmUnread[uid]) || 0);
+  const showGuest = !isSpoof && u.guest;
+  const showTick = !isSpoof && u.verified;
   return `<div class="mini-row tap" data-user-open="${isSpoof ? '__spoof__' : uid}">
-    ${avatarHtml(u.name, u.photoURL, "lg", u.guest, isOnline)}
-    <div class="mini-main"><b>${escapeHtml(u.name||"—")}${u.guest ? GUEST_TAG : ""}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
+    ${avatarHtml(u.name, u.photoURL, "lg", showGuest, isOnline)}
+    <div class="mini-main"><b>${escapeHtml(u.name||"—")}${showGuest ? GUEST_TAG : ""}${showTick ? tick(true) : ""}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
       <small class="${isOnline ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small></div>
     ${unread ? `<span class="dm-badge">${unread>99?"99+":unread}</span>` : ""}
     <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
