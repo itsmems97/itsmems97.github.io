@@ -2497,6 +2497,7 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
   <div class="row tap" id="row-theme"><div class="row-left"><svg><use href="#ic-sun-line" style="fill:none;stroke:currentColor;stroke-width:1.8"/></svg> Appearance</div><span style="font-size:12px;color:var(--text-faint)" id="theme-label">Dark</span></div>
   <div class="row tap" id="row-notif"><div class="row-left"><svg><use href="#ic-chat"/></svg> Notifications</div><span style="font-size:12px;color:var(--text-faint)" id="notif-status">—</span></div>
   <div class="row tap" id="row-spoof-online" hidden><div class="row-left"><svg><use href="#ic-users"/></svg> Spoof Online</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="spoof-online-label">OFF</span></div>
+<div class="row tap" id="row-spoof-members" hidden><div class="row-left"><svg><use href="#ic-users"/></svg> Spoof Members Count</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="spoof-members-label">OFF</span></div>
 <div class="row tap" id="row-maintenance" hidden><div class="row-left"><svg><use href="#ic-lock"/></svg> Maintenance Mode</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="maintenance-label">OFF</span></div>
 <div class="row tap" id="row-send-messages" hidden><div class="row-left"><svg><use href="#ic-chat"/></svg> Send Messages</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 <div class="row tap" id="row-console-detector" hidden><div class="row-left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> Console Detector</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="console-detector-label">OFF</span></div>
@@ -4471,7 +4472,7 @@ function boot(){
   initOwnerConsole();
   initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); initTelegramUI(); initHomeCategories();
   if(!state.isGuest) loadMyPhone();
-  listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance(); listenSpoofSetting();
+  listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance(); listenSpoofSetting(); listenSpoofMembers();
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: preview & download only", "ic-lock"); }
@@ -6594,6 +6595,120 @@ function updateSpoofUI(){
     lbl.textContent = SPOOF_ONLINE_MODE ? "ON" : "OFF";
     lbl.style.color = SPOOF_ONLINE_MODE ? "var(--accent-2)" : "var(--text-faint)";
   }
+  const spoofMemRow = document.getElementById("row-spoof-members");
+  const spoofMemLbl = document.getElementById("spoof-members-label");
+  if(spoofMemRow) spoofMemRow.hidden = !state.isOwner;
+  if(spoofMemLbl){
+    spoofMemLbl.textContent = SPOOF_MEMBERS_CONFIG.enabled
+      ? fmtCount(SPOOF_MEMBERS_CONFIG.targetCount)
+      : "OFF";
+    spoofMemLbl.style.color = SPOOF_MEMBERS_CONFIG.enabled ? "var(--accent)" : "var(--text-faint)";
+  }
+}
+
+/* ============ SPOOF MEMBERS (FAKE USERS) ============ */
+let SPOOF_MEMBERS_CONFIG = { enabled: false, targetCount: 0 };
+
+function listenSpoofMembers(){
+  if(!firebaseReady) return;
+  onSnapshot(doc(db, "config", "spoofMembers"), s => {
+    const d = s.exists() ? s.data() : {};
+    SPOOF_MEMBERS_CONFIG = {
+      enabled: !!d.enabled,
+      targetCount: parseInt(d.targetCount) || 0
+    };
+    try{ renderUsersPage(); }catch(_){}
+    try{ updateSpoofUI(); }catch(_){}
+  }, err => console.warn("spoof members listener", err));
+}
+
+async function setSpoofMembersCount(){
+  if(!state.isOwner) return;
+  const current = SPOOF_MEMBERS_CONFIG.targetCount || 0;
+  const v = await askText({
+    title: "Set spoof members count",
+    value: String(current),
+    placeholder: "e.g. 2500 (0 = disable)",
+    max: 8,
+    okLabel: "Set"
+  });
+  if(v === null) return;
+  const n = parseInt(v.trim(), 10);
+  if(!Number.isFinite(n) || n < 0){ toast("Enter a valid number", "ic-close"); return; }
+  try{
+    await setDoc(doc(db, "config", "spoofMembers"), {
+      enabled: n > 0,
+      targetCount: n,
+      updatedAt: serverTimestamp(),
+      updatedBy: state.authUid || state.uid
+    }, { merge: true });
+    SPOOF_MEMBERS_CONFIG = { enabled: n > 0, targetCount: n };
+    _spoofCacheKey = "";
+    renderUsersPage();
+    updateSpoofUI();
+    toast(n > 0 ? "Spoof members set to " + fmtCount(n) : "Spoof members disabled");
+  }catch(e){ toast("Failed: " + (e.code || e.message), "ic-close"); }
+}
+
+const SPOOF_NAMES = [
+  "Aarav Khan", "Zara Ali", "Rohan Sharma", "Priya Singh", "Kabir Ahmed",
+  "Aisha Malik", "Dev Patel", "Riya Verma", "Arjun Kumar", "Sana Fatima",
+  "Vikram Rao", "Neha Gupta", "Imran Sheikh", "Meera Joshi", "Aryan Khan",
+  "Fatima Noor", "Hasan Raza", "Ishita Roy", "Karan Mehta", "Layla Ibrahim",
+  "Omar Farooq", "Sara Khan", "Tariq Aziz", "Ayesha Siddiqui", "Bilal Hussain",
+  "Dania Iqbal", "Faisal Baig", "Hira Nawaz", "Junaid Akhtar", "Kiran Shah",
+  "Mehak Riaz", "Nabeel Chaudhry", "Palwasha Khan", "Qasim Ali", "Rabia Aslam",
+  "Salman Yousuf", "Tooba Anwar", "Umair Khalid", "Warda Zaman", "Yasir Mahmood",
+  "Zainab Bashir", "Adnan Sethi", "Bushra Naeem", "Cyrus Mirza", "Danish Qureshi",
+  "Eman Tariq", "Farhan Zaidi", "Gulzar Hussain", "Hina Butt", "Ibrahim Dar",
+  "Javeria Sohail", "Kamran Rasheed", "Laiba Khalil", "Muneeb Sattar",
+  "Nida Hayat", "Osama Jamil", "Parveen Akhtar", "Rayan Hameed", "Sundus Malik",
+  "Talha Najam", "Urooj Aftab", "Waqas Ahmed", "Yumna Sheikh", "Zoya Rehman",
+  "Ahmed Raza", "Beenish Khan", "Daniyal Amir", "Eisha Farooq", "Gohar Khan",
+  "Haroon Yousaf", "Iqra Bano", "Jibran Alam", "Komal Javed", "Lubna Ilyas",
+  "Murtaza Haider", "Nashit Rehman", "Orhan Ali", "Pakeeza Noor", "Rohail Shah",
+  "Sadia Iqbal", "Taimoor Baig", "Ujala Naz", "Vania Khan", "Wajiha Aslam"
+];
+
+let _spoofCache = null;
+let _spoofCacheKey = "";
+
+function generateSpoofMembers(count){
+  const key = String(count);
+  if(_spoofCache && _spoofCacheKey === key) return _spoofCache;
+  const arr = [];
+  const nowMs = Date.now();
+  for(let i = 0; i < count; i++){
+    const name = SPOOF_NAMES[Math.floor(Math.random() * SPOOF_NAMES.length)];
+    const uid = "spoof_" + i + "_" + Math.random().toString(36).slice(2, 6);
+    const roll = Math.random();
+    let tier, lastActiveMs, verified;
+    if(roll < 0.25){
+      tier = 0; verified = true;
+      lastActiveMs = nowMs - Math.floor(Math.random() * 60 * 60 * 1000);
+    } else if(roll < 0.60){
+      tier = 1; verified = false;
+      lastActiveMs = nowMs - Math.floor(Math.random() * 30 * 1000);
+    } else {
+      tier = 2; verified = false;
+      lastActiveMs = nowMs - (60 * 1000 + Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000));
+    }
+    arr.push({
+      uid,
+      tier,
+      data: {
+        name,
+        photoURL: "",
+        guest: true,
+        verified,
+        lastActiveMs,
+        uploadsCount: Math.floor(Math.random() * 8)
+      }
+    });
+  }
+  _spoofCache = arr;
+  _spoofCacheKey = key;
+  return arr;
 }
 function listenChat(){
   if(!firebaseReady) return;
@@ -6919,26 +7034,44 @@ function renderUsersPage(){
   if(!state.isOwner) entries = entries.filter(([,u])=> !u.banned);
   const counts = {};
   state.apps.forEach(a=>{ if(a.uploaderUid) counts[a.uploaderUid] = (counts[a.uploaderUid]||0) + 1; });
+
+  // ⚡ Spoof members inject karo (sirf owner ke liye)
+  const spoofEnabled = state.isOwner && SPOOF_MEMBERS_CONFIG.enabled && SPOOF_MEMBERS_CONFIG.targetCount > 0;
+  let spoofEntries = [];
+  if(spoofEnabled){
+    const needed = Math.max(0, SPOOF_MEMBERS_CONFIG.targetCount - entries.length);
+    if(needed > 0){
+      const gen = generateSpoofMembers(needed);
+      spoofEntries = gen.map(s => [s.uid, { ...s.data, __spoof: true, __tier: s.tier }]);
+    }
+  }
+  const allEntries = [...entries, ...spoofEntries];
+
   function userTier(uid, u){
-  if(u.banned) return 3;
-  if(u.verified) return 0;
-  const ms = lastSeenMs(u);
-  const isActive = (serverNow() - ms) < ONLINE_WINDOW_MS || SPOOF_ONLINE_MODE;
-  return isActive ? 1 : 2;
-}
-entries.sort((a,b)=>{
-  const ta = userTier(a[0], a[1]);
-  const tb = userTier(b[0], b[1]);
-  if(ta !== tb) return ta - tb;
-  return userShuffle(a[0]) - userShuffle(b[0]);
-});
-  list.innerHTML = entries.map(([uid,u])=>{
-    const status = presenceText(u);
-    const n = counts[uid]||0;
-    const unread = (state.dmUnread && state.dmUnread[uid]) || 0;
-    return `<div class="mini-row tap" data-user-open="${uid}">
+    if(u.__spoof) return u.__tier !== undefined ? u.__tier : 2;
+    if(u.banned) return 3;
+    if(u.verified) return 0;
+    const ms = lastSeenMs(u);
+    const isActive = (serverNow() - ms) < ONLINE_WINDOW_MS || SPOOF_ONLINE_MODE;
+    return isActive ? 1 : 2;
+  }
+  allEntries.sort((a,b)=>{
+    const ta = userTier(a[0], a[1]);
+    const tb = userTier(b[0], b[1]);
+    if(ta !== tb) return ta - tb;
+    return userShuffle(a[0]) - userShuffle(b[0]);
+  });
+
+  list.innerHTML = allEntries.map(([uid,u])=>{
+    const isSpoof = !!u.__spoof;
+    const status = isSpoof
+      ? (u.__tier === 1 || u.__tier === 0 ? "Active now" : presenceText(u.lastActiveMs))
+      : presenceText(u);
+    const n = isSpoof ? (u.uploadsCount || 0) : (counts[uid]||0);
+    const unread = isSpoof ? 0 : ((state.dmUnread && state.dmUnread[uid]) || 0);
+    return `<div class="mini-row tap" data-user-open="${isSpoof ? '__spoof__' : uid}">
       ${avatarHtml(u.name, u.photoURL, "lg", u.guest)}
-<div class="mini-main"><b>${escapeHtml(u.name||"—")}${u.guest ? GUEST_TAG : ""}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
+      <div class="mini-main"><b>${escapeHtml(u.name||"—")}${u.guest ? GUEST_TAG : ""}${tick(u.verified)}${state.isOwner && u.banned ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BANNED</span>' : ""}</b>
         <small class="${status==="Active now" ? "online" : ""}">${status} • ${n} upload${n===1?"":"s"}</small></div>
       ${unread ? `<span class="dm-badge">${unread>99?"99+":unread}</span>` : ""}
       <svg width="14" height="14" style="transform:rotate(-90deg);color:var(--text-faint)"><use href="#ic-chevron"/></svg>
@@ -6946,7 +7079,13 @@ entries.sort((a,b)=>{
   }).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
 }
 function initUsersPage(){
-  $("#users-list").addEventListener("click", e=>{ const r = e.target.closest("[data-user-open]"); if(r) openUserSheet(r.dataset.userOpen); });
+  $("#users-list").addEventListener("click", e=>{
+    const r = e.target.closest("[data-user-open]");
+    if(!r) return;
+    const uid = r.dataset.userOpen;
+    if(!uid || uid === "__spoof__"){ toast("Member profile not available", "ic-close"); return; }
+    openUserSheet(uid);
+  });
   $("#verify-cta-btn").addEventListener("click", ()=> state.isOwner ? openCodesSheet() : openGetVerifiedSheet());
 }
 function joinedMs(u){ return u && u.joinedAt && u.joinedAt.toMillis ? u.joinedAt.toMillis() : 0; }
@@ -7466,8 +7605,10 @@ function initProfileActions(){
   $("#row-change-photo").addEventListener("click", ()=> $("#profile-photo-input").click());
   const _maintRow = document.getElementById("row-maintenance");
 if(_maintRow) _maintRow.addEventListener("click", toggleMaintenance);
-const _spoofRow = document.getElementById("row-spoof-online");
+  const _spoofRow = document.getElementById("row-spoof-online");
 if(_spoofRow) _spoofRow.addEventListener("click", toggleSpoofOnline);
+const _spoofMemRow = document.getElementById("row-spoof-members");
+if(_spoofMemRow) _spoofMemRow.addEventListener("click", setSpoofMembersCount);
   const _sendMsgRow = document.getElementById("row-send-messages");
 if(_sendMsgRow) _sendMsgRow.addEventListener("click", openSendMessagesSheet);
 const _cdRow = document.getElementById("row-console-detector");
