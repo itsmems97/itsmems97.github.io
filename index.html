@@ -6005,10 +6005,22 @@ function openAppDetail(appId){
       </div>
       ${agoLine}
       <div class="detail-actions" style="display:flex;gap:8px;padding:0 18px 6px">
-        <button class="btn btn-primary" style="flex:2" id="detail-download-btn"><svg><use href="${app.hasPassword && !state.isOwner ? "#ic-lock" : "#ic-download"}"/></svg>${app.hasPassword && !state.isOwner ? "Enter password" : "Download"}</button>
-        <button class="btn btn-ghost" style="flex:1" id="detail-copy-btn" type="button"><svg><use href="#ic-copy"/></svg> Share</button>
-        ${canManage(app.uploaderUid) ? `<button class="btn btn-danger" id="detail-delete-btn"><svg><use href="#ic-trash"/></svg></button>` : ""}
-      </div>
+  <button class="btn btn-primary" style="flex:2" id="detail-download-btn"><svg><use href="${app.hasPassword && !state.isOwner ? "#ic-lock" : "#ic-download"}"/></svg>${app.hasPassword && !state.isOwner ? "Enter password" : "Download"}</button>
+  <button class="btn btn-ghost" style="flex:1" id="detail-copy-btn" type="button"><svg><use href="#ic-copy"/></svg> Share</button>
+  ${canManage(app.uploaderUid) ? `<button class="btn btn-danger" id="detail-delete-btn"><svg><use href="#ic-trash"/></svg></button>` : ""}
+</div>
+${state.isOwner ? `
+<div style="display:flex;gap:8px;padding:0 18px 6px">
+  <button class="btn btn-ghost" style="flex:1;font-size:12px;padding:9px 10px" id="detail-set-dl" type="button">
+    <svg width="14" height="14"><use href="#ic-download"/></svg> Set Custom DL
+  </button>
+  <button class="btn btn-ghost" style="flex:1;font-size:12px;padding:9px 10px" id="detail-reset-dl" type="button">
+    <svg width="14" height="14"><use href="#ic-refresh"/></svg> Reset to Real
+  </button>
+</div>
+<div style="text-align:center;font-size:11px;color:var(--text-faint);padding:2px 18px 8px">
+  Shown: <b style="color:var(--accent)">${fmtCount(app.downloadCount||0)}</b> • Real: <b style="color:var(--accent-2)">${fmtCount(app.realDownloadCount !== undefined ? app.realDownloadCount : (app.downloadCount||0))}</b>${app.customDownloadSet ? ' • <span style="color:var(--accent)">CUSTOM</span>' : ''}
+</div>` : ""}
       <div class="dl-progress" id="detail-dl-progress-top" hidden><i id="detail-dl-bar-top"></i></div>
       ${app.category ? `<div class="cat-pill"><svg width="11" height="11"><use href="#ic-grid"/></svg> ${escapeHtml(app.category)}</div>` : ""}
       <div class="detail-stats">
@@ -6059,7 +6071,23 @@ $("#detail-copy-btn").addEventListener("click", async ()=>{ await shareApp(app, 
   const cmtBtn = $("#detail-comments-btn");
 if(cmtBtn) cmtBtn.addEventListener("click", ()=> openCommentsSheet(app.id, "pika", app.name));
   const delBtn = $("#detail-delete-btn");
-  if(delBtn) delBtn.addEventListener("click", async ()=>{ if(await deleteApp(app)) wrap.remove(); });
+if(delBtn) delBtn.addEventListener("click", async ()=>{ if(await deleteApp(app)) wrap.remove(); });
+
+if(state.isOwner){
+  const setDlBtn = $("#detail-set-dl");
+  if(setDlBtn) setDlBtn.addEventListener("click", async ()=>{
+    await setCustomDownloads(app);
+    wrap.remove();
+    setTimeout(()=> openAppDetail(app.id), 200);
+  });
+
+  const resetDlBtn = $("#detail-reset-dl");
+  if(resetDlBtn) resetDlBtn.addEventListener("click", async ()=>{
+    await resetCustomDownloads(app);
+    wrap.remove();
+    setTimeout(()=> openAppDetail(app.id), 200);
+  });
+}
   $("#detail-download-btn").addEventListener("click", async ()=>{
     if(app.hasPassword && !state.isOwner){
       const entered = await askPassword(app);
@@ -6132,6 +6160,17 @@ function createDlBubble(app, onCancel){
     remove(){ el.remove(); dlBubbleCount = Math.max(0, dlBubbleCount-1); if(!$(".dl-bubble")) target.classList.remove("show","armed"); }
   };
 }
+function bumpDownloadCount(app){
+  if(!firebaseReady) return;
+  const updates = { downloadCount: increment(1) };
+  if(app.customDownloadSet || app.realDownloadCount !== undefined){
+    updates.realDownloadCount = increment(1);
+  }
+  try{
+    updateDoc(doc(db,"apps",app.id), updates).catch(()=>{});
+  }catch(e){}
+}
+
 function startDownloadJob(app){
   const url = app.fileUrl;
   if(!url){ toast("No download link available", "ic-close"); return; }
@@ -6148,14 +6187,11 @@ function startDownloadJob(app){
     .then(()=>{
       bubble.set(100);
       toast(`"${app.name}" downloaded`);
-      if(firebaseReady){
-        try{ updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }).catch(()=>{}); }catch(e){}
-      }
+      bumpDownloadCount(app);
     })
     .catch(err=>{
       if(err && err.name === 'AbortError'){ toast('Download cancelled'); }
       else {
-        // Server ne CORS block kiya ya fetch fail hua → native download fallback
         try{
           const a = document.createElement("a");
           a.href = url;
@@ -6166,15 +6202,60 @@ function startDownloadJob(app){
           a.click();
           setTimeout(()=> a.remove(), 500);
         }catch(e){ console.warn("Fallback download failed", e); }
-        if(firebaseReady){
-          try{ updateDoc(doc(db,"apps",app.id), { downloadCount: increment(1) }).catch(()=>{}); }catch(e){}
-        }
+        bumpDownloadCount(app);
       }
     })
     .finally(()=>{
       bubble.remove();
       setTimeout(()=> dlActive.delete(app.id), 3000);
     });
+}
+
+async function setCustomDownloads(app){
+  if(!state.isOwner){ toast("Only the owner can do this", "ic-close"); return; }
+  const current = app.downloadCount || 0;
+  const v = await askText({
+    title: "Set custom downloads",
+    value: String(current),
+    placeholder: "e.g. 200",
+    max: 12,
+    okLabel: "Set"
+  });
+  if(v === null) return;
+  const n = parseInt(v.trim(), 10);
+  if(!Number.isFinite(n) || n < 0){ toast("Enter a valid number", "ic-close"); return; }
+  const realSnapshot = app.realDownloadCount !== undefined
+    ? app.realDownloadCount
+    : (app.downloadCount || 0);
+  try{
+    await updateDoc(doc(db, "apps", app.id), {
+      downloadCount: n,
+      realDownloadCount: realSnapshot,
+      customDownloadSet: true,
+      customDownloadAt: Date.now()
+    });
+    toast("Custom downloads set to " + fmtCount(n));
+  }catch(e){ toast("Failed: " + (e.code || e.message), "ic-close"); }
+}
+
+async function resetCustomDownloads(app){
+  if(!state.isOwner){ toast("Only the owner can do this", "ic-close"); return; }
+  const realCount = app.realDownloadCount !== undefined
+    ? app.realDownloadCount
+    : (app.downloadCount || 0);
+  if(!(await confirmSheet(
+    "Reset to real count?",
+    `Display count will become ${fmtCount(realCount)} (actual real downloads).`,
+    "Reset"
+  ))) return;
+  try{
+    await updateDoc(doc(db, "apps", app.id), {
+      downloadCount: realCount,
+      customDownloadSet: false,
+      customDownloadAt: deleteField()
+    });
+    toast("Reset to real count: " + fmtCount(realCount));
+  }catch(e){ toast("Failed", "ic-close"); }
 }
 async function startDownload(app){ startDownloadJob(app); }
 async function loadJSZip(){
