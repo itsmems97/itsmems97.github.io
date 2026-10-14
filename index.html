@@ -5175,20 +5175,165 @@ function openEntertainmentPopup(){
     setTimeout(()=> openMusicPlayer("https://itsmems97.github.io/Pika-Movie.html", "Movies & Series"), 130);
   });
 }
+/* ============ SPOOF PROFILE PRELOAD STATE ============ */
+let SPOOF_LOAD_STATE = 'idle'; // 'idle' | 'loading' | 'ready'
+let _spoilerPreloadToken = 0;
+let _lastPreloadKey = '';
+const USERS_POPUP_SEEN_KEY = 'pika_users_popup_seen_session';
+
+async function preloadSpoofAvatars(members){
+  const token = ++_spoilerPreloadToken;
+  SPOOF_LOAD_STATE = 'loading';
+
+  const CONCURRENCY = 20;
+  const loadOne = (m) => new Promise(resolve => {
+    const url = m.data && m.data.photoURL;
+    if(!url){ resolve(); return; }
+    const img = new Image();
+    img.onload = resolve;
+    img.onerror = resolve;
+    img.src = url;
+  });
+
+  let idx = 0;
+  while(idx < members.length){
+    if(token !== _spoilerPreloadToken) return;
+    const batch = members.slice(idx, idx + CONCURRENCY);
+    await Promise.all(batch.map(loadOne));
+    idx += CONCURRENCY;
+  }
+
+  if(token === _spoilerPreloadToken){
+    SPOOF_LOAD_STATE = 'ready';
+  }
+}
+
+function closeUsersSlowPopup(){
+  const ov = document.getElementById("users-slow-overlay");
+  if(!ov) return;
+  ov.style.animation = "entFadeIn .22s ease-in reverse";
+  setTimeout(()=> { if(ov.parentNode) ov.remove(); }, 200);
+}
+
+function openUsersSlowPopup(){
+  if(document.getElementById("users-slow-overlay")) return;
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="users-slow-overlay" style="
+      position:fixed;inset:0;z-index:230;
+      background:rgba(0,0,0,.55);
+      backdrop-filter:blur(22px) saturate(180%);
+      -webkit-backdrop-filter:blur(22px) saturate(180%);
+      display:flex;align-items:center;justify-content:center;
+      padding:24px;
+      animation:entFadeIn .28s ease-out;
+    ">
+      <div style="
+        position:relative;
+        width:100%;max-width:340px;
+        border-radius:32px;
+        padding:26px 20px 18px;
+        background:rgba(255,255,255,.10);
+        border:1px solid rgba(255,255,255,.22);
+        box-shadow:
+          0 30px 70px rgba(0,0,0,.55),
+          inset 0 1px 0 rgba(255,255,255,.35),
+          inset 0 -1px 0 rgba(255,255,255,.08);
+        backdrop-filter:blur(40px) saturate(190%);
+        -webkit-backdrop-filter:blur(40px) saturate(190%);
+        overflow:hidden;
+        color:#fff;
+        animation:entPop .48s cubic-bezier(.22,1.4,.36,1);
+        text-align:center;
+      ">
+        <div style="
+          position:absolute;inset:0;pointer-events:none;
+          background:
+            radial-gradient(circle at 100% 0%, rgba(255,198,26,.22), transparent 55%),
+            radial-gradient(circle at 0% 100%, rgba(51,224,193,.18), transparent 55%);
+        "></div>
+        <div style="position:relative;z-index:2;">
+          <div style="
+            width:64px;height:64px;margin:0 auto 14px;
+            border-radius:50%;
+            background:linear-gradient(135deg,#FFC61A,#FF8A00);
+            display:grid;place-items:center;
+            box-shadow:0 8px 20px rgba(255,168,0,.4);
+            animation:pkspin 1.6s linear infinite;
+          ">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#171200" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" stroke-dasharray="6 4"/>
+            </svg>
+          </div>
+          <h3 style="margin:0 0 8px;font-size:19px;font-weight:800;letter-spacing:-.01em;color:#fff;">Please Wait</h3>
+          <p style="margin:0 0 20px;font-size:13.5px;line-height:1.55;color:rgba(255,255,255,.82);">
+            Members are loading. The app may feel slow because of too much traffic right now.
+            <br><br>
+            After members finish loading, you can use the app <b style="color:#fff;">fast and normally</b>.
+          </p>
+          <button id="users-slow-ok" type="button" style="
+            width:100%;padding:14px;
+            border-radius:18px;
+            background:linear-gradient(135deg,var(--accent),#FFA800);
+            color:#171200;
+            font-size:15px;font-weight:800;
+            border:none;cursor:pointer;
+            box-shadow:0 8px 20px rgba(255,168,0,.4);
+            position:relative;z-index:2;
+            font-family:inherit;
+          ">Okay</button>
+        </div>
+      </div>
+    </div>
+  `);
+  const ov = document.getElementById("users-slow-overlay");
+  const ok = document.getElementById("users-slow-ok");
+  ok.addEventListener("click", closeUsersSlowPopup);
+  ov.addEventListener("click", e => { if(e.target === ov) closeUsersSlowPopup(); });
+
+  // ⚡ Auto-close: minimum 4 seconds + loading complete
+  const startAt = Date.now();
+  const MIN_MS = 4000;
+  const MAX_MS = 60000;
+
+  function checkAutoClose(){
+    const el = document.getElementById("users-slow-overlay");
+    if(!el) return; // already closed by user
+    const elapsed = Date.now() - startAt;
+    if(elapsed >= MAX_MS){ closeUsersSlowPopup(); return; }
+    if(elapsed >= MIN_MS && SPOOF_LOAD_STATE === 'ready'){
+      closeUsersSlowPopup();
+      return;
+    }
+    setTimeout(checkAutoClose, 400);
+  }
+  setTimeout(checkAutoClose, 400);
+}
+
 function initNav(){
   $$(".nav-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const target = btn.dataset.page;
-if(target === "__entertainment"){
-  openEntertainmentPopup();
-  return;
-}
-if(target === "__categories"){ openCategoriesSheet(); return; }
-if(target === "upload-page" && guestBlock("upload apps")) return;
+      if(target === "__entertainment"){
+        openEntertainmentPopup();
+        return;
+      }
+      if(target === "__categories"){ openCategoriesSheet(); return; }
+      if(target === "upload-page" && guestBlock("upload apps")) return;
       $$(".nav-btn").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
       $$(".page").forEach(p=>p.hidden = true);
       $("#"+target).hidden = false;
+
+      // ⚡ Popup — sirf ek baar per session (sabko)
+      if(target === "users-page"){
+        let seen = false;
+        try{ seen = sessionStorage.getItem(USERS_POPUP_SEEN_KEY) === "1"; }catch(e){}
+        if(!seen){
+          try{ sessionStorage.setItem(USERS_POPUP_SEEN_KEY, "1"); }catch(e){}
+          setTimeout(()=> openUsersSlowPopup(), 150);
+        }
+      }
     });
   });
 }
@@ -7134,17 +7279,27 @@ function renderUsersPage(){
   const counts = {};
   state.apps.forEach(a=>{ if(a.uploaderUid) counts[a.uploaderUid] = (counts[a.uploaderUid]||0) + 1; });
 
-  // ⚡ Spoof members inject karo (sirf owner ke liye)
-  const spoofEnabled = state.isOwner && SPOOF_MEMBERS_CONFIG.enabled && SPOOF_MEMBERS_CONFIG.targetCount > 0;
-  let spoofEntries = [];
-  if(spoofEnabled){
-    const needed = Math.max(0, SPOOF_MEMBERS_CONFIG.targetCount - entries.length);
-    if(needed > 0){
-      const gen = generateSpoofMembers(needed);
-      spoofEntries = gen.map(s => [s.uid, { ...s.data, __spoof: true, __tier: s.tier }]);
+ // ⚡ Spoof members inject karo (sirf owner ke liye)
+const spoofEnabled = state.isOwner && SPOOF_MEMBERS_CONFIG.enabled && SPOOF_MEMBERS_CONFIG.targetCount > 0;
+let spoofEntries = [];
+if(spoofEnabled){
+  const needed = Math.max(0, SPOOF_MEMBERS_CONFIG.targetCount - entries.length);
+  if(needed > 0){
+    const gen = generateSpoofMembers(needed);
+    spoofEntries = gen.map(s => [s.uid, { ...s.data, __spoof: true, __tier: s.tier }]);
+    // ⚡ Preload avatars in background (only once per cache key)
+    if(_lastPreloadKey !== _spoofCacheKey){
+      _lastPreloadKey = _spoofCacheKey;
+      preloadSpoofAvatars(gen);
     }
+  } else {
+    SPOOF_LOAD_STATE = 'ready';
   }
-  const allEntries = [...entries, ...spoofEntries];
+} else {
+  // Real user / guest → instant ready so popup auto-closes after 4s
+  SPOOF_LOAD_STATE = 'ready';
+}
+const allEntries = [...entries, ...spoofEntries];
 
   function userTier(uid, u){
   if(!u.__spoof && u.verified && !u.banned) return 0;
