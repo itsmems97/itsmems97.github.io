@@ -7154,15 +7154,19 @@ function loadAvatarPools(){
 loadAvatarPools();
 
 function avatarUrl(gender, index){
-  const pool = AVATAR_POOLS[gender] || AVATAR_POOLS.male;
+  let pool = AVATAR_LIVE[gender];
+  if(!pool || !pool.length) pool = AVATAR_POOLS[gender];
+  if(!pool || !pool.length) pool = AVATAR_POOLS.male;
   const n = ((index % pool.length) + pool.length) % pool.length;
   return AVATAR_BASE_URL + pool[n];
 }
 
 function getSpoofAvatarUrl(name, gender){
   const h = spoofHash(name + (gender || ""));
-  const g = (gender === "female") ? "female" : "male";
-  return avatarUrl(g, h);
+  let g = "male";
+  if(gender === "female") g = "female";
+  else if(h % 10 === 0) g = "feminine";   // har 10 mein se ~1 male-name member ko Feminine profile
+  return avatarUrl(g, Math.floor(h / 10));
 }
 
 let _spoofCache = null;
