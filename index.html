@@ -7620,19 +7620,19 @@ function openAvatarPicker(opts){
 
   document.body.insertAdjacentHTML("beforeend", `
     <div class="sheet-backdrop dlg" id="avatar-picker-backdrop" style="z-index:210">
-      <div class="sheet" style="padding:22px 16px calc(22px + var(--safe-bottom));max-height:88vh;overflow-y:auto">
-        <div class="sheet-handle"></div>
-        <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
-        <h3 style="text-align:center;font-size:17px;margin:8px 0 4px">Choose your avatar</h3>
-        <p style="text-align:center;font-size:12px;color:var(--text-dim);margin:0 0 14px;line-height:1.5">
+      <div class="sheet" style="position:relative;display:flex;flex-direction:column;overflow:hidden;height:88vh;padding:22px 16px calc(22px + var(--safe-bottom))">
+        <div class="sheet-handle" style="flex-shrink:0"></div>
+        <button class="sheet-close" data-close style="position:absolute;top:12px;right:14px;margin:0;float:none"><svg width="14" height="14"><use href="#ic-close"/></svg></button>
+        <h3 style="flex-shrink:0;text-align:center;font-size:17px;margin:8px 0 4px">Choose your avatar</h3>
+        <p style="flex-shrink:0;text-align:center;font-size:12px;color:var(--text-dim);margin:0 0 14px;line-height:1.5">
           Pick a 3D avatar — or choose your own photo from gallery.
         </p>
 
-        <div id="avatar-tabs" style="display:flex;gap:6px;margin-bottom:16px">
+        <div id="avatar-tabs" style="flex-shrink:0;display:flex;gap:6px;margin-bottom:16px">
           ${renderTabs()}
         </div>
 
-        <div id="avatar-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+        <div id="avatar-grid" style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start;margin-bottom:18px">
           ${renderGrid(poolFor(activeTab))}
         </div>
 
