@@ -1986,23 +1986,26 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
   --av-pink:linear-gradient(145deg,#FFE9F0 0%,#FFC9DB 100%);    /* Girls — light pink  */
 }
 .av3d{ position:relative; overflow:visible; }
+button.av3d{ -webkit-mask-image:none; mask-image:none; }   /* global button{mask} overflow ko clip kar raha tha */
 .av3d-m{ background:var(--av-cream); }
 .av3d-f{ background:var(--av-pink); }
-.av3d.av3d > img{
-  position:absolute; left:0; bottom:0; top:auto; right:auto;
-  width:100%; height:125%; max-width:none;
-  object-fit:cover; object-position:50% 100%;
-  border-radius:0; pointer-events:none; display:block;
-  /* upar ka hissa (center line tak) khula = head circle se bahar, neeche ka hissa circle mein clip */
-  -webkit-mask-image:linear-gradient(#000,#000), radial-gradient(ellipse 50.6% 40.5% at 50% 60%, #000 99%, transparent 100%);
-          mask-image:linear-gradient(#000,#000), radial-gradient(ellipse 50.6% 40.5% at 50% 60%, #000 99%, transparent 100%);
-  -webkit-mask-size:100% 60%, 100% 100%;
-          mask-size:100% 60%, 100% 100%;
-  -webkit-mask-position:0 0, 0 0;
-          mask-position:0 0, 0 0;
+.av3d-clip{
+  position:absolute; left:0; bottom:0; width:100%; height:130%; pointer-events:none; display:block;
+  /* center line se upar sab khula (head circle se bahar), neeche circle ke andar clip */
+  -webkit-mask-image:linear-gradient(#000,#000), radial-gradient(ellipse 50.6% 38.9% at 50% 61.54%, #000 99%, transparent 100%);
+          mask-image:linear-gradient(#000,#000), radial-gradient(ellipse 50.6% 38.9% at 50% 61.54%, #000 99%, transparent 100%);
+  -webkit-mask-size:80% 61.54%, 100% 100%;
+          mask-size:80% 61.54%, 100% 100%;
+  -webkit-mask-position:50% 0, 0 0;
+          mask-position:50% 0, 0 0;
   -webkit-mask-repeat:no-repeat;
           mask-repeat:no-repeat;
 }
+.av3d .av3d-clip > img{
+  position:absolute; left:0; top:0; width:135%; height:auto; max-width:none; object-fit:fill;
+  border-radius:0; display:block; opacity:0; transition:opacity .15s;
+}
+.av3d .av3d-clip > img.fit{ opacity:1; }
 </style>
 </head>
 <body>
@@ -3485,6 +3488,75 @@ function av3dKind(url){
   if(u.indexOf("/ProfilePNG/") === -1) return "";
   return /\/ProfilePNG\/Male\//i.test(u) ? "m" : "f";
 }
+/* ===== 3D pop-out avatars: har PNG ka content (head top / body bottom) measure karke circle mein fit karta hai ===== */
+const AV3D_FIT_KEY = "pika_av3d_fit_v2";
+const AV3D_FIT = (()=>{ try{ return JSON.parse(localStorage.getItem(AV3D_FIT_KEY) || "{}") || {}; }catch(e){ return {}; } })();
+let _av3dSaveT = null;
+function av3dSave(){
+  clearTimeout(_av3dSaveT);
+  _av3dSaveT = setTimeout(()=>{ try{ localStorage.setItem(AV3D_FIT_KEY, JSON.stringify(AV3D_FIT)); }catch(e){} }, 400);
+}
+const AV3D_WRAP = 1.30;   // clip box = circle ka 130% height (upar 30% jagah head ke liye)
+const AV3D_POP  = 0.09;   // head circle ke upar kitni nikle (circle size ka 9%)
+const AV3D_OVER = 0.03;   // body circle ke neeche se thora aage jaye taake bottom khali na rahe
+function av3dFitStyle(f){
+  const a = f && f.a > 0 ? f.a : 1;
+  const t = f ? f.t : 0.07, b = f ? f.b : 0.84;
+  const span = Math.max(b - t, 0.3);
+  const yTop = (AV3D_WRAP - 1) - AV3D_POP;
+  const yBot = AV3D_WRAP + AV3D_OVER;
+  let hr = (yBot - yTop) / span;
+  hr = Math.min(Math.max(hr, 1 / a), 2.4);
+  const wr = hr * a;
+  const y0 = yTop - t * hr;
+  const x0 = (1 - wr) / 2;
+  return "left:" + (x0 * 100).toFixed(2) + "%;top:" + (y0 / AV3D_WRAP * 100).toFixed(2) + "%;width:" + (wr * 100).toFixed(2) + "%;";
+}
+function av3dMeasure(img){
+  try{
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if(!w || !h) return null;
+    const N = 96, c = document.createElement("canvas"); c.width = c.height = N;
+    const ctx = c.getContext("2d", { willReadFrequently:true });
+    ctx.drawImage(img, 0, 0, N, N);
+    const d = ctx.getImageData(0, 0, N, N).data;
+    const need = Math.max(5, Math.round(N * 0.1));   // chhoti decorations (hearts/sparkles) ignore
+    let top = -1, bot = -1;
+    for(let y = 0; y < N; y++){
+      let n = 0;
+      for(let x = 0; x < N; x++){ if(d[(y * N + x) * 4 + 3] > 40) n++; }
+      if(n >= need){ if(top < 0) top = y; bot = y; }
+    }
+    if(top < 0) return null;
+    return { a: +(w / h).toFixed(4), t: +(top / N).toFixed(4), b: +((bot + 1) / N).toFixed(4) };
+  }catch(e){ return null; }
+}
+function av3dImgHtml(url, alt, lazy){
+  const f = AV3D_FIT[url];
+  return `<span class="av3d-clip"><img class="av3d-img${f ? " fit" : ""}" src="${escapeHtml(url)}" alt="${alt || ""}" crossorigin="anonymous" draggable="false"${lazy ? ' loading="lazy"' : ""}${f ? ` style="${av3dFitStyle(f)}"` : ""}></span>`;
+}
+document.addEventListener("load", function(e){
+  const img = e.target;
+  if(!img || img.tagName !== "IMG" || !img.classList.contains("av3d-img")) return;
+  const src = img.getAttribute("src");
+  if(!window._av3dTagged){ window._av3dTagged = true; console.warn("[Avatar3D] v3 active"); }
+  let f = AV3D_FIT[src];
+  if(!f){
+    f = av3dMeasure(img);
+    if(f){ AV3D_FIT[src] = f; av3dSave(); }
+    else console.warn("[Avatar3D] measure failed (CORS?) -> default fit: " + src.split("/").slice(-2).join("/"));
+  }
+  img.style.cssText = av3dFitStyle(f);
+  img.classList.add("fit");
+}, true);
+document.addEventListener("error", function(e){
+  const img = e.target;
+  if(img && img.tagName === "IMG" && img.classList && img.classList.contains("av3d-img") && img.hasAttribute("crossorigin")){
+    console.warn("[Avatar3D] CORS load failed, retrying without CORS: " + String(img.getAttribute("src")).split("/").slice(-2).join("/"));
+    img.removeAttribute("crossorigin");   // CORS fail hua to bina CORS ke dobara load (default fit use hoga)
+    img.src = img.getAttribute("src");
+  }
+}, true);
 function avatarHtml(name, photo, cls="", isGuest, showOnline=false){
   let inner;
   if(isGuest && !photo){
@@ -3492,7 +3564,7 @@ function avatarHtml(name, photo, cls="", isGuest, showOnline=false){
     inner = `<span class="uav ${cls}" style="background:var(--av-cream);font-size:1.35em;line-height:1;text-shadow:0 2px 6px rgba(0,0,0,.2);">${emoji}</span>`;
   } else {
     const _k = photo ? av3dKind(photo) : "";
-    inner = `<span class="uav ${cls}${_k ? " av3d av3d-" + _k : ""}">${photo ? `<img src="${escapeHtml(photo)}" alt="">` : escapeHtml((name||"?").trim().slice(0,1).toUpperCase())}</span>`;
+    inner = `<span class="uav ${cls}${_k ? " av3d av3d-" + _k : ""}">${photo ? (_k ? av3dImgHtml(photo) : `<img src="${escapeHtml(photo)}" alt="">`) : escapeHtml((name||"?").trim().slice(0,1).toUpperCase())}</span>`;
   }
   if(!showOnline) return inner;
   return `<span class="uav-wrap">${inner}<span class="online-dot"></span></span>`;
@@ -7507,7 +7579,7 @@ function renderProfile(){
   const _pk = state.photoURL ? av3dKind(state.photoURL) : "";
   $("#profile-avatar").classList.remove("av3d","av3d-m","av3d-f");
   if(_pk) $("#profile-avatar").classList.add("av3d","av3d-" + _pk);
-  $("#profile-avatar").innerHTML = state.photoURL ? `<img alt="" src="${escapeHtml(state.photoURL)}" />` : escapeHtml((state.username||"P").slice(0,1).toUpperCase());
+  $("#profile-avatar").innerHTML = state.photoURL ? (_pk ? av3dImgHtml(state.photoURL) : `<img alt="" src="${escapeHtml(state.photoURL)}" />`) : escapeHtml((state.username||"P").slice(0,1).toUpperCase());
   $("#profile-avatar").style.background = "";
 }
   const mine = state.apps.filter(a=> a.uploaderUid === state.uid);
@@ -7634,7 +7706,7 @@ function openAvatarPicker(opts){
     return `<button type="button" class="avatar-pick-cell av3d av3d-${k}" data-avatar-url="${url}" style="
       border:0;padding:0;cursor:pointer;display:block;width:100%;
       border-radius:50%;aspect-ratio:1;
-    "><img src="${url}" alt="" draggable="false" loading="lazy"/></button>`;
+    ">${av3dImgHtml(url, "", true)}</button>`;
   }).join("");
 
   const renderTabs = () => TABS.map(t => {
@@ -7665,7 +7737,7 @@ function openAvatarPicker(opts){
           ${renderTabs()}
         </div>
 
-        <div style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-bottom:18px;padding-top:20px">
+        <div style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-bottom:18px;padding-top:30px">
           <div id="avatar-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px 12px">
             ${renderGrid(poolFor(activeTab))}
           </div>
@@ -10559,7 +10631,7 @@ $("#pktg-subs").textContent = preview
   const av = $("#pktg-avatar");
   av.classList.remove("av3d","av3d-m","av3d-f");
   { const _ck = ch.photoURL ? av3dKind(ch.photoURL) : ""; if(_ck) av.classList.add("av3d","av3d-" + _ck); }
-  av.innerHTML = ch.photoURL ? `<img src="${escapeHtml(ch.photoURL)}" alt="">` : escapeHtml((ch.name||"?").trim().slice(0,1).toUpperCase());
+  av.innerHTML = ch.photoURL ? (av.classList.contains("av3d") ? av3dImgHtml(ch.photoURL) : `<img src="${escapeHtml(ch.photoURL)}" alt="">`) : escapeHtml((ch.name||"?").trim().slice(0,1).toUpperCase());
   $("#pktg-input").placeholder = `Message ${ch.name}…`;
   const isOwnerHere = isChannelOwner(ch);
   $("#pktg-manage-btn").style.display = isOwnerHere ? "flex" : "none";
