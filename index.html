@@ -7587,12 +7587,11 @@ function openAvatarPicker(opts){
   if(document.getElementById("avatar-picker-backdrop")) return;
 
   const TABS = [
-    { key: "all",      label: "🌍 Everyone", pool: AVATAR_POOLS.all },
     { key: "male",     label: "👨 Male",     pool: AVATAR_POOLS.male },
     { key: "female",   label: "👩 Female",   pool: AVATAR_POOLS.female },
     { key: "feminine", label: "✨ Feminine", pool: AVATAR_POOLS.feminine }
   ];
-  let activeTab = "all";
+  let activeTab = "male";
 
   const renderGrid = (pool) => pool.map((png) => {
     const url = AVATAR_BASE_URL + png;
@@ -7609,10 +7608,10 @@ function openAvatarPicker(opts){
     const bg = active ? "linear-gradient(135deg,#FFD700,#FFA800)" : "var(--surface-2)";
     const fg = active ? "#171200" : "var(--text-dim)";
     return `<button type="button" class="avatar-tab" data-tab="${t.key}" style="
-      flex:1;padding:10px 2px;border-radius:14px;white-space:nowrap;
+      flex:1;padding:10px 8px;border-radius:14px;white-space:nowrap;
       border:1px solid ${active ? 'transparent' : 'var(--border)'};
       background:${bg};color:${fg};
-      font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;
+      font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;
       transition:all .2s;
       box-shadow:${active ? '0 6px 16px rgba(255,168,0,.4)' : 'none'};
     ">${t.label}</button>`;
@@ -7632,8 +7631,10 @@ function openAvatarPicker(opts){
           ${renderTabs()}
         </div>
 
-        <div id="avatar-grid" style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start;margin-bottom:18px">
-          ${renderGrid(poolFor(activeTab))}
+        <div style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-bottom:18px">
+          <div id="avatar-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            ${renderGrid(poolFor(activeTab))}
+          </div>
         </div>
 
         <button class="btn btn-primary btn-block" id="avatar-pick-gallery" type="button" style="justify-content:center;margin-bottom:8px">
