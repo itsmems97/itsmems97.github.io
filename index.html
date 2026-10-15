@@ -3963,7 +3963,7 @@ async function ensureProfile(){
     state.photoURL = existing.photoURL || state.photoURL || "";
   }
   const base = { name: state.username, nameLower: lowerName(state.username), photoURL: state.photoURL || "", verified: state.verified, owner: state.isOwner, ...presenceFields(), updatedAt: serverTimestamp() };
-  try{ await setDoc(ref, existing ? base : { ...base, joinedAt: serverTimestamp() }, { merge:true }); }
+  try{ await setDoc(ref, existing ? base : { ...base, joinedAt: serverTimestamp(), setupDone: false }, { merge:true }); }
   catch(e){ console.warn(e); }
 }
 function hideSplash(){
@@ -3978,6 +3978,7 @@ function enterStore(){
   $("#app").hidden = false;
   boot();
   showInstallPrompt();
+  maybeShowSetup();
 }
 function showGate(notice){
   hideSplash(); $("#app").hidden = true; $("#username-gate").hidden = false;
@@ -4440,7 +4441,7 @@ async function ensureGuestProfile(){
   const name = "User" + u.uid.slice(0,4).toUpperCase();
   const exp = guestExpiryMs();
   const base = { name, nameLower: lowerName(name), photoURL:"", verified:false, owner:false, guest:true, ...presenceFields(), updatedAt: serverTimestamp(), expireAt: Timestamp.fromMillis(exp), expireAtMs: exp };
-  try{ await setDoc(ref, isNew ? { ...base, joinedAt: serverTimestamp() } : base, { merge:true }); }
+  try{ await setDoc(ref, isNew ? { ...base, joinedAt: serverTimestamp(), setupDone: false } : base, { merge:true }); }
   catch(e){ console.warn("Guest profile not saved", e); }
 }
 async function guestBoot(){
@@ -7091,20 +7092,66 @@ function spoofHash(s){
 
 const AVATAR_BASE_URL = "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/ProfilePNG/";
 
-// 3 avatar pools — Male / Female / Feminine
-function buildAvatarList(prefix, count){
+// 3 avatar pools — Male / Female / Feminine (30 each, folder wise)
+// Naya avatar add karna ho to sirf 30 ki jagah 31 likho (M31 / F31 / FE31)
+function buildAvatarList(folder, prefix, count){
   const arr = [];
   for(let i = 1; i <= count; i++){
     const n = i < 10 ? "0" + i : String(i);
-    arr.push(prefix + n + ".png");
+    arr.push(folder + "/" + prefix + n + ".png");
   }
   return arr;
 }
 const AVATAR_POOLS = {
-  male:     buildAvatarList("M", 20),
-  female:   buildAvatarList("F", 20),
-  feminine: buildAvatarList("FE", 20)
+  male:     buildAvatarList("Male", "M", 30),
+  female:   buildAvatarList("Female", "F", 30),
+  feminine: buildAvatarList("Feminine", "FE", 30)
 };
+AVATAR_POOLS.all = AVATAR_POOLS.male.concat(AVATAR_POOLS.female, AVATAR_POOLS.feminine);
+// ⚡ AUTO-DETECT: GitHub folders se .png files khud detect hoti hain (naam change nahi karna)
+const AVATAR_API_BASE = "https://api.github.com/repos/itsmems97/itsmems97.github.io/contents/ProfilePNG/";
+const AVATAR_FOLDERS = { male: "Male", female: "Female", feminine: "Feminine" };
+const AVATAR_CACHE_KEY = "pika_avatar_pools_v1";
+const AVATAR_CACHE_MS = 10 * 60 * 1000; // 10 minute cache
+const AVATAR_LIVE = { male: AVATAR_POOLS.male, female: AVATAR_POOLS.female, feminine: AVATAR_POOLS.feminine, all: AVATAR_POOLS.all };
+let _avatarLivePromise = null;
+function applyLiveAvatars(p){
+  AVATAR_LIVE.male = p.male; AVATAR_LIVE.female = p.female; AVATAR_LIVE.feminine = p.feminine;
+  AVATAR_LIVE.all = p.male.concat(p.female, p.feminine);
+}
+async function fetchAvatarFolder(key){
+  const folder = AVATAR_FOLDERS[key];
+  const r = await fetch(AVATAR_API_BASE + folder + "?ref=main");
+  if(!r.ok) throw new Error("GitHub " + r.status);
+  const items = await r.json();
+  return items
+    .filter(f => f.type === "file" && /\.png$/i.test(f.name))
+    .map(f => f.name)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }))
+    .map(n => folder + "/" + encodeURIComponent(n));
+}
+function loadAvatarPools(){
+  if(_avatarLivePromise) return _avatarLivePromise;
+  _avatarLivePromise = (async () => {
+    let cached = null;
+    try{ cached = JSON.parse(localStorage.getItem(AVATAR_CACHE_KEY) || "null"); }catch(e){}
+    if(cached && cached.pools && (Date.now() - cached.at) < AVATAR_CACHE_MS){ applyLiveAvatars(cached.pools); return; }
+    const pools = {};
+    let allOk = true;
+    for(const key of ["male", "female", "feminine"]){
+      try{ pools[key] = await fetchAvatarFolder(key); }
+      catch(e){
+        allOk = false;
+        console.warn("Avatar auto-detect failed for " + key, e);
+        pools[key] = (cached && cached.pools && cached.pools[key]) || AVATAR_POOLS[key];
+      }
+    }
+    applyLiveAvatars(pools);
+    if(allOk){ try{ localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify({ at: Date.now(), pools })); }catch(e){} }
+  })();
+  return _avatarLivePromise;
+}
+loadAvatarPools();
 
 function avatarUrl(gender, index){
   const pool = AVATAR_POOLS[gender] || AVATAR_POOLS.male;
@@ -7465,19 +7512,21 @@ function openAvatarPicker(opts){
   if(document.getElementById("avatar-picker-backdrop")) return;
 
   const TABS = [
+    { key: "all",      label: "🌍 Everyone", pool: AVATAR_POOLS.all },
     { key: "male",     label: "👨 Male",     pool: AVATAR_POOLS.male },
     { key: "female",   label: "👩 Female",   pool: AVATAR_POOLS.female },
     { key: "feminine", label: "✨ Feminine", pool: AVATAR_POOLS.feminine }
   ];
-  let activeTab = "male";
+  let activeTab = "all";
 
   const renderGrid = (pool) => pool.map((png) => {
     const url = AVATAR_BASE_URL + png;
     return `<button type="button" class="avatar-pick-cell" data-avatar-url="${url}" style="
-      border:0;background:transparent;padding:0;cursor:pointer;
+      border:0;padding:0;cursor:pointer;display:block;width:100%;
       border-radius:50%;overflow:hidden;aspect-ratio:1;
       position:relative;
-    "><img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:50%;background:linear-gradient(135deg,#E0C3FC,#8EC5FC)" loading="lazy"/></button>`;
+      background:linear-gradient(135deg,#E0C3FC,#8EC5FC);
+    "><img src="${url}" alt="" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:50%" loading="lazy"/></button>`;
   }).join("");
 
   const renderTabs = () => TABS.map(t => {
@@ -7485,10 +7534,10 @@ function openAvatarPicker(opts){
     const bg = active ? "linear-gradient(135deg,#FFD700,#FFA800)" : "var(--surface-2)";
     const fg = active ? "#171200" : "var(--text-dim)";
     return `<button type="button" class="avatar-tab" data-tab="${t.key}" style="
-      flex:1;padding:10px 8px;border-radius:14px;
+      flex:1;padding:10px 2px;border-radius:14px;white-space:nowrap;
       border:1px solid ${active ? 'transparent' : 'var(--border)'};
       background:${bg};color:${fg};
-      font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;
+      font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;
       transition:all .2s;
       box-shadow:${active ? '0 6px 16px rgba(255,168,0,.4)' : 'none'};
     ">${t.label}</button>`;
@@ -7504,12 +7553,12 @@ function openAvatarPicker(opts){
           Pick a 3D avatar — or choose your own photo from gallery.
         </p>
 
-        <div id="avatar-tabs" style="display:flex;gap:8px;margin-bottom:16px">
+        <div id="avatar-tabs" style="display:flex;gap:6px;margin-bottom:16px">
           ${renderTabs()}
         </div>
 
-        <div id="avatar-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px">
-          ${renderGrid(AVATAR_POOLS[activeTab])}
+        <div id="avatar-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+          ${renderGrid(AVATAR_LIVE[activeTab])}
         </div>
 
         <button class="btn btn-primary btn-block" id="avatar-pick-gallery" type="button" style="justify-content:center;margin-bottom:8px">
@@ -7527,10 +7576,11 @@ function openAvatarPicker(opts){
 
   const refreshGrid = () => {
     const grid = document.getElementById("avatar-grid");
-    if(grid) grid.innerHTML = renderGrid(AVATAR_POOLS[activeTab]);
+    if(grid) grid.innerHTML = renderGrid(AVATAR_LIVE[activeTab]);
     const tabs = document.getElementById("avatar-tabs");
     if(tabs) tabs.innerHTML = renderTabs();
   };
+  loadAvatarPools().then(refreshGrid);
 
   wrap.addEventListener("click", async e => {
     if(e.target === wrap || e.target.closest("[data-close]")){ close(); return; }
@@ -7576,6 +7626,133 @@ function openAvatarPicker(opts){
   });
 }
 
+/* ⚡ First-time setup sheet — Name + Profile choose (Google aur Guest dono ke liye) */
+async function maybeShowSetup(){
+  try{
+    if(!firebaseReady || !state.uid || state.isOwner) return;
+    const key = "pika_setup_ok_" + state.uid;
+    if(localStorage.getItem(key)) return;
+    const snap = await getDoc(doc(db,"users",state.uid));
+    if(!snap.exists()) return;
+    if(snap.data().setupDone !== false){ localStorage.setItem(key, "1"); return; }
+    openSetupSheet(snap.data());
+  }catch(e){ console.warn("Setup check skipped", e); }
+}
+function openSetupSheet(userData){
+  if(document.getElementById("setup-backdrop")) return;
+  const isGuest = !!state.isGuest;
+  const gUser = auth.currentUser;
+  const googlePhoto = (!isGuest && gUser && gUser.photoURL) ? gUser.photoURL : "";
+  const defName = String((userData && userData.name) || (isGuest ? "User" + String(state.uid).slice(0,4).toUpperCase() : state.username) || "Member");
+  let nameMode = "default";
+  let customName = "";
+
+  const wrap = document.createElement("div");
+  wrap.className = "sheet-backdrop dlg";
+  wrap.id = "setup-backdrop";
+  wrap.style.zIndex = "200";
+  document.body.appendChild(wrap);
+
+  const choiceBtn = (act, label, on) => `<button type="button" class="btn ${on ? "btn-primary" : "btn-ghost"}" data-act="${act}" style="flex:1;justify-content:center;padding:10px 6px;font-size:12.5px">${label}</button>`;
+  const render = () => {
+    const shownName = nameMode === "custom" && customName.trim() ? customName.trim() : defName;
+    wrap.innerHTML = `
+      <div class="sheet" style="padding:22px 16px calc(22px + var(--safe-bottom));max-height:92vh;overflow-y:auto">
+        <h3 style="text-align:center;font-size:18px;margin:0 0 4px">Welcome! 🎉</h3>
+        <p style="text-align:center;font-size:12px;color:var(--text-dim);margin:0 0 16px;line-height:1.5">Apna name aur profile choose karo.</p>
+
+        <div style="font-weight:800;font-size:13px;margin:0 0 8px">Your name</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          ${choiceBtn("name-default", isGuest ? "Keep " + escapeHtml(defName) : "Go with Google name", nameMode === "default")}
+          ${choiceBtn("name-custom", "Set custom name", nameMode === "custom")}
+        </div>
+        ${nameMode === "custom"
+          ? `<div class="field" style="margin-bottom:12px"><input type="text" id="setup-name-input" maxlength="${NAME_MAX}" placeholder="Your name (${NAME_MIN}-${NAME_MAX} characters)" autocomplete="off" value="${escapeHtml(customName)}" /></div>`
+          : `<div style="font-size:12px;color:var(--text-dim);margin-bottom:12px">Name: <b>${escapeHtml(defName)}</b></div>`}
+
+        <div style="font-weight:800;font-size:13px;margin:6px 0 8px">Your profile picture</div>
+        <div style="display:flex;justify-content:center;margin-bottom:12px">${avatarHtml(shownName, state.photoURL, "xl", isGuest)}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+          <button type="button" class="btn btn-primary btn-block" data-act="photo-app" style="justify-content:center">🎨 Set in-app profile</button>
+          ${googlePhoto ? `<button type="button" class="btn btn-ghost btn-block" data-act="photo-google" style="justify-content:center">Go with Google profile</button>` : ""}
+          ${isGuest ? "" : `<button type="button" class="btn btn-ghost btn-block" data-act="photo-gallery" style="justify-content:center">Choose from gallery / file manager</button>`}
+        </div>
+        ${isGuest ? `<p style="text-align:center;font-size:11.5px;color:var(--text-dim);margin:-6px 0 14px">Guest sirf in-app profile use kar sakte hain.</p>` : ""}
+
+        <button type="button" class="btn btn-primary btn-block" data-act="done" style="justify-content:center;margin-bottom:8px">Continue ✅</button>
+        <button type="button" class="btn btn-ghost btn-block" data-act="skip" style="justify-content:center">Skip for now</button>
+      </div>`;
+  };
+  render();
+
+  const userRef = doc(db, "users", state.uid);
+  const finish = async (useCustom) => {
+    try{
+      if(useCustom && nameMode === "custom"){
+        const nn = customName.trim();
+        const errMsg = validateName(nn);
+        if(errMsg){ toast(errMsg, "ic-close"); return; }
+        if(isReservedName(nn)){ toast("That name is reserved.", "ic-close"); return; }
+        const oldLower = lowerName(defName), newLower = lowerName(nn);
+        if(newLower !== oldLower){
+          const taken = await findAccount(newLower);
+          if(taken && taken.uid !== state.uid){ toast("That name is already taken", "ic-close"); return; }
+          if(!isGuest){
+            await setDoc(doc(db,"usernames",newLower), { uid: state.uid, name: nn, nameLower: newLower, at: serverTimestamp() });
+            const os = await getDoc(doc(db,"usernames",oldLower));
+            if(os.exists() && os.data().uid === state.uid) await deleteDoc(doc(db,"usernames",oldLower)).catch(()=>{});
+          }
+        }
+        await updateDoc(userRef, { name: nn, nameLower: newLower, setupDone: true, updatedAt: serverTimestamp() });
+        state.username = nn; localStorage.setItem("pika_username", nn);
+      } else {
+        await updateDoc(userRef, { setupDone: true, updatedAt: serverTimestamp() });
+      }
+      localStorage.setItem("pika_setup_ok_" + state.uid, "1");
+      wrap.remove();
+      renderProfile(); renderAccountDetails();
+      toast("Profile ready");
+    }catch(e){ toast("Failed: " + (e.code || e.message), "ic-close"); }
+  };
+
+  wrap.addEventListener("input", e => {
+    if(e.target && e.target.id === "setup-name-input") customName = e.target.value;
+  });
+  wrap.addEventListener("click", async e => {
+    const b = e.target.closest("[data-act]");
+    if(!b) return;
+    const act = b.dataset.act;
+    if(act === "name-default"){ nameMode = "default"; render(); return; }
+    if(act === "name-custom"){ nameMode = "custom"; render(); const i = document.getElementById("setup-name-input"); if(i) i.focus(); return; }
+    if(act === "photo-app"){
+      openAvatarPicker({ onPicked: url => { state.photoURL = url; render(); renderProfile(); } });
+      return;
+    }
+    if(act === "photo-google"){
+      try{
+        await updateDoc(userRef, { photoURL: googlePhoto, updatedAt: serverTimestamp() });
+        state.photoURL = googlePhoto; render(); renderProfile();
+      }catch(err){ toast("Failed: " + (err.code || err.message), "ic-close"); }
+      return;
+    }
+    if(act === "photo-gallery"){
+      const inp = document.createElement("input");
+      inp.type = "file"; inp.accept = "image/*"; inp.style.display = "none";
+      inp.onchange = async (ev) => {
+        const f = ev.target.files && ev.target.files[0];
+        if(!f) return;
+        wrap.style.display = "none";
+        try{ await changeMyPhoto(f); } finally { wrap.style.display = ""; render(); }
+      };
+      document.body.appendChild(inp);
+      inp.click();
+      setTimeout(() => inp.remove(), 60000);
+      return;
+    }
+    if(act === "done"){ await finish(true); return; }
+    if(act === "skip"){ await finish(false); return; }
+  });
+}
 /* ⚡ Change my own profile photo (from gallery/camera) */
 async function changeMyPhoto(file){
   if(!file) return;
