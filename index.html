@@ -1979,6 +1979,30 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
   transition:transform .15s, background .18s;
 }
 .ent-close:active{ background:rgba(255,255,255,.14); transform:scale(.97); }
+
+/* ===== 3D pop-out avatars (ProfilePNG): head circle se thora upar + creamy backgrounds ===== */
+:root{
+  --av-cream:linear-gradient(145deg,#FFF7E0 0%,#F8E6BC 100%);   /* Boys  — light cream */
+  --av-pink:linear-gradient(145deg,#FFE9F0 0%,#FFC9DB 100%);    /* Girls — light pink  */
+}
+.av3d{ position:relative; overflow:visible; }
+.av3d-m{ background:var(--av-cream); }
+.av3d-f{ background:var(--av-pink); }
+.av3d.av3d > img{
+  position:absolute; left:0; bottom:0; top:auto; right:auto;
+  width:100%; height:125%; max-width:none;
+  object-fit:cover; object-position:50% 100%;
+  border-radius:0; pointer-events:none; display:block;
+  /* upar ka hissa (center line tak) khula = head circle se bahar, neeche ka hissa circle mein clip */
+  -webkit-mask-image:linear-gradient(#000,#000), radial-gradient(ellipse 50.6% 40.5% at 50% 60%, #000 99%, transparent 100%);
+          mask-image:linear-gradient(#000,#000), radial-gradient(ellipse 50.6% 40.5% at 50% 60%, #000 99%, transparent 100%);
+  -webkit-mask-size:100% 60%, 100% 100%;
+          mask-size:100% 60%, 100% 100%;
+  -webkit-mask-position:0 0, 0 0;
+          mask-position:0 0, 0 0;
+  -webkit-mask-repeat:no-repeat;
+          mask-repeat:no-repeat;
+}
 </style>
 </head>
 <body>
@@ -3455,13 +3479,20 @@ function guestEmojiFor(name){
   for(let i = 0; i < s.length; i++) hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
   return GUEST_EMOJIS[Math.abs(hash) % GUEST_EMOJIS.length];
 }
+// ProfilePNG avatar ka type: Male folder -> "m" (cream), Female/Feminine -> "f" (pink), baqi (real photo) -> ""
+function av3dKind(url){
+  const u = String(url || "");
+  if(u.indexOf("/ProfilePNG/") === -1) return "";
+  return /\/ProfilePNG\/Male\//i.test(u) ? "m" : "f";
+}
 function avatarHtml(name, photo, cls="", isGuest, showOnline=false){
   let inner;
   if(isGuest && !photo){
     const emoji = guestEmojiFor(name);
-    inner = `<span class="uav ${cls}" style="background:linear-gradient(135deg,#E0C3FC,#8EC5FC);font-size:1.35em;line-height:1;text-shadow:0 2px 6px rgba(0,0,0,.2);">${emoji}</span>`;
+    inner = `<span class="uav ${cls}" style="background:var(--av-cream);font-size:1.35em;line-height:1;text-shadow:0 2px 6px rgba(0,0,0,.2);">${emoji}</span>`;
   } else {
-    inner = `<span class="uav ${cls}">${photo ? `<img src="${escapeHtml(photo)}" alt="">` : escapeHtml((name||"?").trim().slice(0,1).toUpperCase())}</span>`;
+    const _k = photo ? av3dKind(photo) : "";
+    inner = `<span class="uav ${cls}${_k ? " av3d av3d-" + _k : ""}">${photo ? `<img src="${escapeHtml(photo)}" alt="">` : escapeHtml((name||"?").trim().slice(0,1).toUpperCase())}</span>`;
   }
   if(!showOnline) return inner;
   return `<span class="uav-wrap">${inner}<span class="online-dot"></span></span>`;
@@ -7469,9 +7500,13 @@ function renderProfile(){
   nameEl.innerHTML = `${escapeHtml(state.username || "—")}${tick(state.verified)}`;
   $("#profile-role").textContent = state.isOwner ? "Store Owner" : (state.isGuest ? "Guest — download only" : (state.verified ? "Verified member" : "Member of Pika Store"));
   if(state.isGuest && !state.photoURL){
+  $("#profile-avatar").classList.remove("av3d","av3d-m","av3d-f");
   $("#profile-avatar").innerHTML = `<span style="font-size:1.8em;line-height:1;text-shadow:0 3px 10px rgba(0,0,0,.25);">${guestEmojiFor(state.username)}</span>`;
-  $("#profile-avatar").style.background = "linear-gradient(135deg,#E0C3FC,#8EC5FC)";
+  $("#profile-avatar").style.background = "var(--av-cream)";
 } else {
+  const _pk = state.photoURL ? av3dKind(state.photoURL) : "";
+  $("#profile-avatar").classList.remove("av3d","av3d-m","av3d-f");
+  if(_pk) $("#profile-avatar").classList.add("av3d","av3d-" + _pk);
   $("#profile-avatar").innerHTML = state.photoURL ? `<img alt="" src="${escapeHtml(state.photoURL)}" />` : escapeHtml((state.username||"P").slice(0,1).toUpperCase());
   $("#profile-avatar").style.background = "";
 }
@@ -7595,12 +7630,11 @@ function openAvatarPicker(opts){
 
   const renderGrid = (pool) => pool.map((png) => {
     const url = AVATAR_BASE_URL + png;
-    return `<button type="button" class="avatar-pick-cell" data-avatar-url="${url}" style="
+    const k = av3dKind(url) || "f";
+    return `<button type="button" class="avatar-pick-cell av3d av3d-${k}" data-avatar-url="${url}" style="
       border:0;padding:0;cursor:pointer;display:block;width:100%;
-      border-radius:50%;overflow:hidden;aspect-ratio:1;
-      position:relative;
-      background:linear-gradient(135deg,#E0C3FC,#8EC5FC);
-    "><img src="${url}" alt="" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:50%" loading="lazy"/></button>`;
+      border-radius:50%;aspect-ratio:1;
+    "><img src="${url}" alt="" draggable="false" loading="lazy"/></button>`;
   }).join("");
 
   const renderTabs = () => TABS.map(t => {
@@ -7631,8 +7665,8 @@ function openAvatarPicker(opts){
           ${renderTabs()}
         </div>
 
-        <div style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-bottom:18px">
-          <div id="avatar-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-bottom:18px;padding-top:20px">
+          <div id="avatar-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px 12px">
             ${renderGrid(poolFor(activeTab))}
           </div>
         </div>
@@ -10523,6 +10557,8 @@ $("#pktg-subs").textContent = preview
   ? `Preview • ${_mem} member${(ch.memberCount||1)===1?"":"s"}${_act}`
   : `${_mem} member${(ch.memberCount||1)===1?"":"s"}${_act}`;
   const av = $("#pktg-avatar");
+  av.classList.remove("av3d","av3d-m","av3d-f");
+  { const _ck = ch.photoURL ? av3dKind(ch.photoURL) : ""; if(_ck) av.classList.add("av3d","av3d-" + _ck); }
   av.innerHTML = ch.photoURL ? `<img src="${escapeHtml(ch.photoURL)}" alt="">` : escapeHtml((ch.name||"?").trim().slice(0,1).toUpperCase());
   $("#pktg-input").placeholder = `Message ${ch.name}…`;
   const isOwnerHere = isChannelOwner(ch);
