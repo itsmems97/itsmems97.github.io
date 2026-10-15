@@ -7506,6 +7506,77 @@ updateSpoofUI();
     </div>`;
   }).join("") : `<div class="mini-row" style="color:var(--text-faint)">No uploads yet.</div>`;
 }
+/* ⚡ Feminine (18+) access — warning popup + age verify */
+const FE_OK_KEY = "pika_fe_ok";
+const feVerified = () => { try{ return localStorage.getItem(FE_OK_KEY) === "1"; }catch(e){ return false; } };
+function poolFor(key){
+  if(key === "all" && !feVerified()) return AVATAR_LIVE.male.concat(AVATAR_LIVE.female);
+  return AVATAR_LIVE[key];
+}
+function askFeminineAccess(){
+  return new Promise(resolve => {
+    if(document.getElementById("fe-gate-backdrop")){ resolve(false); return; }
+    const wrap = document.createElement("div");
+    wrap.className = "sheet-backdrop dlg";
+    wrap.id = "fe-gate-backdrop";
+    wrap.style.zIndex = "230";
+    document.body.appendChild(wrap);
+    const done = (ok) => { wrap.remove(); resolve(ok); };
+    const box = (inner) => `<div class="sheet" style="padding:26px 20px calc(26px + var(--safe-bottom));">${inner}</div>`;
+
+    const stepWarn = () => {
+      wrap.innerHTML = box(`
+        <h3 style="text-align:center;font-size:18px;margin:0 0 10px;">⚠️ Warning: 18+ Profiles</h3>
+        <p class="dlg-p" style="text-align:center">This section has <b>18+ profiles</b>.<br><br>Are you <b>Aesthetic</b> or are you <b>Feminine</b>?<br>(Means: Gay? Lesbian? Trans?)<br><br>If yes ✓ then press <b>Okay</b> to verify your age. Otherwise press <b>Cancel</b>.</p>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" type="button" data-act="cancel">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" type="button" data-act="ok">Okay</button>
+        </div>`);
+    };
+    const stepAge = (msg) => {
+      wrap.innerHTML = box(`
+        <h3 style="text-align:center;font-size:18px;margin:0 0 10px;">Verify your age</h3>
+        <p class="dlg-p" style="text-align:center">Enter your age. Only <b>18 to 99</b> can see Feminine profiles.</p>
+        <div class="field" style="margin-bottom:10px"><input type="number" inputmode="numeric" id="fe-age-input" min="1" max="99" placeholder="Your age" autocomplete="off" /></div>
+        <p id="fe-age-msg" style="text-align:center;font-size:12.5px;color:#ff6b6b;margin:0 0 12px;min-height:16px">${msg || ""}</p>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" type="button" data-act="cancel">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" type="button" data-act="verify">Verify</button>
+        </div>`);
+      const i = document.getElementById("fe-age-input"); if(i) i.focus();
+    };
+    const stepBlocked = () => {
+      wrap.innerHTML = box(`
+        <h3 style="text-align:center;font-size:18px;margin:0 0 10px;">Sorry Child 👶</h3>
+        <p class="dlg-p" style="text-align:center">Avoid this feature. I'm not responsible.</p>
+        <button class="btn btn-primary btn-block" style="justify-content:center" type="button" data-act="cancel">Close</button>`);
+    };
+    const verify = () => {
+      const raw = (document.getElementById("fe-age-input") || {}).value;
+      const age = parseInt(String(raw == null ? "" : raw).trim(), 10);
+      if(!Number.isFinite(age) || age < 1){ stepAge("Please enter your real age."); return; }
+      if(age < 18){ stepBlocked(); return; }
+      if(age > 99){ stepAge("Please enter your real age (18 to 99)."); return; }
+      try{ localStorage.setItem(FE_OK_KEY, "1"); }catch(e){}
+      toast("Age verified");
+      done(true);
+    };
+
+    stepWarn();
+    wrap.addEventListener("click", e => {
+      if(e.target === wrap){ done(false); return; }
+      const b = e.target.closest("[data-act]");
+      if(!b) return;
+      const act = b.dataset.act;
+      if(act === "cancel"){ done(false); return; }
+      if(act === "ok"){ stepAge(""); return; }
+      if(act === "verify"){ verify(); return; }
+    });
+    wrap.addEventListener("keydown", e => {
+      if(e.key === "Enter" && e.target && e.target.id === "fe-age-input"){ e.preventDefault(); verify(); }
+    });
+  });
+}
 /* ⚡ Avatar Picker Popup — 3 tabs (Male / Female / Feminine) + gallery button */
 function openAvatarPicker(opts){
   opts = opts || {};
@@ -7562,7 +7633,7 @@ function openAvatarPicker(opts){
         </div>
 
         <div id="avatar-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
-          ${renderGrid(AVATAR_LIVE[activeTab])}
+          ${renderGrid(poolFor(activeTab))}
         </div>
 
         <button class="btn btn-primary btn-block" id="avatar-pick-gallery" type="button" style="justify-content:center;margin-bottom:8px">
@@ -7580,7 +7651,7 @@ function openAvatarPicker(opts){
 
   const refreshGrid = () => {
     const grid = document.getElementById("avatar-grid");
-    if(grid) grid.innerHTML = renderGrid(AVATAR_LIVE[activeTab]);
+    if(grid) grid.innerHTML = renderGrid(poolFor(activeTab));
     const tabs = document.getElementById("avatar-tabs");
     if(tabs) tabs.innerHTML = renderTabs();
   };
@@ -7593,7 +7664,13 @@ function openAvatarPicker(opts){
     const tabBtn = e.target.closest("[data-tab]");
     if(tabBtn){
       const k = tabBtn.dataset.tab;
-      if(k !== activeTab){ activeTab = k; refreshGrid(); }
+      if(k !== activeTab){
+        if(k === "feminine" && !feVerified()){
+          const ok = await askFeminineAccess();
+          if(!ok) return;
+        }
+        activeTab = k; refreshGrid();
+      }
       return;
     }
 
