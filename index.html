@@ -12090,16 +12090,56 @@ initOnboarding();
 /* =====================================================================
    PIKA DISCOVER — AppTeka integration (ISOLATED MODULE)
    ===================================================================== */
-const DISCOVER_API = "https://193-122-76-131.nip.io/discover";
+const DISCOVER_API = "https://193-122-76-131.nip.io/discover/api/1";
 const discover = { apps: [], loading: false };
 window.discover = discover;
 
+// AppTeka raw entry → Pika Store format
+function _apptekaToPika(raw){
+  if(!raw) return null;
+  let category = "";
+  const cat = raw.category;
+  if(cat && typeof cat === "object"){
+    const nm = cat.name || {};
+    category = nm.en || Object.values(nm)[0] || "";
+  } else if(typeof cat === "string"){
+    category = cat;
+  }
+  let author = "";
+  if(raw.author && typeof raw.author === "object") author = raw.author.name || "";
+  else if(typeof raw.author === "string") author = raw.author;
+
+  const size = Number(raw.size || 0);
+  let sizeLabel = size + " B";
+  if(size >= 1024*1024*1024) sizeLabel = (size/(1024*1024*1024)).toFixed(1) + " GB";
+  else if(size >= 1024*1024) sizeLabel = (size/(1024*1024)).toFixed(1) + " MB";
+  else if(size >= 1024) sizeLabel = (size/1024).toFixed(1) + " KB";
+
+  return {
+    id: String(raw.app_id || raw.id || ""),
+    name: raw.label || raw.name || "App",
+    icon: raw.icon || "",
+    author: author || "Unknown",
+    category: category || "App",
+    package: raw.package || "",
+    sizeLabel: sizeLabel,
+    version: raw.ver_name || raw.version || "1.0",
+    downloads: raw.downloads || 0,
+    rating: raw.rating || 0
+  };
+}
+
 async function discoverFetch(path){
-  const res = await fetch(DISCOVER_API + path);
-  if(!res.ok) throw new Error('HTTP ' + res.status);
-  const json = await res.json();
-  if(!json.ok) throw new Error(json.error || 'Server error');
-  return json;
+  if(!DISCOVER_API) throw new Error("Discover not configured");
+  const r = await fetch(DISCOVER_API + path, { cache: "no-store" });
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  const data = await r.json();
+  let entries = [];
+  if(data && data.result && Array.isArray(data.result.entries)) entries = data.result.entries;
+  else if(Array.isArray(data)) entries = data;
+  else if(data && Array.isArray(data.apps)) entries = data.apps;
+  const apps = entries.map(_apptekaToPika).filter(a => a && a.id);
+  return { ok: true, apps };
 }
 
 async function discoverLoadHome(force){
