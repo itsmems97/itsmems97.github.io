@@ -12158,7 +12158,7 @@ async function discoverLoadHome(force){
   discover.loading = true;
 
   const today = new Date().toISOString().slice(0,10);
-  const cacheKey = 'pika_discover_' + today;
+  const cacheKey = 'pika_discover_v3_' + today;
 
   if(!force){
     try{
@@ -12325,6 +12325,16 @@ document.getElementById('disc-comments-btn').addEventListener('click', ()=> open
 }
 
 async function startDiscoverDownload(app){
+  const dlId = 'disc__' + app.id;
+  if(typeof dlActive !== 'undefined' && dlActive.has(dlId)){ toast('Already downloading'); return; }
+  try{ dlActive.add(dlId); }catch(e){}
+
+  toast('Opening AppTeka page — download from there');
+  const fallbackUrl = 'https://appteka.store/app/' + encodeURIComponent(app.id);
+  window.open(fallbackUrl, '_blank', 'noopener');
+
+  try{ dlActive.delete(dlId); }catch(e){}
+}
   const dlId = 'disc__' + app.id;
   if(typeof dlActive !== 'undefined' && dlActive.has(dlId)){ toast('Already downloading'); return; }
   try{ dlActive.add(dlId); }catch(e){}
