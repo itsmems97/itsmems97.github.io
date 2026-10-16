@@ -6420,7 +6420,7 @@ $("#search-input").addEventListener("input", e=>{
   discSearchState = { query:q, apps:[], pending:true, done:false };
   renderSearch(q);
   if(typeof discSearchTimer !== 'undefined'){
-    discSearchTimer = setTimeout(()=>{ if(typeof discSearchAndAppend === 'function') discSearchAndAppend(q); }, 400);
+    discSearchTimer = setTimeout(()=>{ if(typeof discSearchAndAppend === 'function') discSearchAndAppend(q); }, 150);
   }
 });
 $("#search-panel").addEventListener("click", e=>{
@@ -12166,6 +12166,7 @@ async function discoverLoadHome(force){
       if(cached && cached.length >= 6){
         discover.apps = cached;
         discover.loading = false;
+        if(typeof ghState !== 'undefined'){ ghState.heroSig = ''; ghState.built = false; ghState.current = -1; }
         if(typeof renderHome === "function") renderHome();
         return;
       }
@@ -12173,15 +12174,16 @@ async function discoverLoadHome(force){
   }
 
   try{
-  const data = await discoverFetch('/app/top/list?locale=en');
-  discover.apps = data.apps || [];
-  try{ localStorage.setItem(cacheKey, JSON.stringify(discover.apps)); }catch(e){}
-  if(typeof renderHome === "function") renderHome();
-}catch(e){
-  console.warn('Discover load failed:', e);
-}finally{
-  discover.loading = false;
-}
+    const data = await discoverFetch('/app/top/list?locale=en');
+    discover.apps = data.apps || [];
+    try{ localStorage.setItem(cacheKey, JSON.stringify(discover.apps)); }catch(e){}
+    if(typeof ghState !== 'undefined'){ ghState.heroSig = ''; ghState.built = false; ghState.current = -1; }
+    if(typeof renderHome === "function") renderHome();
+  }catch(e){
+    console.warn('Discover load failed:', e);
+  }finally{
+    discover.loading = false;
+  }
 }
 
 /* ================= DISCOVER CUSTOM SHARE ================= */
