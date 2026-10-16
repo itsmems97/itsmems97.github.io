@@ -9187,25 +9187,33 @@ async function joinChannelWithCode(channel, codeRaw){
   const memberKey = myMemberKey();
   try{
     await runTransaction(db, async tx=>{
+      // ============ SAARI READS PEHLE ============
       const codeRef = doc(db,"channelCodes",code);
       const codeSnap = await tx.get(codeRef);
       if(!codeSnap.exists() || codeSnap.data().channelId !== channel.id || codeSnap.data().used){
         const e = new Error("Wrong code"); e.code = "WRONGCODE"; throw e;
       }
+      
       const channelRef = doc(db,"channels",channel.id);
       const channelSnap = await tx.get(channelRef);
       const isCustom = channelSnap.exists() && channelSnap.data().customMemberCount === true;
+      
+      const userRef = doc(db,"users", state.uid);
+      const userSnap = await tx.get(userRef);
+      
+      // ============ AB SAARI WRITES ============
       tx.update(codeRef, { used:true, usedBy: memberKey, usedAt: serverTimestamp() });
+      
       tx.set(doc(db,"channels",channel.id,"members",memberKey), {
         uid: state.uid, name: state.username, photoURL: state.photoURL || "",
         role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
       });
+      
       if(!isCustom){
         tx.update(channelRef, { memberCount: increment(1) });
       }
+      
       // ⚡ Auto VIP badge for joining member
-      const userRef = doc(db,"users", state.uid);
-      const userSnap = await tx.get(userRef);
       if(userSnap.exists()){
         const existing = Array.isArray(userSnap.data().vipChannels) ? userSnap.data().vipChannels : [];
         if(!existing.includes(channel.name)){
