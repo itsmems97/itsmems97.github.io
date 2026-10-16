@@ -12131,7 +12131,18 @@ function _apptekaToPika(raw){
 
 async function discoverFetch(path){
   if(!DISCOVER_API) throw new Error("Discover not configured");
-  const r = await fetch(DISCOVER_API + path, { cache: "no-store" });
+  let realPath = path;
+  if(path.startsWith('/random')){
+    realPath = '/app/top/list?locale=en';
+  } else if(path.startsWith('/search')){
+    const qPart = (path.split('?')[1] || '').replace(/^q=/, '') || '';
+    realPath = '/app/search?query=' + qPart + '&locale=en';
+  } else if(path.startsWith('/download/')){
+    const id = path.slice('/download/'.length);
+    realPath = '/app/download?app_id=' + encodeURIComponent(id) + '&locale=en';
+  }
+  const bust = (realPath.indexOf('?') > -1 ? '&' : '?') + '_t=' + Date.now();
+  const r = await fetch(DISCOVER_API + realPath + bust, { cache: "no-store" });
   if(!r.ok) throw new Error("HTTP " + r.status);
   const data = await r.json();
   let entries = [];
