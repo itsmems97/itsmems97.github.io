@@ -12325,27 +12325,49 @@ document.getElementById('disc-comments-btn').addEventListener('click', ()=> open
 }
 
 async function startDiscoverDownload(app){
-  const url = DISCOVER_API + '/download/' + encodeURIComponent(app.id);
-  const filename = (app.package || app.name || 'app') + '.apk';
   const dlId = 'disc__' + app.id;
   if(typeof dlActive !== 'undefined' && dlActive.has(dlId)){ toast('Already downloading'); return; }
   try{ dlActive.add(dlId); }catch(e){}
   const controller = new AbortController();
   const bubble = createDlBubble({ name: app.name }, ()=> controller.abort());
-  toast('Download started');
+  toast('Preparing download...');
+
   try{
-    await downloadInsideStore(url, filename, pct => bubble.set(pct), controller.signal);
+    // Ask our proxy for the real download URL from AppTeka
+    const apiUrl = DISCOVER_API + '/app/download?app_id=' + encodeURIComponent(app.id) + '&locale=en';
+    const r = await fetch(apiUrl, { cache: 'no-store' });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+
+    // Find the download URL in various possible response shapes
+    let downloadUrl = null;
+    const result = data && data.result ? data.result : data;
+    if(result){
+      downloadUrl = result.url || result.download_url || result.link
+                 || result.file_url || result.apk_url
+                 || (result.data && result.data.url);
+    }
+
+    if(!downloadUrl){
+      // Couldn't find a direct URL — just open AppTeka's page in a new tab
+      const fallbackUrl = 'https://appteka.store/app/' + encodeURIComponent(app.id);
+      toast('Opening AppTeka page — download from there');
+      window.open(fallbackUrl, '_blank', 'noopener');
+      bubble.remove();
+      try{ dlActive.delete(dlId); }catch(e){}
+      return;
+    }
+
+    const filename = (app.package || app.name || 'app') + '.apk';
+    await downloadInsideStore(downloadUrl, filename, pct => bubble.set(pct), controller.signal);
     bubble.set(100);
     toast(`"${app.name}" downloaded`);
   }catch(err){
-    if(err && err.name === 'AbortError'){ toast('Download cancelled'); }
-    else {
-      const a = document.createElement('a');
-      a.href = url; a.download = filename; a.style.display = 'none';
-      document.body.appendChild(a); a.click();
-      setTimeout(()=> a.remove(), 1000);
-      toast('Download opened in browser');
-    }
+    console.warn('Download failed:', err);
+    // Fallback: open the AppTeka app page
+    const fallbackUrl = 'https://appteka.store/app/' + encodeURIComponent(app.id);
+    toast('Opening AppTeka page — download from there');
+    window.open(fallbackUrl, '_blank', 'noopener');
   }
   bubble.remove();
   try{ dlActive.delete(dlId); }catch(e){}
