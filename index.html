@@ -12490,13 +12490,24 @@ function extractDiscoverDescription(info){
   const srcs = [info, info.info, info.app, info.data];
   for(const src of srcs){
     if(!src || typeof src !== 'object') continue;
-    let d = src.description || src.short_description || src.short_desc || src.long_description || src.desc;
-    if(typeof d === 'string' && d.trim().length > 0) return d;
-    if(d && typeof d === 'object'){
-      if(d.en && typeof d.en === 'string' && d.en.trim().length > 0) return d.en;
-      for(const key in d) {
-        if(typeof d[key] === 'string' && d[key].trim().length > 0) return d[key];
-      }
+    const d = src.description || src.short_description || src.short_desc || src.long_description || src.desc;
+    if(typeof d === 'string' && d.trim().length > 0){
+      let text = d;
+      // Jina AI ke headers (Title, URL Source, Markdown Content) hatao
+      text = text.replace(/^Title:.*?\n\n/s, '');
+      text = text.replace(/^URL Source:.*?\n\n/s, '');
+      text = text.replace(/^Markdown Content:\s*/i, '');
+      
+      // Markdown images (![alt](url)) ko hatao description se
+      text = text.replace(/!\[[^\]]*\]\([^\)]+\)/g, '');
+      
+      // Extra newlines clean karo
+      text = text.replace(/\n{3,}/g, '\n\n').trim();
+      
+      // Agar description bahut lambi hai toh pehle 800 characters le lo
+      if(text.length > 800) text = text.slice(0, 800) + '...';
+      
+      if(text.length > 0) return text;
     }
   }
   return "";
@@ -12517,6 +12528,19 @@ function extractDiscoverScreenshots(info){
         }).filter(Boolean);
         if(urls.length > 0) return urls;
       }
+    }
+    // Fallback: Jina AI raw text se markdown images nikaalo
+    const d = src.description || src.text || "";
+    if(typeof d === 'string'){
+      const imgRegex = /!\[[^\]]*\]\((https?:\/\/[^\)]+)\)/g;
+      const found = [];
+      let match;
+      while((match = imgRegex.exec(d)) !== null){
+        const url = match[1];
+        // Sirf screenshots (icons/logos ignore karo)
+        if(!url.includes('icon') && !url.includes('logo') && !found.includes(url)) found.push(url);
+      }
+      if(found.length > 0) return found;
     }
   }
   return [];
