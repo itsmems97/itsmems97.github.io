@@ -6395,7 +6395,13 @@ function renderSearch(term){
   const _ql = q.toLowerCase();
   const _localDisc = ((typeof discover !== 'undefined' && discover && discover.apps) ? discover.apps : [])
     .filter(a => ((a.name || '') + ' ' + (a.package || '') + ' ' + (a.author || '')).toLowerCase().includes(_ql))
-    .slice(0, 8);
+    .sort((x, y) => {
+      const xs = (x.name || '').toLowerCase().startsWith(_ql) ? 1 : 0;
+      const ys = (y.name || '').toLowerCase().startsWith(_ql) ? 1 : 0;
+      if(xs !== ys) return ys - xs;
+      return (y.downloads || 0) - (x.downloads || 0);
+    })
+    .slice(0, 60);
   const discoverResults = [];
   const _seenDisc = new Set();
   [..._remoteDisc, ..._localDisc].forEach(a => { if(!_seenDisc.has(a.id)){ _seenDisc.add(a.id); discoverResults.push(a); } });
@@ -12352,47 +12358,34 @@ async function startDiscoverDownload(app){
 
   const filename = String(app.name || 'app').replace(/[^A-Za-z0-9._-]+/g, '_') + '.apk';
   const fallbackUrl = 'https://appteka.store/app/' + encodeURIComponent(app.id);
-  const controller = new AbortController();
-  let bubble = null;
+  const INFO_BASE = 'https://pika-discover.itsme16241897.workers.dev/api/1';
+  const infoCtl = new AbortController();
+  const infoTimer = setTimeout(()=> infoCtl.abort(), 15000);
   let directLink = '';
 
   try{
     toast('Preparing download…');
-    const infoRes = await fetch(DISCOVER_API + '/app/info?app_id=' + encodeURIComponent(app.id) + '&locale=en&_t=' + Date.now(), { cache: 'no-store', signal: controller.signal });
+    const infoRes = await fetch(INFO_BASE + '/app/info?app_id=' + encodeURIComponent(app.id) + '&locale=en&_t=' + Date.now(), { cache: 'no-store', signal: infoCtl.signal });
     if(!infoRes.ok) throw new Error('INFO_HTTP_' + infoRes.status);
     const infoJson = await infoRes.json();
     directLink = (infoJson && infoJson.result && infoJson.result.link) || '';
     if(!directLink) throw new Error('NO_LINK');
 
-    const proxyBase = DISCOVER_API.replace(/\/api\/1$/, '/');
-    const proxiedLink = directLink.replace('https://appteka.store/', proxyBase);
-
-    bubble = createDlBubble({ name: app.name }, ()=> controller.abort());
-    await downloadInsideStore(proxiedLink, filename, pct => bubble.set(pct), controller.signal);
-    bubble.set(100);
-    toast('"' + app.name + '" downloaded');
+    const a = document.createElement('a');
+    a.href = directLink;
+    a.download = filename;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=> a.remove(), 500);
+    toast('Download started — check your notification bar');
   }catch(err){
-    if(err && err.name === 'AbortError'){
-      toast('Download cancelled');
-    } else if(directLink){
-      try{
-        const a = document.createElement('a');
-        a.href = directLink;
-        a.download = filename;
-        a.rel = 'noopener';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(()=> a.remove(), 500);
-        toast('Download started in browser');
-      }catch(e2){ console.warn('Direct download failed', e2); }
-    } else {
-      console.warn('Discover download failed:', err);
-      toast('Opening AppTeka page — download from there');
-      window.open(fallbackUrl, '_blank', 'noopener');
-    }
+    console.warn('Discover download failed:', err);
+    toast('Opening AppTeka page — download from there');
+    window.open(fallbackUrl, '_blank', 'noopener');
   }finally{
-    if(bubble) bubble.remove();
+    clearTimeout(infoTimer);
     setTimeout(()=>{ try{ dlActive.delete(dlId); }catch(e){} }, 3000);
   }
 }
@@ -12402,13 +12395,25 @@ let discSearchTimer = null;
 async function discSearchAndAppend(q){
   const inputEl = document.getElementById('search-input');
   if(!inputEl || inputEl.value.trim() !== q) return;
+
+  // 8 second baad spinner band, chahe remote jawab na de
+  const giveUpTimer = setTimeout(()=>{
+    if(inputEl.value.trim() !== q) return;
+    if(discSearchState.query === q && !discSearchState.done){
+      discSearchState = { query:q, apps:[], pending:false, done:true };
+      if(typeof renderSearch === "function") renderSearch(q);
+    }
+  }, 8000);
+
   try{
     const data = await discoverFetch('/app/search?query=' + encodeURIComponent(q) + '&locale=en');
-    const apps = (data.apps || []).slice(0, 8);
+    clearTimeout(giveUpTimer);
+    const apps = (data.apps || []).slice(0, 40);
     if(inputEl.value.trim() !== q) return;
     discSearchState = { query:q, apps, pending:false, done:true };
     if(typeof renderSearch === "function") renderSearch(q);
   }catch(e){
+    clearTimeout(giveUpTimer);
     console.warn('Discover search failed:', e);
     if(inputEl.value.trim() !== q) return;
     discSearchState = { query:q, apps:[], pending:false, done:true };
