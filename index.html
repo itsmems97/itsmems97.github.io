@@ -5814,7 +5814,10 @@ const N = currentApps.length;
     return;
   }
 
-  const shuffled = [...currentApps].sort(() => Math.random() - 0.5);
+  const _shufA = currentApps.filter(a => !a.__discover).sort(() => Math.random() - 0.5);
+  const _shufB = currentApps.filter(a => a.__discover).sort(() => Math.random() - 0.5);
+  const shuffled = [];
+  for (let i = 0; i < Math.max(_shufA.length, _shufB.length); i++){ if(_shufA[i]) shuffled.push(_shufA[i]); if(_shufB[i]) shuffled.push(_shufB[i]); }
   function batch(offset){
     const out = [];
     for (let i = 0; i < 3; i++) out.push(shuffled[(offset + i) % N]);
@@ -6010,7 +6013,11 @@ function ghRenderTrending(){
   const sec = document.getElementById('gh-trending-sec');
   if (!box || !sec) return;
   const list = ghGetCurrentApps();
-  const sorted = [...list].sort((a, b) => (b.downloadCount||0) - (a.downloadCount||0)).slice(0, 12);
+  const _byDl = (x, y) => (y.downloadCount||0) - (x.downloadCount||0);
+  const _stT = list.filter(a => !a.__discover).sort(_byDl).slice(0, 6);
+  const _dcT = list.filter(a => a.__discover).sort(_byDl).slice(0, 6);
+  const sorted = [];
+  for (let i = 0; i < 6; i++){ if(_stT[i]) sorted.push(_stT[i]); if(_dcT[i]) sorted.push(_dcT[i]); }
   if (!sorted.length){ sec.hidden = true; return; }
   sec.hidden = false;
   const palette = ['#b06bff,#6a4de6', '#ffe35c,#ffa63d', '#5df3cf,#3ad8e6', '#ff9bb3,#e0559a', '#8fd3ff,#4a7cf0'];
@@ -6075,7 +6082,11 @@ function ghRenderPicks(){
   const box = document.getElementById('gh-picks-grid');
   const sec = document.getElementById('gh-picks-sec');
   if (!box || !sec) return;
-  const list = ghGetCurrentApps().slice(0, 4);
+  const _all = ghGetCurrentApps();
+  const _st = _all.filter(a => !a.__discover);
+  const _dc = _all.filter(a => a.__discover);
+  const list = [..._st.slice(0, 2), ..._dc.slice(0, 2)];
+  if (list.length < 4) _all.forEach(a => { if (list.length < 4 && !list.includes(a)) list.push(a); });
   if (list.length < 2){ sec.hidden = true; return; }
   sec.hidden = false;
   const grads = [
@@ -6380,7 +6391,14 @@ function renderSearch(term){
   }
   const apps = state.apps.map(a=>({ a, s: Math.max(fuzzyScore(q, a.name), fuzzyScore(q, a.uploaderName||"")*0.6) })).filter(x=>x.s >= 40).sort((x,y)=>y.s-x.s).slice(0,20);
   const members = Object.entries(state.users).filter(([,u])=> !u.banned || state.isOwner).map(([id,u])=>({ id, u, s: fuzzyScore(q, u.name) })).filter(x=>x.s >= 40).sort((x,y)=>y.s-x.s).slice(0,15);
-  const discoverResults = (discSearchState.query === q && discSearchState.done) ? discSearchState.apps : [];
+  const _remoteDisc = (discSearchState.query === q && discSearchState.done) ? discSearchState.apps : [];
+  const _ql = q.toLowerCase();
+  const _localDisc = ((typeof discover !== 'undefined' && discover && discover.apps) ? discover.apps : [])
+    .filter(a => ((a.name || '') + ' ' + (a.package || '') + ' ' + (a.author || '')).toLowerCase().includes(_ql))
+    .slice(0, 8);
+  const discoverResults = [];
+  const _seenDisc = new Set();
+  [..._remoteDisc, ..._localDisc].forEach(a => { if(!_seenDisc.has(a.id)){ _seenDisc.add(a.id); discoverResults.push(a); } });
   const searching = discSearchState.query === q && discSearchState.pending;
   const top = document.querySelector(".topbar").getBoundingClientRect().bottom;
   panel.style.top = top + "px"; panel.hidden = false;
@@ -6430,7 +6448,8 @@ $("#search-panel").addEventListener("click", e=>{
   if(a){ closeSearchPanel(); openAppDetail(a.dataset.sApp); }
   else if(u){ closeSearchPanel(); openUserSheet(u.dataset.sUser); }
   else if(d){
-    const app = discSearchState.apps.find(x => x.id === d.dataset.discApp);
+    const _did = d.dataset.discApp;
+    const app = discSearchState.apps.find(x => x.id === _did) || ((typeof discover !== 'undefined' && discover && discover.apps) ? discover.apps : []).find(x => x.id === _did);
     if(app){ closeSearchPanel(); openDiscoverApp(app); }
   }
 });
@@ -12331,11 +12350,51 @@ async function startDiscoverDownload(app){
   if(typeof dlActive !== 'undefined' && dlActive.has(dlId)){ toast('Already downloading'); return; }
   try{ dlActive.add(dlId); }catch(e){}
 
-  toast('Opening AppTeka page — download from there');
+  const filename = String(app.name || 'app').replace(/[^A-Za-z0-9._-]+/g, '_') + '.apk';
   const fallbackUrl = 'https://appteka.store/app/' + encodeURIComponent(app.id);
-  window.open(fallbackUrl, '_blank', 'noopener');
+  const controller = new AbortController();
+  let bubble = null;
+  let directLink = '';
 
-  try{ dlActive.delete(dlId); }catch(e){}
+  try{
+    toast('Preparing download…');
+    const infoRes = await fetch(DISCOVER_API + '/app/info?app_id=' + encodeURIComponent(app.id) + '&locale=en&_t=' + Date.now(), { cache: 'no-store', signal: controller.signal });
+    if(!infoRes.ok) throw new Error('INFO_HTTP_' + infoRes.status);
+    const infoJson = await infoRes.json();
+    directLink = (infoJson && infoJson.result && infoJson.result.link) || '';
+    if(!directLink) throw new Error('NO_LINK');
+
+    const proxyBase = DISCOVER_API.replace(/\/api\/1$/, '/');
+    const proxiedLink = directLink.replace('https://appteka.store/', proxyBase);
+
+    bubble = createDlBubble({ name: app.name }, ()=> controller.abort());
+    await downloadInsideStore(proxiedLink, filename, pct => bubble.set(pct), controller.signal);
+    bubble.set(100);
+    toast('"' + app.name + '" downloaded');
+  }catch(err){
+    if(err && err.name === 'AbortError'){
+      toast('Download cancelled');
+    } else if(directLink){
+      try{
+        const a = document.createElement('a');
+        a.href = directLink;
+        a.download = filename;
+        a.rel = 'noopener';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(()=> a.remove(), 500);
+        toast('Download started in browser');
+      }catch(e2){ console.warn('Direct download failed', e2); }
+    } else {
+      console.warn('Discover download failed:', err);
+      toast('Opening AppTeka page — download from there');
+      window.open(fallbackUrl, '_blank', 'noopener');
+    }
+  }finally{
+    if(bubble) bubble.remove();
+    setTimeout(()=>{ try{ dlActive.delete(dlId); }catch(e){} }, 3000);
+  }
 }
 
 let discSearchTimer = null;
