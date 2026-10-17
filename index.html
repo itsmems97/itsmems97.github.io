@@ -1580,7 +1580,7 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 html[data-theme="dark"] #home-page{ background: #0b0e14; }
 
 .gh-hero{
-  --hero-w: min(348px, calc(100% - 32px));
+  --hero-w: min(348px, calc(100vw - 32px));
   --icon-base: calc(var(--hero-w) * 0.344);
   --gh-c1: #b06bff;
   --gh-c2: #6a4de6;
@@ -1596,6 +1596,7 @@ html[data-theme="dark"] #home-page{ background: #0b0e14; }
   -webkit-user-select:none; user-select:none;
   transition: --gh-c1 1s cubic-bezier(.72,0,.22,1), --gh-c2 1s cubic-bezier(.72,0,.22,1);
   box-shadow:0 30px 50px -24px rgba(30,24,70,.4), 0 10px 22px -14px rgba(30,24,70,.2);
+  display: block; /* Ye line ensure karegi ke Hero visible rahe */
 }
 html[data-theme="dark"] .gh-hero{
   background:#141824;
@@ -12461,9 +12462,9 @@ async function resolveDiscoverShareCode(code){
 /* ================= /DISCOVER CUSTOM SHARE ================= */
 
 async function fetchDiscoverFullInfo(appId){
-  const WORKER = 'https://pika-discover.itsme16241897.workers.dev/api/1';
+  const ORACLE_API = "https://193-122-76-131.nip.io/discover/api/1";
   try{
-    const r = await fetch(WORKER + '/app/info?app_id=' + encodeURIComponent(appId) + '&locale=en&_t=' + Date.now(), { cache:'no-store' });
+    const r = await fetch(ORACLE_API + '/app/info?app_id=' + encodeURIComponent(appId) + '&locale=en&_t=' + Date.now(), { cache:'no-store' });
     if(!r.ok) return null;
     const data = await r.json();
     return data && data.result ? data.result : null;
@@ -12471,6 +12472,14 @@ async function fetchDiscoverFullInfo(appId){
     console.warn('Discover info fetch failed:', e);
     return null;
   }
+}
+
+function extractDiscoverDescription(info){
+  if(!info) return "";
+  const d = info.description || info.short_description || info.short_desc || info.long_description || info.desc;
+  if(typeof d === 'string') return d;
+  if(d && typeof d === 'object') return d.en || Object.values(d)[0] || "";
+  return "";
 }
 
 function extractDiscoverScreenshots(info){
@@ -12560,9 +12569,10 @@ Version: ${escapeHtml(app.version || '—')}</div>
     fetchDiscoverFullInfo(app.id).then(info=>{
       if(!info || !document.body.contains(wrap)) return;
       const descEl = wrap.querySelector('.disc-description');
-      if(descEl && info.description){
-        descEl.innerHTML = formatMessageText(info.description);
-      } else if(descEl && !info.description){
+      const descText = extractDiscoverDescription(info);
+      if(descEl && descText){
+        descEl.innerHTML = formatMessageText(descText);
+      } else if(descEl && !descText){
         descEl.innerHTML = '<span style="color:var(--text-faint)">No description available.</span>';
       }
       const shots = extractDiscoverScreenshots(info);
