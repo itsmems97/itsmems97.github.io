@@ -86,7 +86,7 @@ button{
 }
 button:active{ transform:scale(0.96); }
 a{ color:inherit; text-decoration:none; }
-#app{ min-height:100%; padding-bottom:calc(84px + var(--safe-bottom)); }
+#app{ min-height:100%; padding-bottom:calc(84px + var(--safe-bottom)); overflow-x:hidden; max-width:100vw; }
 [hidden]{ display:none !important; }
 .topbar{
   position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:12px;
@@ -1580,7 +1580,7 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 html[data-theme="dark"] #home-page{ background: #0b0e14; }
 
 .gh-hero{
-  --hero-w: min(348px, calc(100vw - 32px));
+  --hero-w: min(348px, calc(100% - 32px));
   --icon-base: calc(var(--hero-w) * 0.344);
   --gh-c1: #b06bff;
   --gh-c2: #6a4de6;
@@ -1794,8 +1794,8 @@ html[data-theme="dark"] .gh-aname{ color:#eef1f6; }
 }
 html[data-theme="dark"] .gh-adl{ background:rgba(106,77,230,.2); }
 
-.gh-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 16px; }
-.gh-lcard{ background:#ffffff; border-radius:22px; padding:12px; display:flex; flex-direction:column; align-items:center; cursor:pointer; box-shadow:0 10px 22px -16px rgba(20,20,50,.30), 0 2px 6px -4px rgba(20,20,50,.10); }
+.gh-grid2{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; padding:0 16px; max-width:100%; box-sizing:border-box; }
+.gh-lcard{ background:#ffffff; border-radius:22px; padding:12px; display:flex; flex-direction:column; align-items:center; cursor:pointer; min-width:0; overflow:hidden; box-sizing:border-box; box-shadow:0 10px 22px -16px rgba(20,20,50,.30), 0 2px 6px -4px rgba(20,20,50,.10); }
 html[data-theme="dark"] .gh-lcard{ background:#171c26; }
 .gh-lcover{ width:100%; aspect-ratio:1; border-radius:22px; overflow:hidden; background:#e9e9f0; }
 html[data-theme="dark"] .gh-lcover{ background:#232a38; }
@@ -2372,13 +2372,6 @@ button.av3d{ -webkit-mask-image:none; mask-image:none; }   /* global button{mask
       <button class="gh-sec-link" id="gh-latest-seeall">Browse</button>
     </div>
     <div class="gh-list" id="gh-latest-list"></div>
-  </section>
-
-  <section class="gh-section" id="gh-picks-sec" hidden>
-    <div class="gh-sec-head">
-      <div class="gh-sec-title">Editor's picks</div>
-    </div>
-    <div class="gh-grid" id="gh-picks-grid"></div>
   </section>
 
   <div class="gh-empty" id="gh-empty" hidden>
@@ -6169,7 +6162,7 @@ function renderHome(){
     if (heroEl) heroEl.style.display = 'none';
     const dotsEl = document.getElementById('gh-dots');
     if(dotsEl) dotsEl.style.display = 'none';
-    ['gh-trending-sec','gh-latest-sec','gh-picks-sec'].forEach(id => {
+    ['gh-trending-sec','gh-latest-sec'].forEach(id => {
       const el = document.getElementById(id); if (el) el.hidden = true;
     });
     if (empty) empty.hidden = false;
@@ -6185,7 +6178,6 @@ function renderHome(){
   ghRenderChips();
   ghRenderTrending();
   ghRenderLatestLive();
-  ghRenderPicks();
 
   ghInitDots();
   ghBindSwipe();
@@ -6208,7 +6200,7 @@ function renderHome(){
       let targetId = '';
       if (label.includes('trending')) targetId = 'gh-trending-sec';
       else if (label.includes('new')) targetId = 'gh-latest-sec';
-      else if (label.includes('rated') || label.includes('top')) targetId = 'gh-picks-sec';
+      else if (label.includes('rated') || label.includes('top')) targetId = 'gh-trending-sec';
 
       if (targetId){
         const el = document.getElementById(targetId);
@@ -12187,17 +12179,22 @@ function _apptekaToPika(raw){
   else if(size >= 1024) sizeLabel = (size/1024).toFixed(1) + " KB";
 
   return {
-    id: String(raw.app_id || raw.id || ""),
-    name: raw.label || raw.name || "App",
-    icon: raw.icon || "",
-    author: author || "Unknown",
-    category: category || "App",
-    package: raw.package || "",
-    sizeLabel: sizeLabel,
-    version: raw.ver_name || raw.version || "1.0",
-    downloads: raw.downloads || 0,
-    rating: raw.rating || 0
-  };
+  id: String(raw.app_id || raw.id || ""),
+  name: raw.label || raw.name || "App",
+  icon: raw.icon || "",
+  author: author || "Unknown",
+  category: category || "App",
+  package: raw.package || "",
+  sizeLabel: sizeLabel,
+  version: raw.ver_name || raw.version || "1.0",
+  downloads: raw.downloads || 0,
+  rating: raw.rating || 0,
+  description: raw.description || raw.short_description || raw.short_desc || raw.desc || "",
+  screenshots: Array.isArray(raw.screenshots) ? raw.screenshots
+             : Array.isArray(raw.images) ? raw.images
+             : Array.isArray(raw.screens) ? raw.screens
+             : []
+};
 }
 
 async function discoverFetch(path){
@@ -12463,6 +12460,34 @@ async function resolveDiscoverShareCode(code){
 }
 /* ================= /DISCOVER CUSTOM SHARE ================= */
 
+async function fetchDiscoverFullInfo(appId){
+  const WORKER = 'https://pika-discover.itsme16241897.workers.dev/api/1';
+  try{
+    const r = await fetch(WORKER + '/app/info?app_id=' + encodeURIComponent(appId) + '&locale=en&_t=' + Date.now(), { cache:'no-store' });
+    if(!r.ok) return null;
+    const data = await r.json();
+    return data && data.result ? data.result : null;
+  }catch(e){
+    console.warn('Discover info fetch failed:', e);
+    return null;
+  }
+}
+
+function extractDiscoverScreenshots(info){
+  if(!info) return [];
+  const candidates = [info.screenshots, info.images, info.screens, info.preview_urls, info.screenshot_list];
+  for(const c of candidates){
+    if(Array.isArray(c) && c.length){
+      return c.map(item=>{
+        if(typeof item === 'string') return item;
+        if(item && typeof item === 'object') return item.url || item.url_original || item.original || item.src || '';
+        return '';
+      }).filter(Boolean);
+    }
+  }
+  return [];
+}
+
 function openDiscoverApp(app){
   const html = `
   <div class="sheet-backdrop" id="disc-backdrop"><div class="sheet">
@@ -12488,9 +12513,21 @@ function openDiscoverApp(app){
         <div class="stat"><b>${escapeHtml(app.sizeLabel)}</b><span>Size</span></div>
         <div class="stat"><b>v${escapeHtml(app.version || '1.0')}</b><span>Version</span></div>
       </div>
+
+      <div class="disc-screens screens-row" id="disc-screens" style="display:${(app.screenshots && app.screenshots.length) ? 'flex' : 'none'};">
+        ${(app.screenshots||[]).map(s=>{
+          const u = (typeof s === 'string') ? s : (s && (s.url || s.url_original || s.original)) || '';
+          return u ? `<img src="${escapeHtml(u)}" alt=""/>` : '';
+        }).join('')}
+      </div>
+
       <div class="accordion">
         <details class="accordion-item" open>
-          <summary>Details <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary>
+          <summary>Description <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary>
+          <div class="body disc-description">${app.description ? formatMessageText(app.description) : '<span style="color:var(--text-faint)">Loading description…</span>'}</div>
+        </details>
+        <details class="accordion-item">
+          <summary>File info <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary>
           <div class="body">Package: ${escapeHtml(app.package || '—')}
 Category: ${escapeHtml(app.category || 'App')}
 Size: ${escapeHtml(app.sizeLabel)}
@@ -12506,16 +12543,36 @@ Version: ${escapeHtml(app.version || '—')}</div>
   </div></div>`;
   document.body.insertAdjacentHTML('beforeend', html);
   const wrap = document.getElementById('disc-backdrop');
+
   wrap.addEventListener('click', e=>{
     if(e.target === wrap || e.target.closest('[data-close]')) wrap.remove();
   });
   document.getElementById('disc-dl-btn').addEventListener('click', ()=>{
-  startDiscoverDownload(app);
-});
-document.getElementById('disc-comments-btn').addEventListener('click', ()=> openCommentsSheet(app.id, "discover", app.name));
+    startDiscoverDownload(app);
+  });
+  document.getElementById('disc-comments-btn').addEventListener('click', ()=> openCommentsSheet(app.id, "discover", app.name));
   document.getElementById('disc-cp-btn').addEventListener('click', async ()=>{
-  await shareDiscoverApp(app);
-});
+    await shareDiscoverApp(app);
+  });
+
+  const needInfo = !app.description || !(app.screenshots && app.screenshots.length);
+  if(needInfo){
+    fetchDiscoverFullInfo(app.id).then(info=>{
+      if(!info || !document.body.contains(wrap)) return;
+      const descEl = wrap.querySelector('.disc-description');
+      if(descEl && info.description){
+        descEl.innerHTML = formatMessageText(info.description);
+      } else if(descEl && !info.description){
+        descEl.innerHTML = '<span style="color:var(--text-faint)">No description available.</span>';
+      }
+      const shots = extractDiscoverScreenshots(info);
+      const shotsEl = wrap.querySelector('#disc-screens');
+      if(shotsEl && shots.length){
+        shotsEl.innerHTML = shots.map(u=> `<img src="${escapeHtml(u)}" alt=""/>`).join('');
+        shotsEl.style.display = 'flex';
+      }
+    });
+  }
 }
 
 async function startDiscoverDownload(app){
