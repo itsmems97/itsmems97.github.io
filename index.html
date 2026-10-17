@@ -12492,12 +12492,16 @@ async function fetchDiscoverFullInfo(appId){
 
 function extractDiscoverDescription(info){
   if(!info) return "";
-  const d = info.description || info.short_description || info.short_desc || info.long_description || info.desc;
-  if(typeof d === 'string' && d.trim().length > 0) return d;
-  if(d && typeof d === 'object'){
-    if(d.en && typeof d.en === 'string' && d.en.trim().length > 0) return d.en;
-    for(const key in d) {
-      if(typeof d[key] === 'string' && d[key].trim().length > 0) return d[key];
+  const srcs = [info, info.info, info.app, info.data];
+  for(const src of srcs){
+    if(!src || typeof src !== 'object') continue;
+    const d = src.description || src.short_description || src.short_desc || src.long_description || src.desc;
+    if(typeof d === 'string' && d.trim().length > 0) return d;
+    if(d && typeof d === 'object'){
+      if(d.en && typeof d.en === 'string' && d.en.trim().length > 0) return d.en;
+      for(const key in d) {
+        if(typeof d[key] === 'string' && d[key].trim().length > 0) return d[key];
+      }
     }
   }
   return "";
@@ -12505,15 +12509,19 @@ function extractDiscoverDescription(info){
 
 function extractDiscoverScreenshots(info){
   if(!info) return [];
-  const candidates = [info.screenshots, info.images, info.screens, info.preview_urls, info.screenshot_list];
-  for(const c of candidates){
-    if(Array.isArray(c) && c.length > 0){
-      const urls = c.map(item=>{
-        if(typeof item === 'string') return item;
-        if(item && typeof item === 'object') return item.url || item.url_original || item.original || item.src || '';
-        return '';
-      }).filter(Boolean);
-      if(urls.length > 0) return urls;
+  const srcs = [info, info.info, info.app, info.data];
+  for(const src of srcs){
+    if(!src || typeof src !== 'object') continue;
+    const candidates = [src.screenshots, src.images, src.screens, src.preview_urls, src.screenshot_list];
+    for(const c of candidates){
+      if(Array.isArray(c) && c.length > 0){
+        const urls = c.map(item=>{
+          if(typeof item === 'string') return item;
+          if(item && typeof item === 'object') return item.url || item.url_original || item.original || item.src || '';
+          return '';
+        }).filter(Boolean);
+        if(urls.length > 0) return urls;
+      }
     }
   }
   return [];
