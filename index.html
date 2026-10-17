@@ -801,11 +801,11 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 .reply-bar button{ width:28px; height:28px; padding:0; color:var(--text-faint); }
 .chat-attach{ width:44px; height:44px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text); }
 .chat-attach svg{ width:18px; height:18px; }
-.dl-bubble{ position:fixed; z-index:99999; width:60px; height:60px; border-radius:50%; background:var(--surface); box-shadow:0 8px 24px rgba(0,0,0,.5), 0 0 0 2px var(--accent); display:flex; align-items:center; justify-content:center; touch-action:none; user-select:none; }
+.dl-bubble{ position:fixed; z-index:2147483647; width:60px; height:60px; border-radius:50%; background:var(--surface); box-shadow:0 8px 24px rgba(0,0,0,.5), 0 0 0 2px var(--accent); display:flex; align-items:center; justify-content:center; touch-action:none; user-select:none; }
 .dl-bubble svg.ring{ position:absolute; inset:0; width:60px; height:60px; transform:rotate(-90deg); }
 .dl-bubble .pct{ font-size:12px; font-weight:800; position:relative; }
 .dl-bubble.busy svg.ring{ animation:pkspin 1s linear infinite; }
-.dl-dismiss-target{ position:fixed; z-index:119; left:50%; bottom:28px; transform:translateX(-50%) scale(.6); width:64px; height:64px; border-radius:50%; background:rgba(20,20,24,.55); backdrop-filter:blur(6px); color:#fff; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .18s, transform .18s, background .15s; }
+.dl-dismiss-target{ position:fixed; z-index:2147483646; left:50%; bottom:28px; transform:translateX(-50%) scale(.6); width:64px; height:64px; border-radius:50%; background:rgba(20,20,24,.55); backdrop-filter:blur(6px); color:#fff; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .18s, transform .18s, background .15s; }
 .dl-dismiss-target.show{ opacity:1; transform:translateX(-50%) scale(1); }
 .dl-dismiss-target.armed{ background:var(--danger, #e5484d); transform:translateX(-50%) scale(1.12); }
 .msg .dm-meta{ display:inline-flex; margin-left:6px; vertical-align:-2px; }
