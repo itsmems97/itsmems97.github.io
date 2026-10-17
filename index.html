@@ -4328,11 +4328,11 @@ async function installApp(){
   await new Promise(resolve=>{
     let p = 0;
     const t = setInterval(()=>{
-      p = Math.min(100, p + Math.floor(Math.random()*8) + 4);
+      p = Math.min(100, p + Math.floor(Math.random()*4) + 2);
       if(bar) bar.style.width = p + "%";
       if(pct) pct.textContent = p + "%";
       if(p >= 100){ clearInterval(t); setTimeout(resolve, 250); }
-    }, 90);
+    }, 120);
   });
 
   if(animEl) animEl.classList.add("out");
@@ -4364,15 +4364,15 @@ async function installApp(){
   const bar1 = document.getElementById("install-bar-1");
   const pct1 = document.getElementById("install-pct-1");
 
-  // Animate stage 1 progress
+  // Animate stage 1 progress (SLOWED DOWN to ~3.5 seconds)
   await new Promise(resolve=>{
     let pct = 0;
     const t = setInterval(()=>{
-      pct = Math.min(100, pct + Math.floor(Math.random()*8) + 4);
+      pct = Math.min(100, pct + Math.floor(Math.random()*4) + 2);
       if(bar1) bar1.style.width = pct + "%";
       if(pct1) pct1.textContent = pct + "%";
       if(pct >= 100){ clearInterval(t); setTimeout(resolve, 250); }
-    }, 90);
+    }, 120);
   });
 
   // Fade out stage 1
@@ -4413,14 +4413,15 @@ async function installApp(){
   const bar3 = document.getElementById("install-bar-3");
   const pct3 = document.getElementById("install-pct-3");
 
+  // Animate stage 3 progress (SLOWED DOWN to ~5.5 seconds)
   await new Promise(resolve=>{
     let pct = 30;
     const t = setInterval(()=>{
-      pct = Math.min(100, pct + Math.floor(Math.random()*10) + 4);
+      pct = Math.min(100, pct + Math.floor(Math.random()*3) + 1);
       if(bar3) bar3.style.width = pct + "%";
       if(pct3) pct3.textContent = pct + "%";
       if(pct >= 100){ clearInterval(t); setTimeout(resolve, 400); }
-    }, 120);
+    }, 150);
   });
 
   // ============ STAGE 4: SUCCESS (custom) ============
@@ -4435,8 +4436,8 @@ async function installApp(){
     `;
   }
 
-  // Wait 2 seconds on success screen
-  await new Promise(r => setTimeout(r, 2200));
+  // Wait 2.5 seconds on success screen
+  await new Promise(r => setTimeout(r, 2500));
 
   // Fade out
   if(animEl3) animEl3.classList.add("out");
