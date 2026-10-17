@@ -12462,9 +12462,7 @@ async function resolveDiscoverShareCode(code){
 /* ================= /DISCOVER CUSTOM SHARE ================= */
 
 async function fetchDiscoverFullInfo(appId){
-  const targetUrl = `https://appteka.store/api/1/app/info?app_id=${encodeURIComponent(appId)}&locale=en&_t=${Date.now()}`;
-
-  // 1. Cloudflare Worker (Ab ye HTML scrape karke data dega)
+  // 1. Cloudflare Worker (Jina AI Scraper)
   try {
     const r = await fetch(`https://pika-discover.itsme16241897.workers.dev/api/1/app/info?app_id=${encodeURIComponent(appId)}&locale=en&_t=${Date.now()}`);
     if(r.ok) { 
@@ -12475,17 +12473,14 @@ async function fetchDiscoverFullInfo(appId){
     }
   } catch(e) { console.warn('Worker failed', e); }
 
-  // 2. CORS Proxy
+  // 2. Fallback: AppTeka Direct API (agar worker fail ho)
   try {
-    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
-    if(r.ok) { const d = await r.json(); if(d && d.result) return d.result; }
-  } catch(e) { console.warn('corsproxy failed', e); }
-
-  // 3. AllOrigins
-  try {
-    const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`);
-    if(r.ok) { const d = await r.json(); if(d && d.result) return d.result; }
-  } catch(e) { console.warn('AllOrigins failed', e); }
+    const r = await fetch(`https://appteka.store/api/1/app/info?app_id=${encodeURIComponent(appId)}&locale=en&_t=${Date.now()}`);
+    if(r.ok) { 
+      const d = await r.json(); 
+      if(d && d.result) return d.result; 
+    }
+  } catch(e) { console.warn('Direct API failed', e); }
 
   return null;
 }
@@ -12495,7 +12490,7 @@ function extractDiscoverDescription(info){
   const srcs = [info, info.info, info.app, info.data];
   for(const src of srcs){
     if(!src || typeof src !== 'object') continue;
-    const d = src.description || src.short_description || src.short_desc || src.long_description || src.desc;
+    let d = src.description || src.short_description || src.short_desc || src.long_description || src.desc;
     if(typeof d === 'string' && d.trim().length > 0) return d;
     if(d && typeof d === 'object'){
       if(d.en && typeof d.en === 'string' && d.en.trim().length > 0) return d.en;
