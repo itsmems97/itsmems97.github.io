@@ -100,15 +100,24 @@ a{ color:inherit; text-decoration:none; }
 .topbar .search-box input{ flex:1; background:none; border:none; color:var(--text); font-size:15px; outline:none; }
 .topbar .search-box input::placeholder{ color:var(--text-faint); }
 .bottom-nav{
-  position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex; justify-content:space-around; align-items:center;
-  padding:10px 6px calc(10px + var(--safe-bottom));
-  background:var(--glass); backdrop-filter:blur(22px) saturate(160%);
-  -webkit-backdrop-filter:blur(22px) saturate(160%); border-top:1px solid var(--border);
+  position:fixed; left:0; right:0; margin:0 auto; width:calc(100% - 20px); max-width:460px;
+  bottom:calc(12px + var(--safe-bottom)); z-index:50;
+  display:flex; align-items:center; padding:6px; border-radius:34px;
+  background:rgba(34,38,52,.55);
+  backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 12px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 0 rgba(255,255,255,.06);
+  touch-action:none; --fx-pill:rgba(255,255,255,.16);
 }
-.bottom-nav button{ display:flex; flex-direction:column; align-items:center; gap:4px; font-size:10px; font-weight:600; color:var(--text-faint); padding:6px 8px; border-radius:14px; }
-.bottom-nav button svg{ width:22px; height:22px; }
-.bottom-nav button.active{ color:var(--accent); }
-.bottom-nav button.active svg{ filter:drop-shadow(0 2px 8px rgba(255,198,26,.5)); }
+html[data-theme="light"] .bottom-nav{ background:rgba(255,255,255,.62); border-color:rgba(255,255,255,.9); box-shadow:0 10px 28px rgba(20,25,40,.16), inset 0 1px 0 rgba(255,255,255,.9); --fx-pill:rgba(0,0,0,.08); }
+.bottom-nav .nav-pill{ position:absolute; top:6px; bottom:6px; left:0; width:60px; border-radius:26px; background:var(--fx-pill); box-shadow:inset 0 1px 0 rgba(255,255,255,.25); pointer-events:none; }
+.bottom-nav .nav-btn{ position:relative; z-index:1; flex:1 1 auto; min-width:auto; display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 5px 8px; border-radius:28px; font-size:var(--fs,10px); font-weight:700; white-space:nowrap; color:var(--text-faint); opacity:var(--tabo,1); transition:color .25s ease, flex-grow .45s cubic-bezier(.2,.8,.2,1); -webkit-mask-image:none; }
+.bottom-nav .nav-btn:active{ transform:translateZ(0); }
+.bottom-nav .nav-btn svg{ width:24px; height:24px; transition:transform .3s cubic-bezier(.34,1.5,.5,1); }
+.bottom-nav .nav-btn.active, .bottom-nav .nav-btn.hl{ color:var(--accent); }
+.bottom-nav .nav-btn.active{ flex-grow:1.7; }
+.bottom-nav .nav-btn.active svg{ filter:drop-shadow(0 0 6px rgba(255,198,26,.6)); transform:scale(1.12); }
+#nav-fx{ position:fixed; left:0; top:0; width:0; height:0; z-index:55; pointer-events:none; visibility:hidden; }
 main{ padding-top:6px; }
 .page{ animation:fadeUp .35s var(--ease-spring); }
 @keyframes fadeUp{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
@@ -5661,7 +5670,10 @@ function openUsersSlowPopup(){
 
 function initNav(){
   $$(".nav-btn").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      
       const target = btn.dataset.page;
       if(target === "__entertainment"){
         openEntertainmentPopup();
@@ -12846,6 +12858,372 @@ if(pktg && pktg.classList.contains('open')){
 
     // Second press within 2.5s → allow exit (let browser handle it)
   });
+})();
+</script>
+<script>
+/* ===== Floating liquid-glass bottom bar: hold + drag lens (WebGL) ===== */
+(function(){
+  var nav = document.querySelector('.bottom-nav');
+  if(!nav) return;
+  var tabs = Array.prototype.slice.call(nav.querySelectorAll('.nav-btn'));
+  if(!tabs.length) return;
+
+  var pill = document.createElement('div'); pill.className = 'nav-pill';
+  nav.insertBefore(pill, nav.firstChild);
+  var cv = document.createElement('canvas'); cv.id = 'nav-fx';
+  document.body.appendChild(cv);
+
+  var pressed = false, dragging = false, holding = false, hover = -1;
+  var holdTimer = null, startX = 0, fingerX = 0;
+  var X = 0, W = 60, G = 0, vX = 0, vW = 0, vG = 0;
+  var running = false, lastT = 0, keepUntil = 0;
+
+  function buzz(ms){ if(navigator.vibrate){ try{ navigator.vibrate(ms); }catch(e){} } }
+  function activeTab(){ for(var i=0;i<tabs.length;i++){ if(tabs[i].classList.contains('active')) return tabs[i]; } return tabs[0]; }
+
+  /* shrink labels only if the bar is too narrow, so text never overflows */
+  function fit(){
+    var fs = 10;
+    nav.style.setProperty('--fs', fs + 'px');
+    while(nav.scrollWidth > nav.clientWidth + 0.5 && fs > 7){ fs -= 0.5; nav.style.setProperty('--fs', fs + 'px'); }
+  }
+
+  function target(){
+    var t = (dragging && hover >= 0) ? tabs[hover] : (nav._pend || activeTab());
+    var w = t.offsetWidth, x = t.offsetLeft;
+    if(dragging){
+      var r = nav.getBoundingClientRect();
+      x = fingerX - r.left - nav.clientLeft - w/2;
+      x = Math.max(2, Math.min(nav.clientWidth - 6 - w + 4, x));
+    }
+    return { x:x, w:w };
+  }
+
+  /* ---------- WebGL ---------- */
+  var gl = null, glOK = false, tex = null, U = {};
+  var tcv = document.createElement('canvas'), tctx = tcv.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var PADX = 26, PADY = 36;
+  var col = { accent:'#FFC61A', muted:'#5C6577', dark:true };
+
+  var VS = 'attribute vec2 a; varying vec2 vUv; void main(){ vUv = a*0.5+0.5; gl_Position = vec4(a,0.0,1.0); }';
+  var FS = [
+    '#ifdef GL_FRAGMENT_PRECISION_HIGH',
+    'precision highp float;',
+    '#else',
+    'precision mediump float;',
+    '#endif',
+    'varying vec2 vUv;',
+    'uniform sampler2D uTex; uniform vec2 uSize; uniform vec4 uLens; uniform float uG; uniform float uVel; uniform float uTime; uniform float uAlpha; uniform vec4 uTint;',
+    'float sdRB(vec2 q, vec2 hs, float r){ vec2 d = abs(q) - hs + r; return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - r; }',
+    'float sdLens(vec2 p){ return sdRB(p - uLens.xy, uLens.zw, min(uLens.z, uLens.w)); }',
+    'void main(){',
+    '  vec2 p = vec2(vUv.x, 1.0 - vUv.y) * uSize;',
+    '  float dL = sdLens(p);',
+    '  vec2 lc = uLens.xy;',
+    '  vec2 q = (p - lc) / vec2(uLens.z * 2.6 + 30.0, uLens.w * 1.8 + 20.0);',
+    '  float fall = exp(-dot(q, q) * 1.5);',
+    '  vec2 disp = vec2(-uVel * 5.0 * fall, 0.0);',
+    '  vec2 rv = p - lc;',
+    '  disp += rv / (length(rv) + 0.001) * sin(length(rv) * 0.22 - uTime * 16.0) * 1.2 * abs(uVel) * fall;',
+    '  float G = min(uG, 1.1);',
+    '  float t = 1.0; vec2 n = vec2(0.0, -1.0); float depth = 0.0;',
+    '  if (dL < 0.0) {',
+    '    depth = -dL;',
+    '    t = clamp(depth / (uLens.w * 0.8), 0.0, 1.0);',
+    '    vec2 e = vec2(1.0, 0.0);',
+    '    n = normalize(vec2(sdLens(p + e.xy) - sdLens(p - e.xy), sdLens(p + e.yx) - sdLens(p - e.yx)) + 1e-5);',
+    '    float ease = t * t * (3.0 - 2.0 * t);',
+    '    float f = 1.0 / (1.0 + 0.55 * G * ease);',
+    '    disp += (lc - p) * (1.0 - f);',
+    '    disp -= n * pow(1.0 - t, 2.0) * 11.0 * G;',
+    '  }',
+    '  vec4 c = texture2D(uTex, (p + disp) / uSize);',
+    '  float inL = 1.0 - smoothstep(-0.75, 0.75, dL);',
+    '  float tn = uTint.a * min(uG, 1.0) * inL;',
+    '  c += vec4(uTint.rgb * tn, tn) * (1.0 - c.a);',
+    '  if (dL < 0.0) {',
+    '    float edge = pow(1.0 - t, 2.5);',
+    '    vec2 L = normalize(vec2(-0.55, -0.85));',
+    '    float sp = max(dot(n, L), 0.0) + max(dot(n, -L), 0.0) * 0.4;',
+    '    float rim = sp * edge * 0.35 * G;',
+    '    c.rgb += vec3(rim); c.a = min(1.0, c.a + rim * (1.0 - c.a));',
+    '    float slot = smoothstep(3.0, 6.0, depth) * (1.0 - smoothstep(10.0, 15.0, depth));',
+    '    slot *= smoothstep(0.75, 0.95, abs(n.y));',
+    '    slot *= 1.0 - smoothstep(0.35, 0.7, abs(p.x - lc.x) / uLens.z);',
+    '    float sa = slot * 0.5 * G;',
+    '    c.rgb *= (1.0 - sa); c.a = c.a * (1.0 - sa) + sa;',
+    '    float oa = (1.0 - smoothstep(0.0, 1.6, depth)) * 0.35 * G;',
+    '    c = c * (1.0 - oa) + vec4(vec3(0.75) * oa, oa);',
+    '  }',
+    '  float sh = (1.0 - smoothstep(0.0, 18.0, dL)) * smoothstep(-1.0, 1.0, dL) * 0.28 * min(uG, 1.0);',
+    '  c += vec4(0.0, 0.0, 0.0, sh) * (1.0 - c.a);',
+    '  gl_FragColor = c * uAlpha;',
+    '}'
+  ].join('\n');
+
+  function compile(type, src){
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ console.warn('Nav shader:', gl.getShaderInfoLog(s)); return null; }
+    return s;
+  }
+
+  function initGL(){
+    try{
+      gl = cv.getContext('webgl', { alpha:true, premultipliedAlpha:true, antialias:false }) || cv.getContext('experimental-webgl');
+      if(!gl) return;
+      var vs = compile(gl.VERTEX_SHADER, VS), fs = compile(gl.FRAGMENT_SHADER, FS);
+      if(!vs || !fs) return;
+      var prog = gl.createProgram();
+      gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+      if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+      gl.useProgram(prog);
+      var buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+      var loc = gl.getAttribLocation(prog, 'a');
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      ['uTex','uSize','uLens','uG','uVel','uTime','uAlpha','uTint'].forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
+      tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      gl.uniform1i(U.uTex, 0);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      glOK = true;
+    }catch(err){ glOK = false; }
+  }
+
+  function readColors(){
+    var root = document.documentElement, cs = getComputedStyle(root);
+    col.accent = cs.getPropertyValue('--accent').trim() || '#FFC61A';
+    col.muted = cs.getPropertyValue('--text-faint').trim() || '#5C6577';
+    col.dark = root.getAttribute('data-theme') !== 'light';
+  }
+
+  /* icons: rebuilt from the app's own <svg>/<symbol> so the lens shows the same icons */
+  function svgSource(tab, color){
+    var svg = tab.querySelector('svg');
+    if(!svg) return null;
+    var use = svg.querySelector('use'), inner, vb = '0 0 24 24', attrs = '';
+    if(use){
+      var id = (use.getAttribute('href') || use.getAttribute('xlink:href') || '').replace('#', '');
+      var sym = document.getElementById(id);
+      if(!sym) return null;
+      inner = sym.innerHTML; vb = sym.getAttribute('viewBox') || vb;
+    }else{
+      inner = svg.innerHTML; vb = svg.getAttribute('viewBox') || vb;
+      ['fill','stroke','stroke-width','stroke-linecap','stroke-linejoin'].forEach(function(a){
+        if(svg.hasAttribute(a)) attrs += ' ' + a + '="' + svg.getAttribute(a) + '"';
+      });
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="' + vb + '"' +
+           attrs.replace(/currentColor/g, color) + '>' + inner.replace(/currentColor/g, color) + '</svg>';
+  }
+  function iconImg(tab, color){
+    tab._ic = tab._ic || {};
+    if(!tab._ic[color]){
+      var s = svgSource(tab, color);
+      if(!s) return null;
+      var im = new Image();
+      im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+      tab._ic[color] = im;
+    }
+    return tab._ic[color];
+  }
+  function prepIcons(){ tabs.forEach(function(t){ iconImg(t, col.accent); iconImg(t, col.muted); }); }
+
+  /* the lens refracts a picture of the tabs: icons + labels drawn into a 2D canvas */
+  function paintTabs(ox, oy){
+    var c = tctx;
+    c.setTransform(1,0,0,1,0,0);
+    c.clearRect(0, 0, tcv.width, tcv.height);
+    c.setTransform(dpr,0,0,dpr,-ox*dpr,-oy*dpr);
+    var act = activeTab();
+    for(var i=0;i<tabs.length;i++){
+      var t = tabs[i];
+      var on = (t === act && hover < 0) || t.classList.contains('hl');
+      var color = on ? col.accent : col.muted;
+      var svg = t.querySelector('svg');
+      if(svg){
+        var r = svg.getBoundingClientRect();
+        var im = iconImg(t, color);
+        c.save();
+        if(on){ c.shadowColor = col.accent; c.shadowBlur = 8 * dpr; }
+        if(im && im.complete && im.naturalWidth){ try{ c.drawImage(im, r.left, r.top, r.width, r.height); }catch(e){} }
+        c.restore();
+      }
+      for(var k=0;k<t.childNodes.length;k++){
+        var n = t.childNodes[k];
+        if(n.nodeType === 3 && n.textContent.trim()){
+          var rg = document.createRange(); rg.selectNodeContents(n);
+          var tr = rg.getBoundingClientRect();
+          var cs = getComputedStyle(t);
+          c.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+          c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle';
+          c.fillText(n.textContent.trim(), tr.left + tr.width/2, tr.top + tr.height/2);
+          break;
+        }
+      }
+    }
+  }
+
+  function smooth(a, b, x){ var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t*t*(3 - 2*t); }
+
+  function render(now, speed){
+    if(!glOK || !nav.offsetWidth) return;
+    var alpha = smooth(0.03, 0.4, G);
+    pill.style.opacity = (1 - alpha).toFixed(3);
+    nav.style.setProperty('--tabo', (1 - alpha).toFixed(3));
+    if(alpha < 0.003){ cv.style.visibility = 'hidden'; return; }
+
+    var nr = nav.getBoundingClientRect();
+    var ox = nr.left - PADX, oy = nr.top - PADY;
+    var cw = nr.width + PADX*2, ch = nr.height + PADY*2;
+    var pw = Math.round(cw * dpr), ph = Math.round(ch * dpr);
+    if(cv.width !== pw || cv.height !== ph){
+      cv.width = pw; cv.height = ph; tcv.width = pw; tcv.height = ph;
+      gl.viewport(0, 0, pw, ph);
+    }
+    cv.style.left = ox + 'px'; cv.style.top = oy + 'px';
+    cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+    cv.style.visibility = 'visible';
+
+    paintTabs(ox, oy);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tcv);
+
+    var gc = Math.min(G, 1.15);
+    var pillH = nav.clientHeight - 12;
+    var lcx = nr.left + nav.clientLeft + X + W/2 - ox;
+    var lcy = PADY + nr.height/2;
+    var hw = (W/2 + 22*gc) * (1 + speed);
+    var hh = (pillH/2 + 18*gc) * (1 - speed*0.15);
+
+    gl.clearColor(0,0,0,0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(U.uSize, cw, ch);
+    gl.uniform4f(U.uLens, lcx, lcy, hw, hh);
+    gl.uniform1f(U.uG, G);
+    gl.uniform1f(U.uVel, Math.max(-1, Math.min(1, vX/1500)));
+    gl.uniform1f(U.uTime, now/1000);
+    gl.uniform1f(U.uAlpha, alpha);
+    if(col.dark) gl.uniform4f(U.uTint, 1, 1, 1, 0.10); else gl.uniform4f(U.uTint, 1, 1, 1, 0.38);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  /* ---------- springs ---------- */
+  function step(now){
+    if(!nav.offsetWidth){ running = false; return; }
+    var dt = Math.min((now - lastT)/1000, 1/30);
+    lastT = now;
+    var T = target();
+    var tG = holding ? 1 : 0;
+    var kx = dragging ? 520 : 300, dx = dragging ? 34 : 21;
+    vX += ((T.x - X)*kx - vX*dx)*dt; X += vX*dt;
+    vW += ((T.w - W)*300 - vW*22)*dt; W += vW*dt;
+    vG += ((tG - G)*230 - vG*17)*dt; G += vG*dt;
+    var speed = Math.min(Math.abs(vX)/2600, 0.3);
+    pill.style.width = W + 'px';
+    pill.style.transform = 'translate3d(' + X.toFixed(2) + 'px,0,0)';
+    render(now, speed);
+    var settled = Math.abs(T.x - X) < 0.1 && Math.abs(T.w - W) < 0.1 && Math.abs(tG - G) < 0.002 &&
+                  Math.abs(vX) < 1 && Math.abs(vW) < 1 && Math.abs(vG) < 0.01;
+    if(settled && !pressed && now > keepUntil){
+      X = T.x; W = T.w; G = tG; vX = vW = vG = 0;
+      pill.style.width = W + 'px';
+      pill.style.transform = 'translate3d(' + X + 'px,0,0)';
+      render(now, 0);
+      running = false;
+      return;
+    }
+    requestAnimationFrame(step);
+  }
+  function kick(ms){
+    keepUntil = Math.max(keepUntil, performance.now() + (ms || 0));
+    if(!running){ running = true; lastT = performance.now(); requestAnimationFrame(step); }
+  }
+  function snap(){
+    if(!nav.offsetWidth) return;
+    var T = target();
+    X = T.x; W = T.w; vX = vW = vG = 0;
+    pill.style.width = W + 'px';
+    pill.style.transform = 'translate3d(' + X + 'px,0,0)';
+  }
+  function tabAt(cx){
+    for(var i=0;i<tabs.length;i++){ var r = tabs[i].getBoundingClientRect(); if(cx >= r.left && cx <= r.right) return i; }
+    return cx < tabs[0].getBoundingClientRect().left ? 0 : tabs.length - 1;
+  }
+  function setHover(i){
+    if(i === hover) return;
+    hover = i;
+    tabs.forEach(function(t, k){ t.classList.toggle('hl', k === i); });
+    buzz(8);
+  }
+
+  /* ---------- touch: tap, hold, swipe, drag ---------- */
+  nav.addEventListener('pointerdown', function(e){
+    pressed = true; dragging = false; holding = false; hover = -1;
+    startX = fingerX = e.clientX;
+    try{ nav.setPointerCapture(e.pointerId); }catch(err){}
+    readColors(); prepIcons();
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(function(){ if(!pressed) return; holding = true; buzz(12); kick(); }, 160);
+    kick();
+  });
+  nav.addEventListener('pointermove', function(e){
+    if(!pressed) return;
+    fingerX = e.clientX;
+    if(!dragging && Math.abs(fingerX - startX) > 6){ dragging = true; holding = true; }
+    if(dragging){
+      var cur = hover >= 0 ? tabs[hover] : activeTab();
+      var cr = cur.getBoundingClientRect();
+      if(hover < 0 || fingerX < cr.left - 4 || fingerX > cr.right + 4) setHover(tabAt(fingerX));
+      kick();
+    }
+  });
+  function release(e, cancelled){
+    if(!pressed) return;
+    clearTimeout(holdTimer);
+    var wasDrag = dragging, idx = wasDrag ? hover : tabAt(e.clientX);
+    pressed = dragging = holding = false;
+    hover = -1;
+    tabs.forEach(function(t){ t.classList.remove('hl'); });
+    try{ nav.releasePointerCapture(e.pointerId); }catch(err){}
+    if(!cancelled && idx >= 0 && (!wasDrag || tabs[idx] !== activeTab())){
+      var go = tabs[idx];
+      if((go.dataset.page || '').indexOf('__') !== 0) nav._pend = go; /* pill waits on the tapped tab */
+      setTimeout(function(){ nav._pend = null; go.click(); kick(800); }, 80); /* let the browser finish its own tap events first */
+    }
+    kick(800);
+  }
+  nav.addEventListener('pointerup', function(e){ release(e, false); });
+  nav.addEventListener('pointercancel', function(e){ release(e, true); });
+
+  /* real finger clicks are handled above; keyboard and code-made clicks still go through */
+  nav.addEventListener('click', function(e){
+    if(e.isTrusted && e.detail !== 0){ e.stopPropagation(); e.preventDefault(); }
+  }, true);
+
+  /* follow tab changes made by the app itself (e.g. other code clicking a tab) */
+  new MutationObserver(function(){ kick(800); }).observe(nav, { attributes:true, subtree:true, attributeFilter:['class'] });
+
+  function relayout(){ fit(); snap(); kick(300); }
+  if(window.ResizeObserver) new ResizeObserver(relayout).observe(nav);
+  window.addEventListener('resize', relayout);
+  window.addEventListener('load', relayout);
+  if(document.fonts){
+    if(document.fonts.ready) document.fonts.ready.then(relayout);
+    if(document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', relayout);
+  }
+
+  initGL(); readColors(); fit(); snap();
 })();
 </script>
 </body>
