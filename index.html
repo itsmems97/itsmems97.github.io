@@ -1794,6 +1794,19 @@ html[data-theme="dark"] .gh-aname{ color:#eef1f6; }
 }
 html[data-theme="dark"] .gh-adl{ background:rgba(106,77,230,.2); }
 
+.gh-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 16px; }
+.gh-lcard{ background:#ffffff; border-radius:22px; padding:12px; display:flex; flex-direction:column; align-items:center; cursor:pointer; box-shadow:0 10px 22px -16px rgba(20,20,50,.30), 0 2px 6px -4px rgba(20,20,50,.10); }
+html[data-theme="dark"] .gh-lcard{ background:#171c26; }
+.gh-lcover{ width:100%; aspect-ratio:1; border-radius:22px; overflow:hidden; background:#e9e9f0; }
+html[data-theme="dark"] .gh-lcover{ background:#232a38; }
+.gh-lcover img{ width:100%; height:100%; object-fit:cover; display:block; }
+.gh-lname{ width:100%; margin-top:10px; font-size:13px; font-weight:700; text-align:center; color:#16161c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+html[data-theme="dark"] .gh-lname{ color:#eef1f6; }
+.gh-lmeta{ margin-top:2px; font-size:10.5px; color:#8b8b96; }
+.gh-ldl{ margin-top:10px; width:100%; height:36px; border-radius:18px; background:#f0eefc; color:#6a4de6; font-size:12.5px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px; }
+html[data-theme="dark"] .gh-ldl{ background:rgba(106,77,230,.22); }
+.gh-lend{ text-align:center; padding:22px 24px 10px; font-size:12.5px; color:#8b8b96; }
+
 .gh-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px; }
 .gh-pcard{
   position:relative; height:112px; border:0; padding:14px; border-radius:20px; overflow:hidden;
@@ -6013,11 +6026,7 @@ function ghRenderTrending(){
   const sec = document.getElementById('gh-trending-sec');
   if (!box || !sec) return;
   const list = ghGetCurrentApps();
-  const _byDl = (x, y) => (y.downloadCount||0) - (x.downloadCount||0);
-  const _stT = list.filter(a => !a.__discover).sort(_byDl).slice(0, 6);
-  const _dcT = list.filter(a => a.__discover).sort(_byDl).slice(0, 6);
-  const sorted = [];
-  for (let i = 0; i < 6; i++){ if(_stT[i]) sorted.push(_stT[i]); if(_dcT[i]) sorted.push(_dcT[i]); }
+  const sorted = list.filter(a => !a.__discover).sort((x, y) => (y.downloadCount||0) - (x.downloadCount||0)).slice(0, 12);
   if (!sorted.length){ sec.hidden = true; return; }
   sec.hidden = false;
   const palette = ['#b06bff,#6a4de6', '#ffe35c,#ffa63d', '#5df3cf,#3ad8e6', '#ff9bb3,#e0559a', '#8fd3ff,#4a7cf0'];
@@ -6041,41 +6050,72 @@ function ghRenderTrending(){
   }).join('');
 }
 
+let __ghLatestSig = '';
+let __ghLatestShown = 0;
+let __ghLatestObs = null;
+const GH_LATEST_CHUNK = 40;
+
+function ghLatestCard(a){
+  const icon = escapeHtml(a.icon || placeholderIcon(a.name));
+  return `<div class="gh-lcard" data-gh-open="disc__${escapeHtml(a.id)}">
+    <div class="gh-lcover"><img src="${icon}" alt="" loading="lazy"/></div>
+    <div class="gh-lname">${escapeHtml(a.name)}</div>
+    <div class="gh-lmeta">${escapeHtml(a.sizeLabel || '')}${a.time ? ' • ' + escapeHtml(fmtAgo(a.time * 1000)) : ''}</div>
+    <button class="gh-ldl" type="button" data-gh-dl="${escapeHtml(a.id)}">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M6 12l6 6 6-6"/><path d="M4 20h16"/></svg>
+      Download
+    </button>
+  </div>`;
+}
+
+function ghLatestMore(){
+  const box = document.getElementById('gh-latest-list');
+  const sentinel = document.getElementById('gh-latest-sentinel');
+  if(!box || !sentinel) return;
+  const list = (typeof discover !== 'undefined' && discover && discover.apps) ? discover.apps : [];
+  if(__ghLatestShown >= list.length) return;
+  const next = list.slice(__ghLatestShown, __ghLatestShown + GH_LATEST_CHUNK);
+  box.insertAdjacentHTML('beforeend', next.map(ghLatestCard).join(''));
+  __ghLatestShown += next.length;
+  if(__ghLatestShown >= list.length){
+    sentinel.textContent = 'Baqi apps Search bar mein apne favourite search karo 🔍';
+    if(__ghLatestObs){ __ghLatestObs.disconnect(); __ghLatestObs = null; }
+  } else {
+    sentinel.textContent = 'Loading more…';
+  }
+}
+
 function ghRenderLatest(){
   const box = document.getElementById('gh-latest-list');
   const sec = document.getElementById('gh-latest-sec');
   if (!box || !sec) return;
-  const list = ghGetCurrentApps()
-    .filter(a => !a.__discover)
-    .sort((a, b) => (b.createdAtMs||0) - (a.createdAtMs||0))
-    .slice(0, 8);
+  const list = (typeof discover !== 'undefined' && discover && discover.apps) ? discover.apps : [];
   if (!list.length){ sec.hidden = true; return; }
   sec.hidden = false;
-  const palette = ['#b06bff,#6a4de6', '#ffe35c,#ffa63d', '#5df3cf,#3ad8e6', '#ff9bb3,#e0559a', '#8fd3ff,#4a7cf0'];
-  box.innerHTML = list.map((a, i) => {
-    const grad = palette[i % palette.length];
-    const thumb = a.thumbUrl ? `url('${escapeHtml(a.thumbUrl)}')` : `linear-gradient(140deg,${grad})`;
-    const letter = escapeHtml((a.name || 'A').trim()[0].toUpperCase());
-    const _dm = appCreatedMs(a);
-const ago = _dm ? fmtAgo(_dm) : '';
-    return `
-    <div class="gh-aitem" data-gh-open="${escapeHtml(a.id)}">
-      <div class="gh-aicon" style="background:${thumb}; background-size:cover; background-position:center;">
-        ${a.thumbUrl ? '' : letter}
-      </div>
-      <div class="gh-ainfo">
-        <div class="gh-aname">${escapeHtml(a.name)}</div>
-        <div class="gh-ameta">
-          <span>${escapeHtml(a.format || 'APK')}</span><span class="sep"></span>
-          <span>${escapeHtml(a.sizeLabel || '—')}</span>${ago ? `<span class="sep"></span><span>${escapeHtml(ago)}</span>` : ''}
-        </div>
-      </div>
-      <button class="gh-adl" type="button">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M6 12l6 6 6-6"/><path d="M4 20h16"/></svg>
-        Get
-      </button>
-    </div>`;
-  }).join('');
+  const sig = list.length + '|' + (list[0] ? list[0].id : '');
+  if (sig === __ghLatestSig && box.children.length) return;
+  __ghLatestSig = sig;
+  box.className = 'gh-grid2';
+  box.innerHTML = '';
+  __ghLatestShown = 0;
+  let sentinel = document.getElementById('gh-latest-sentinel');
+  if (!sentinel){
+    sentinel = document.createElement('div');
+    sentinel.id = 'gh-latest-sentinel';
+    sentinel.className = 'gh-lend';
+    box.insertAdjacentElement('afterend', sentinel);
+  }
+  if (__ghLatestObs){ __ghLatestObs.disconnect(); __ghLatestObs = null; }
+  ghLatestMore();
+  if (__ghLatestShown < list.length && 'IntersectionObserver' in window){
+    __ghLatestObs = new IntersectionObserver(entries => {
+      if (!entries.some(e => e.isIntersecting)) return;
+      if (__ghLatestObs) __ghLatestObs.unobserve(sentinel);
+      ghLatestMore();
+      if (__ghLatestObs) __ghLatestObs.observe(sentinel);
+    }, { rootMargin: '800px' });
+    __ghLatestObs.observe(sentinel);
+  }
 }
 
 function ghRenderPicks(){
@@ -6144,7 +6184,7 @@ function renderHome(){
   ghBuildOrbiters();
   ghRenderChips();
   ghRenderTrending();
-  ghRenderLatest();
+  ghRenderLatestLive();
   ghRenderPicks();
 
   ghInitDots();
@@ -6193,12 +6233,18 @@ function renderHome(){
       }
       return;
     }
+        const dlBtn = e.target.closest('[data-gh-dl]');
+    if (dlBtn){
+      const da = discFindApp(dlBtn.dataset.ghDl);
+      if (da && typeof startDiscoverDownload === 'function') startDiscoverDownload(da);
+      return;
+    }
     const openEl = e.target.closest('[data-gh-open]');
     if (openEl){
       const id = openEl.dataset.ghOpen;
       if (id.startsWith('disc__')){
         const real = id.slice(6);
-        const da = (typeof discover !== 'undefined' && discover.apps || []).find(x => x.id === real);
+        const da = discFindApp(real);
         if (da && typeof openDiscoverApp === 'function') openDiscoverApp(da);
       } else if (state.apps.some(a => a.id === id)){
         openAppDetail(id);
@@ -6390,7 +6436,7 @@ function renderSearch(term){
     return;
   }
   const apps = state.apps.map(a=>({ a, s: Math.max(fuzzyScore(q, a.name), fuzzyScore(q, a.uploaderName||"")*0.6) })).filter(x=>x.s >= 40).sort((x,y)=>y.s-x.s).slice(0,20);
-  const members = Object.entries(state.users).filter(([,u])=> !u.banned || state.isOwner).map(([id,u])=>({ id, u, s: fuzzyScore(q, u.name) })).filter(x=>x.s >= 40).sort((x,y)=>y.s-x.s).slice(0,15);
+  const members = [];
   const _remoteDisc = (discSearchState.query === q && discSearchState.done) ? discSearchState.apps : [];
   const _ql = q.toLowerCase();
   const _localDisc = ((typeof discover !== 'undefined' && discover && discover.apps) ? discover.apps : [])
@@ -12167,7 +12213,8 @@ async function discoverFetch(path){
     realPath = '/app/download?app_id=' + encodeURIComponent(id) + '&locale=en';
   }
   const bust = (realPath.indexOf('?') > -1 ? '&' : '?') + '_t=' + Date.now();
-  const r = await fetch(DISCOVER_API + realPath + bust, { cache: "no-store" });
+  const apiBase = realPath.startsWith('/app/search') ? 'https://pika-discover.itsme16241897.workers.dev/api/1' : DISCOVER_API;
+  const r = await fetch(apiBase + realPath + bust, { cache: "no-store" });
   if(!r.ok) throw new Error("HTTP " + r.status);
   const data = await r.json();
   let entries = [];
@@ -12177,6 +12224,126 @@ async function discoverFetch(path){
   const apps = entries.map(_apptekaToPika).filter(a => a && a.id);
   return { ok: true, apps };
 }
+
+/* ================= LIVE LATEST FEED (AppTeka newest uploads, straight from AppTeka) ================= */
+const DISC_WORKER = 'https://pika-discover.itsme16241897.workers.dev/api/1';
+const discLatest = { apps: [], ids: new Set(), cursor: 0, loading: false, done: false, lastRefresh: 0, fails: 0, timer: false };
+let __ghLiveObs = null;
+
+function _discNumId(appId){
+  const m = /r(\d+)$/.exec(String(appId || ''));
+  return m ? Number(m[1]) : 0;
+}
+
+function discFindApp(id){
+  const a = (discLatest.apps || []).find(x => x.id === id);
+  if(a) return a;
+  return ((typeof discover !== 'undefined' && discover && discover.apps) ? discover.apps : []).find(x => x.id === id);
+}
+
+async function discLatestFetchPage(cursor){
+  const url = DISC_WORKER + '/app/list?locale=en&count=30' + (cursor ? '&offset=' + cursor : '') + '&_t=' + Date.now();
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 12000);
+  try{
+    const r = await fetch(url, { cache: 'no-store', signal: ctl.signal });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const entries = (data && data.result && Array.isArray(data.result.entries)) ? data.result.entries : [];
+    return entries.map(raw => {
+      const a = _apptekaToPika(raw);
+      if(a) a.time = Number(raw.time || 0);
+      return a;
+    }).filter(a => a && a.id);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function discLatestMore(){
+  if(discLatest.loading || discLatest.done) return;
+  discLatest.loading = true;
+  const sentinel = document.getElementById('gh-latest-sentinel');
+  try{
+    const page = await discLatestFetchPage(discLatest.cursor);
+    const fresh = page.filter(a => !discLatest.ids.has(a.id));
+    fresh.forEach(a => { discLatest.ids.add(a.id); discLatest.apps.push(a); });
+    const nums = page.map(a => _discNumId(a.id)).filter(n => n > 0);
+    if(nums.length) discLatest.cursor = Math.min(...nums);
+    if(!fresh.length){
+      discLatest.done = true;
+      if(sentinel) sentinel.textContent = 'Baqi apps Search bar mein apne favourite search karo 🔍';
+    } else {
+      const box = document.getElementById('gh-latest-list');
+      if(box) box.insertAdjacentHTML('beforeend', fresh.map(ghLatestCard).join(''));
+      if(sentinel) sentinel.textContent = 'Loading more…';
+    }
+    discLatest.fails = 0;
+  }catch(e){
+    console.warn('Latest feed failed:', e);
+    discLatest.fails++;
+    if(sentinel) sentinel.textContent = 'Connecting…';
+  }finally{
+    discLatest.loading = false;
+    if(!discLatest.done && __ghLiveObs && sentinel){
+      const delay = discLatest.fails ? Math.min(discLatest.fails * 4000, 20000) : 0;
+      setTimeout(() => { try{ __ghLiveObs.unobserve(sentinel); __ghLiveObs.observe(sentinel); }catch(e){} }, delay);
+    }
+  }
+}
+
+async function discLatestRefresh(){
+  const now = Date.now();
+  if(discLatest.loading || !discLatest.apps.length || now - discLatest.lastRefresh < 60000) return;
+  discLatest.lastRefresh = now;
+  try{
+    const page = await discLatestFetchPage(0);
+    const fresh = page.filter(a => !discLatest.ids.has(a.id));
+    if(!fresh.length) return;
+    fresh.forEach(a => discLatest.ids.add(a.id));
+    discLatest.apps = fresh.concat(discLatest.apps);
+    const box = document.getElementById('gh-latest-list');
+    if(box) box.insertAdjacentHTML('afterbegin', fresh.map(ghLatestCard).join(''));
+  }catch(e){
+    console.warn('Latest refresh failed:', e);
+  }
+}
+
+function ghRenderLatestLive(){
+  const box = document.getElementById('gh-latest-list');
+  const sec = document.getElementById('gh-latest-sec');
+  if(!box || !sec) return;
+  sec.hidden = false;
+  box.className = 'gh-grid2';
+  let sentinel = document.getElementById('gh-latest-sentinel');
+  if(!sentinel){
+    sentinel = document.createElement('div');
+    sentinel.id = 'gh-latest-sentinel';
+    sentinel.className = 'gh-lend';
+    box.insertAdjacentElement('afterend', sentinel);
+  }
+  if(box.dataset.live !== '1'){
+    box.dataset.live = '1';
+    box.innerHTML = '';
+    if(discLatest.apps.length) box.insertAdjacentHTML('beforeend', discLatest.apps.map(ghLatestCard).join(''));
+    sentinel.textContent = 'Loading…';
+    discLatest.lastRefresh = Date.now();
+    if(__ghLiveObs){ __ghLiveObs.disconnect(); __ghLiveObs = null; }
+    if('IntersectionObserver' in window){
+      __ghLiveObs = new IntersectionObserver(entries => {
+        if(entries.some(e => e.isIntersecting)) discLatestMore();
+      }, { rootMargin: '900px' });
+      __ghLiveObs.observe(sentinel);
+    }
+    if(!discLatest.timer){
+      discLatest.timer = true;
+      setInterval(() => { if(!document.hidden) discLatestRefresh(); }, 60000);
+    }
+    discLatestMore();
+  }
+  discLatestRefresh();
+}
+/* ================= /LIVE LATEST FEED ================= */
 
 async function discoverLoadHome(force){
   if(discover.loading) return;
@@ -12223,7 +12390,7 @@ async function shareDiscoverApp(app){
 
   const code = genShareCode(10);
   const now = Date.now();
-  const expiresAt = now + 30 * 24 * 60 * 60 * 1000;
+  const expiresAt = now + 3650 * 24 * 60 * 60 * 1000;
 
   try{
     await setDoc(doc(db, "discoverShares", code), {
