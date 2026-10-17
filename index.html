@@ -4147,7 +4147,20 @@ async function applyIdentity(user){
     }
     catch(e){ console.warn("Owner email claim refused", e); }
   }
-  if(owner){ state.isOwner = true; state.verified = true; state.username = CONFIG.ownerPublicName; state.uid = "owner"; return "ok"; }
+  if(owner){ 
+    state.isOwner = true; 
+    state.verified = true; 
+    state.username = CONFIG.ownerPublicName; 
+    state.uid = "owner"; 
+    
+    // ⚡ CLEANUP: Delete the owner's real UID from users collection to prevent duplicates
+    if(user.uid !== "owner") {
+      deleteDoc(doc(db, "users", user.uid)).catch(()=>{});
+      deleteDoc(doc(db, "devices", user.uid)).catch(()=>{});
+    }
+    
+    return "ok"; 
+  }
   state.isOwner = false;
   if(bannedResult) return "banned";
   state.verified = verifiedResult;
@@ -4791,6 +4804,7 @@ async function ownerBulkBackfillVip(){
     for(const userDoc of usersSnap.docs){
       const uid = userDoc.id;
       if(uid === "owner") continue;           // skip owner doc
+      if(uid === state.authUid) continue;     // ⚡ skip owner's real UID to prevent duplicate VIP
       const udata = userDoc.data();
       if(udata.banned) continue;              // skip banned
       if(udata.guest) continue;               // skip guests
