@@ -12464,52 +12464,37 @@ async function resolveDiscoverShareCode(code){
 async function fetchDiscoverFullInfo(appId){
   const targetUrl = `https://appteka.store/app/${appId}`;
 
-  // 1. Direct Jina AI (Browser IP use hota hai, block nahi hota)
-  try {
-    const r = await fetch(`https://r.jina.ai/${targetUrl}`);
-    if(r.ok) {
-      const text = await r.text();
-      if(text.includes('Markdown Content:')) {
-        return { rawText: text, type: 'markdown' };
-      }
-    }
-  } catch(e) { console.warn('Jina AI failed', e); }
+  // Parallel: Jina AI (description/screenshots) + Worker (download link)
+  const [jinaRes, workerRes] = await Promise.allSettled([
+    fetch(`https://r.jina.ai/${targetUrl}`).then(r => r.ok ? r.text() : null),
+    fetch(`https://pika-discover.itsme16241897.workers.dev/api/1/app/info?app_id=${encodeURIComponent(appId)}&locale=en&_t=${Date.now()}`).then(r => r.ok ? r.json() : null)
+  ]);
 
-  // 2. Direct CorsProxy (Fallback agar Jina fail ho)
-  try {
-    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
-    if(r.ok) {
-      const text = await r.text();
-      if(text.includes('<html')) return { rawText: text, type: 'html' };
-    }
-  } catch(e) { console.warn('CorsProxy failed', e); }
+  const result = { rawText: "", type: "", link: "", screenshots: [] };
 
-  // 3. Cloudflare Worker (Aakhri fallback)
-  try {
-    const r = await fetch(`https://pika-discover.itsme16241897.workers.dev/api/1/app/info?app_id=${encodeURIComponent(appId)}&locale=en&_t=${Date.now()}`);
-    if(r.ok) {
-      const d = await r.json();
-      if(d && d.result && d.result.info) return d.result.info;
-    }
-  } catch(e) { console.warn('Worker failed', e); }
+  // Jina AI response
+  if(jinaRes.status === 'fulfilled' && jinaRes.value && jinaRes.value.includes('Markdown Content:')){
+    result.rawText = jinaRes.value;
+    result.type = 'markdown';
+  }
 
-  // 4. AppTeka Direct API (Sirf basic data, no description)
-  try {
-    const r = await fetch(`https://appteka.store/api/1/app/info?app_id=${encodeURIComponent(appId)}&locale=en&_t=${Date.now()}`);
-    if(r.ok) {
-      const d = await r.json();
-      if(d && d.result) return d.result;
+  // Worker response — extract download link
+  if(workerRes.status === 'fulfilled' && workerRes.value && workerRes.value.result){
+    const r = workerRes.value.result;
+    result.link = r.link || (r.info && r.info.link) || (r.download_url) || '';
+    // If worker also has screenshots, use them
+    if(!result.type && Array.isArray(r.info && r.info.screenshots)){
+      result.screenshots = r.info.screenshots;
     }
-  } catch(e) { console.warn('Direct API failed', e); }
+  }
 
-  return null;
+  return result;
 }
 
 function extractDiscoverDescription(info){
   if(!info) return "";
   
-  // Jina AI Markdown format se parse karo
-  if(info.type === 'markdown') {
+  if(info.type === 'markdown' && info.rawText) {
     const text = info.rawText;
     const contentIndex = text.indexOf("Markdown Content:");
     if (contentIndex > -1) {
@@ -12519,48 +12504,13 @@ function extractDiscoverDescription(info){
       for (let line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
-        // Features list start hone se pehle ruk jao
-        if (trimmed.startsWith('-') || trimmed.startsWith('*') || /core features|features|what's new|screenshots/i.test(trimmed)) {
-          break;
-        }
+        if (trimmed.startsWith('-') || trimmed.startsWith('*') || /core features|features|what's new|screenshots/i.test(trimmed)) break;
         descLines.push(trimmed);
       }
       let desc = descLines.join('\n').replace(/!\[[^\]]*\]\([^\)]+\)/g, '').trim();
       if(desc.length > 800) desc = desc.slice(0, 800) + '...';
       return desc;
     }
-    return "";
-  }
-
-  // HTML format se parse karo
-  if(info.type === 'html') {
-    const text = info.rawText;
-    const descMatch = text.match(/<meta\s+(?:name|property)=["'](?:og:)?description["']\s+content=["']([^"']+)["']/i);
-    if (descMatch) return descMatch[1];
-    
-    const nextDataMatch = text.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/i);
-    if (nextDataMatch) {
-      try {
-        const json = JSON.parse(nextDataMatch[1]);
-        let found = "";
-        const findDesc = (obj) => {
-          if(!obj || typeof obj !== 'object') return;
-          if(obj.description && typeof obj.description === 'string' && obj.description.length > found.length) found = obj.description;
-          for(const k in obj) findDesc(obj[k]);
-        };
-        findDesc(json);
-        if(found) return found;
-      } catch(e){}
-    }
-    return "";
-  }
-
-  // Normal object (API se aaya ho toh)
-  const srcs = [info, info.info, info.app, info.data];
-  for(const src of srcs){
-    if(!src || typeof src !== 'object') continue;
-    const d = src.description || src.short_description || src.short_desc || src.long_description || src.desc;
-    if(typeof d === 'string' && d.trim().length > 0) return d.trim();
   }
   return "";
 }
@@ -12568,8 +12518,7 @@ function extractDiscoverDescription(info){
 function extractDiscoverScreenshots(info){
   if(!info) return [];
 
-  // Jina AI Markdown images
-  if(info.type === 'markdown') {
+  if(info.type === 'markdown' && info.rawText) {
     const text = info.rawText;
     const imgRegex = /!\[[^\]]*\]\((https?:\/\/[^\)]+)\)/g;
     let match;
@@ -12580,45 +12529,10 @@ function extractDiscoverScreenshots(info){
         screenshots.push(imgUrl);
       }
     }
-    return screenshots;
+    if(screenshots.length > 0) return screenshots;
   }
 
-  // HTML og:image tags
-  if(info.type === 'html') {
-    const text = info.rawText;
-    const screenshots = [];
-    const imgRegex = /<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/gi;
-    let match;
-    while ((match = imgRegex.exec(text)) !== null) {
-      if (!screenshots.includes(match[1])) screenshots.push(match[1]);
-    }
-    if (screenshots.length === 0) {
-      const imgTagRegex = /<img[^>]+src=["']([^"']+\.(?:png|jpg|jpeg|webp))["']/gi;
-      while ((match = imgTagRegex.exec(text)) !== null) {
-        const u = match[1];
-        if (!u.includes('icon') && !u.includes('logo') && !screenshots.includes(u)) screenshots.push(u);
-      }
-    }
-    return screenshots;
-  }
-
-  // Normal object (API se aaya ho toh)
-  const srcs = [info, info.info, info.app, info.data];
-  for(const src of srcs){
-    if(!src || typeof src !== 'object') continue;
-    const candidates = [src.screenshots, src.images, src.screens, src.preview_urls, src.screenshot_list];
-    for(const c of candidates){
-      if(Array.isArray(c) && c.length > 0){
-        const urls = c.map(item=>{
-          if(typeof item === 'string') return item;
-          if(item && typeof item === 'object') return item.url || item.url_original || item.original || item.src || '';
-          return '';
-        }).filter(Boolean);
-        if(urls.length > 0) return urls;
-      }
-    }
-  }
-  return [];
+  return info.screenshots || [];
 }
 
 function openDiscoverApp(app){
@@ -12686,6 +12600,9 @@ Version: ${escapeHtml(app.version || '—')}</div>
   fetchDiscoverFullInfo(app.id).then(info=>{
     if(!document.body.contains(wrap)) return;
     
+    // Store download link for later use
+    if(info && info.link) app.downloadLink = info.link;
+    
     const descEl = wrap.querySelector('.disc-description');
     const descText = extractDiscoverDescription(info);
     
@@ -12716,20 +12633,30 @@ async function startDiscoverDownload(app){
   try{ dlActive.add(dlId); }catch(e){}
 
   const filename = String(app.name || 'app').replace(/[^A-Za-z0-9._-]+/g, '_') + '.apk';
-  const fallbackUrl = 'https://appteka.store/app/' + encodeURIComponent(app.id);
-  const INFO_BASE = 'https://pika-discover.itsme16241897.workers.dev/api/1';
-  const infoCtl = new AbortController();
-  const infoTimer = setTimeout(()=> infoCtl.abort(), 15000);
-  let directLink = '';
+  toast('Preparing download…');
 
-  try{
-    toast('Preparing download…');
-    const infoRes = await fetch(INFO_BASE + '/app/info?app_id=' + encodeURIComponent(app.id) + '&locale=en&_t=' + Date.now(), { cache: 'no-store', signal: infoCtl.signal });
-    if(!infoRes.ok) throw new Error('INFO_HTTP_' + infoRes.status);
-    const infoJson = await infoRes.json();
-    directLink = (infoJson && infoJson.result && infoJson.result.link) || '';
-    if(!directLink) throw new Error('NO_LINK');
+  let directLink = app.downloadLink || '';
 
+  // Fetch link from worker if not cached
+  if(!directLink){
+    try {
+      const r = await fetch(`https://pika-discover.itsme16241897.workers.dev/api/1/app/info?app_id=${encodeURIComponent(app.id)}&locale=en&_t=${Date.now()}`);
+      if(r.ok){
+        const d = await r.json();
+        directLink = (d && d.result && (d.result.link || (d.result.info && d.result.info.link))) || '';
+        if(directLink) app.downloadLink = directLink;
+      }
+    } catch(e) { console.warn('Link fetch failed', e); }
+  }
+
+  if(!directLink){
+    toast('Download link not available. Please try another app.', 'ic-close');
+    try{ dlActive.delete(dlId); }catch(e){}
+    return;
+  }
+
+  // Trigger direct download
+  try {
     const a = document.createElement('a');
     a.href = directLink;
     a.download = filename;
@@ -12739,14 +12666,12 @@ async function startDiscoverDownload(app){
     a.click();
     setTimeout(()=> a.remove(), 500);
     toast('Download started — check your notification bar');
-  }catch(err){
-    console.warn('Discover download failed:', err);
-    toast('Opening AppTeka page — download from there');
-    window.open(fallbackUrl, '_blank', 'noopener');
-  }finally{
-    clearTimeout(infoTimer);
-    setTimeout(()=>{ try{ dlActive.delete(dlId); }catch(e){} }, 3000);
+  } catch(e) {
+    console.warn('Native download failed', e);
+    window.location.href = directLink;
   }
+
+  setTimeout(()=>{ try{ dlActive.delete(dlId); }catch(e){} }, 3000);
 }
 
 let discSearchTimer = null;
