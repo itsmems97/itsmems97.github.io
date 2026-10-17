@@ -12462,23 +12462,44 @@ async function resolveDiscoverShareCode(code){
 /* ================= /DISCOVER CUSTOM SHARE ================= */
 
 async function fetchDiscoverFullInfo(appId){
-  const ORACLE_API = "https://193-122-76-131.nip.io/discover/api/1";
-  try{
-    const r = await fetch(ORACLE_API + '/app/info?app_id=' + encodeURIComponent(appId) + '&locale=en&_t=' + Date.now(), { cache:'no-store' });
-    if(!r.ok) return null;
-    const data = await r.json();
-    return data && data.result ? data.result : null;
-  }catch(e){
-    console.warn('Discover info fetch failed:', e);
-    return null;
-  }
+  const targetUrl = `https://appteka.store/api/1/app/info?app_id=${encodeURIComponent(appId)}&locale=en&_t=${Date.now()}`;
+
+  // 1. Cloudflare Worker (Ab ye HTML scrape karke data dega)
+  try {
+    const r = await fetch(`https://pika-discover.itsme16241897.workers.dev/api/1/app/info?app_id=${encodeURIComponent(appId)}&locale=en&_t=${Date.now()}`);
+    if(r.ok) { 
+      const d = await r.json(); 
+      if(d && d.result){
+        return d.result.info || d.result; 
+      }
+    }
+  } catch(e) { console.warn('Worker failed', e); }
+
+  // 2. CORS Proxy
+  try {
+    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+    if(r.ok) { const d = await r.json(); if(d && d.result) return d.result; }
+  } catch(e) { console.warn('corsproxy failed', e); }
+
+  // 3. AllOrigins
+  try {
+    const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`);
+    if(r.ok) { const d = await r.json(); if(d && d.result) return d.result; }
+  } catch(e) { console.warn('AllOrigins failed', e); }
+
+  return null;
 }
 
 function extractDiscoverDescription(info){
   if(!info) return "";
   const d = info.description || info.short_description || info.short_desc || info.long_description || info.desc;
-  if(typeof d === 'string') return d;
-  if(d && typeof d === 'object') return d.en || Object.values(d)[0] || "";
+  if(typeof d === 'string' && d.trim().length > 0) return d;
+  if(d && typeof d === 'object'){
+    if(d.en && typeof d.en === 'string' && d.en.trim().length > 0) return d.en;
+    for(const key in d) {
+      if(typeof d[key] === 'string' && d[key].trim().length > 0) return d[key];
+    }
+  }
   return "";
 }
 
@@ -12486,12 +12507,13 @@ function extractDiscoverScreenshots(info){
   if(!info) return [];
   const candidates = [info.screenshots, info.images, info.screens, info.preview_urls, info.screenshot_list];
   for(const c of candidates){
-    if(Array.isArray(c) && c.length){
-      return c.map(item=>{
+    if(Array.isArray(c) && c.length > 0){
+      const urls = c.map(item=>{
         if(typeof item === 'string') return item;
         if(item && typeof item === 'object') return item.url || item.url_original || item.original || item.src || '';
         return '';
       }).filter(Boolean);
+      if(urls.length > 0) return urls;
     }
   }
   return [];
@@ -12523,17 +12545,12 @@ function openDiscoverApp(app){
         <div class="stat"><b>v${escapeHtml(app.version || '1.0')}</b><span>Version</span></div>
       </div>
 
-      <div class="disc-screens screens-row" id="disc-screens" style="display:${(app.screenshots && app.screenshots.length) ? 'flex' : 'none'};">
-        ${(app.screenshots||[]).map(s=>{
-          const u = (typeof s === 'string') ? s : (s && (s.url || s.url_original || s.original)) || '';
-          return u ? `<img src="${escapeHtml(u)}" alt=""/>` : '';
-        }).join('')}
-      </div>
+      <div class="disc-screens screens-row" id="disc-screens" style="display:none;"></div>
 
       <div class="accordion">
         <details class="accordion-item" open>
           <summary>Description <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary>
-          <div class="body disc-description">${app.description ? formatMessageText(app.description) : '<span style="color:var(--text-faint)">Loading description…</span>'}</div>
+          <div class="body disc-description"><span style="color:var(--text-faint)">Loading description…</span></div>
         </details>
         <details class="accordion-item">
           <summary>File info <svg width="16" height="16"><use href="#ic-chevron"/></svg></summary>
@@ -12564,25 +12581,31 @@ Version: ${escapeHtml(app.version || '—')}</div>
     await shareDiscoverApp(app);
   });
 
-  const needInfo = !app.description || !(app.screenshots && app.screenshots.length);
-  if(needInfo){
-    fetchDiscoverFullInfo(app.id).then(info=>{
-      if(!info || !document.body.contains(wrap)) return;
-      const descEl = wrap.querySelector('.disc-description');
-      const descText = extractDiscoverDescription(info);
-      if(descEl && descText){
+  fetchDiscoverFullInfo(app.id).then(info=>{
+    if(!document.body.contains(wrap)) return;
+    
+    const descEl = wrap.querySelector('.disc-description');
+    const descText = extractDiscoverDescription(info);
+    
+    if(descEl){
+      if(descText && descText.trim().length > 0){
         descEl.innerHTML = formatMessageText(descText);
-      } else if(descEl && !descText){
+      } else {
         descEl.innerHTML = '<span style="color:var(--text-faint)">No description available.</span>';
       }
-      const shots = extractDiscoverScreenshots(info);
-      const shotsEl = wrap.querySelector('#disc-screens');
-      if(shotsEl && shots.length){
-        shotsEl.innerHTML = shots.map(u=> `<img src="${escapeHtml(u)}" alt=""/>`).join('');
-        shotsEl.style.display = 'flex';
-      }
-    });
-  }
+    }
+    
+    const shots = extractDiscoverScreenshots(info);
+    const shotsEl = wrap.querySelector('#disc-screens');
+    if(shotsEl && shots.length > 0){
+      shotsEl.innerHTML = shots.map(u => `<img src="${escapeHtml(u)}" alt=""/>`).join('');
+      shotsEl.style.display = 'flex';
+    }
+  }).catch(err => {
+    console.error('Error loading info:', err);
+    const descEl = wrap.querySelector('.disc-description');
+    if(descEl) descEl.innerHTML = '<span style="color:var(--text-faint)">Failed to load details.</span>';
+  });
 }
 
 async function startDiscoverDownload(app){
