@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>⚡ HTML5 Internet Speed Test</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --line:rgba(255,255,255,.12);
+    --txt:#e8ecff;
+    --muted:#8b94b8;
+    --acc:#4da3ff;
+    --acc2:#8b5cf6;
+    --ok:#2ee6a8;
+    --bad:#ff5d73;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    background:
+      radial-gradient(1000px 600px at 15% -10%, #1a2a6c44, transparent 60%),
+      radial-gradient(900px 600px at 95% 5%, #8b5cf633, transparent 60%),
+      var(--bg);
+    color:var(--txt);
+    display:grid;
+    place-items:center;
+    padding:24px;
+    min-height:100%;
+  }
+  .card{
+    width:min(560px,100%);
+    background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));
+    border:1px solid var(--line);
+    border-radius:26px;
+    padding:26px 26px 22px;
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 30px 80px -30px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  h1{
+    margin:0 0 6px;
+    font-size:17px;
+    font-weight:700;
+    letter-spacing:.2px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .sub{
+    margin:0 0 6px;
+    font-size:12.5px;
+    line-height:1.55;
+    color:var(--muted);
+  }
+
+  /* ---------- gauge ---------- */
+  .gauge-wrap{
+    position:relative;
+    width:100%;
+    max-width:360px;
+    margin:10px auto 2px;
+  }
+  .gauge{width:100%;height:auto;display:block;overflow:visible}
+  .arc-track{
+    fill:none;stroke:rgba(255,255,255,.09);
+    stroke-width:14;stroke-linecap:round;
+  }
+  .arc-fill{
+    fill:none;stroke:url(#grad);
+    stroke-width:14;stroke-linecap:round;
+    stroke-dasharray:282.743;
+    stroke-dashoffset:282.743;
+    transition:stroke-dashoffset .18s linear;
+    filter:drop-shadow(0 0 10px rgba(77,163,255,.5));
+  }
+  .readout{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:flex-end;
+    padding-bottom:4px;
+    pointer-events:none;
+  }
+  #speedTxt{
+    font-size:52px;font-weight:800;line-height:1;
+    letter-spacing:-2px;
+    font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,#fff,#b9c6ff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .unit{
+    margin-top:6px;font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--muted);font-weight:600;
+  }
+
+  /* ---------- progress ---------- */
+  .bar{
+    height:6px;margin:18px 0 14px;
+    background:rgba(255,255,255,.08);
+    border-radius:99px;overflow:hidden;
+  }
+  .bar>i{
+    display:block;height:100%;width:0%;
+    border-radius:99px;
+    background:linear-gradient(90deg,var(--acc),var(--acc2),var(--ok));
+    transition:width .2s linear;
+  }
+
+  /* ---------- stats ---------- */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .stat{
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--line);
+    border-radius:14px;padding:9px 11px;
+  }
+  .stat span{
+    display:block;font-size:10px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted);margin-bottom:3px;
+  }
+  .stat b{font-size:14.5px;font-variant-numeric:tabular-nums;font-weight:700}
+
+  /* ---------- button ---------- */
+  button{
+    width:100%;margin-top:16px;padding:15px;
+    border:0;border-radius:16px;
+    font-size:15.5px;font-weight:700;color:#fff;cursor:pointer;
+    background:linear-gradient(135deg,#4da3ff,#8b5cf6);
+    box-shadow:0 14px 34px -14px rgba(77,163,255,.95);
+    transition:transform .12s ease,filter .12s ease,opacity .2s;
+    font-family:inherit;
+  }
+  button:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.08)}
+  button:active:not(:disabled){transform:translateY(0)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+
+  /* ---------- status / log ---------- */
+  .status{
+    margin-top:13px;min-height:18px;text-align:center;
+    font-size:12.5px;color:var(--muted);
+  }
+  .log{
+    margin-top:10px;max-height:112px;overflow:auto;
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:11px;line-height:1.75;color:#7e88ad;
+  }
+  .log .ok{color:var(--ok)}
+  .log .bad{color:var(--bad)}
+  .log .warn{color:#ffc46b}
+</style>
+</head>
+<body>
+
+<main class="card">
+  <h1>⚡ Internet Speed Test</h1>
+  <p class="sub">Streams a large block of data over 6 parallel connections, measures the real throughput, then wipes every byte it touched.</p>
+
+  <div class="gauge-wrap">
+    <svg class="gauge" viewBox="0 0 220 130" aria-hidden="true">
+      <defs>
+        <linearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stop-color="#4da3ff"/>
+          <stop offset="55%"  stop-color="#8b5cf6"/>
+          <stop offset="100%" stop-color="#2ee6a8"/>
+        </linearGradient>
+      </defs>
+      <path class="arc-track" d="M 20 115 A 90 90 0 0 1 200 115"/>
+      <path class="arc-fill" id="arcFill" d="M 20 115 A 90 90 0 0 1 200 115"/>
+    </svg>
+    <div class="readout">
+      <div id="speedTxt">0.00</div>
+      <div class="unit">Mbps</div>
+    </div>
+  </div>
+
+  <div class="bar"><i id="progressBar"></i></div>
+
+  <div class="stats">
+    <div class="stat"><span>Downloaded</span><b id="metaDown">0 MB</b></div>
+    <div class="stat"><span>Peak</span><b id="metaPeak">0 Mbps</b></div>
+    <div class="stat"><span>Elapsed</span><b id="metaTime">0.0 s</b></div>
+  </div>
+
+  <button id="startBtn">Start Test</button>
+  <div class="status" id="statusTxt">Ready — 6 parallel streams · 10 s</div>
+  <div class="log" id="log"></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     CONFIG
+     ========================================================= */
+  const CFG = {
+    streams:      6,                     // parallel connections
+    durationMs:   10000,                 // test length
+    requestBytes: 100 * 1024 * 1024,     // 100 MB per request
+    endpoint:     'https://speed.cloudflare.com/__down?bytes=',
+    gaugeSteps:   [50, 100, 200, 300, 500, 750, 1000, 2000, 5000, 10000]
+  };
+
+  const ARC_LEN = 282.743;               // length of the semicircle arc
+
+  /* =========================================================
+     DOM
+     ========================================================= */
+  const $ = (id) => document.getElementById(id);
+  const arcFill     = $('arcFill');
+  const speedTxt    = $('speedTxt');
+  const statusTxt   = $('statusTxt');
+  const startBtn    = $('startBtn');
+  const progressBar = $('progressBar');
+  const metaDown    = $('metaDown');
+  const metaPeak    = $('metaPeak');
+  const metaTime    = $('metaTime');
+  const logBox      = $('log');
+
+  /* =========================================================
+     STATE
+     ========================================================= */
+  let running     = false;
+  let controller  = null;
+  let totalBytes  = 0;
+  let samples     = [];      // rolling [{t, total}] for live speed
+  let peakMbps    = 0;
+  let gaugeMax    = 100;
+  let startTs     = 0;
+  let steadyT     = 0;       // timestamp when TCP slow-start is over
+  let steadyBytes = 0;
+  let tickTimer   = null;
+
+  /* =========================================================
+     HELPERS
+     ========================================================= */
+  function logMsg(text, cls) {
+    const line = document.createElement('div');
+    if (cls) line.className = cls;
+    line.textContent = text;
+    logBox.appendChild(line);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function niceMax(v) {
+    for (const s of CFG.gaugeSteps) if (v <= s) return s;
+    return CFG.gaugeSteps[CFG.gaugeSteps.length - 1];
+  }
+
+  function setGauge(mbps) {
+    if (mbps > gaugeMax) gaugeMax = niceMax(mbps);
+    const p = Math.max(0, Math.min(1, mbps / gaugeMax));
+    arcFill.style.strokeDashoffset = String(ARC_LEN * (1 - p));
+  }
+
+  function resetUI() {
+    speedTxt.textContent = '0.00';
+    arcFill.style.strokeDashoffset = String(ARC_LEN);
+    progressBar.style.width = '0%';
+    metaDown.textContent = '0 MB';
+    metaPeak.textContent = '0 Mbps';
+    metaTime.textContent = '0.0 s';
+    logBox.innerHTML = '';
+  }
+
+  /* =========================================================
+     DOWNLOAD WORKER
+     Streams the body, counts bytes, and throws the chunks away.
+     Nothing is ever written to disk or kept in memory.
+     ========================================================= */
+  async function worker(id, signal) {
+    while (!signal.aborted) {
+      const url = CFG.endpoint + CFG.requestBytes +
+                  '&r=' + Math.random().toString(36).slice(2);
+
+      let res;
+      try {
+        res = await fetch(url, { cache: 'no-store', signal });
+      } catch (e) {
+        if (signal.aborted) return;              // normal: we aborted
+        throw new Error('Network error on stream ' + id + ': ' + e.message);
+      }
+
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' on stream ' + id);
+
+      // Fallback for browsers without ReadableStream body
+      if (!res.body) {
+        const buf = await res.arrayBuffer();
+        totalBytes += buf.byteLength;
+        continue;
+      }
+
+      const reader = res.body.getReader();
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          totalBytes += value.length;            // count only
+          // `value` is dropped here → garbage collected, never cached
+
+          if (signal.aborted) {
+            try { await reader.cancel(); } catch (_) {}
+            return;
+          }
+        }
+      } catch (e) {
+        if (signal.aborted) return;
+        throw e;
+      } finally {
+        try { reader.releaseLock(); } catch (_) {}
+      }
+    }
+  }
+
+  /* =========================================================
+     LIVE SAMPLER  (every 100 ms)
+     ========================================================= */
+  function tick() {
+    const now = performance.now();
+
+    samples.push({ t: now, total: totalBytes });
+    while (samples.length > 2 && now - samples[0].t > 1200) samples.shift();
+
+    const dt = (now - samples[0].t) / 1000;
+    const db = totalBytes - samples[0].total;
+    const mbps = dt > 0.15 ? (db * 8) / (dt * 1e6) : 0;
+
+    if (mbps > peakMbps) peakMbps = mbps;
+
+    // ignore the TCP slow-start window for the final average
+    if (steadyT === 0 && now - startTs >= 1500) {
+      steadyT = now;
+      steadyBytes = totalBytes;
+    }
+
+    // paint
+    speedTxt.textContent = mbps.toFixed(2);
+    setGauge(mbps);
+    const elapsed = now - startTs;
+    progressBar.style.width = Math.min(100, (elapsed / CFG.durationMs) * 100) + '%';
+    metaDown.textContent = (totalBytes / 1048576).toFixed(1) + ' MB';
+    metaPeak.textContent = peakMbps.toFixed(2) + ' Mbps';
+    metaTime.textContent = (Math.min(elapsed, CFG.durationMs) / 1000).toFixed(1) + ' s';
+  }
+
+  /* =========================================================
+     CLEANUP — abort everything and wipe all cache storage
+     ========================================================= */
+  async function cleanup() {
+    // 1) kill any in-flight requests
+    if (controller) {
+      try { controller.abort(); } catch (_) {}
+      controller = null;
+    }
+
+    // 2) release memory references
+    samples = [];
+    totalBytes = 0;
+
+    // 3) purge the Cache Storage API (if the browser exposes it)
+    let removed = 0;
+    if ('caches' in window) {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+        removed = keys.length;
+      } catch (_) { /* private mode / unsupported */ }
+    }
+
+    // 4) revoke any object URLs we may have created (none here, kept for safety)
+    // blobUrls.forEach(u => URL.revokeObjectURL(u));
+
+    logMsg('🧹 Cache cleared' + (removed ? ' (' + removed + ' store' + (removed > 1 ? 's' : '') + ' removed)' : '') + ' — 0 bytes retained', 'ok');
+  }
+
+  /* =========================================================
+     MAIN TEST
+     ========================================================= */
+  async function startTest() {
+    if (running) return;
+    running = true;
+
+    resetUI();
+    startBtn.disabled = true;
+    statusTxt.textContent = 'Testing… please wait';
+
+    totalBytes  = 0;
+    peakMbps    = 0;
+    gaugeMax    = 100;
+    samples     = [];
+    steadyT     = 0;
+    steadyBytes = 0;
+    startTs     = performance.now();
+    samples.push({ t: startTs, total: 0 });
+
+    controller = new AbortController();
+    const signal = controller.signal;
+
+    logMsg('▶ ' + CFG.streams + ' parallel streams · ' +
+           (CFG.durationMs / 1000) + ' s · 100 MB blocks (no-store)');
+
+    tickTimer = setInterval(tick, 100);
+    const stopTimer = setTimeout(() => controller.abort(), CFG.durationMs);
+
+    // launch workers
+    const tasks = [];
+    for (let i = 0; i < CFG.streams; i++) tasks.push(worker(i, signal));
+
+    let error = null;
+    try {
+      const results = await Promise.allSettled(tasks);
+      const failed = results.find((r) => r.status === 'rejected');
+      if (failed && !signal.aborted) error = failed.reason;
+    } catch (e) {
+      error = e;
+    }
+
+    clearInterval(tickTimer);
+    clearTimeout(stopTimer);
+    tickTimer = null;
+
+    /* ---- freeze the results BEFORE cleanup wipes the counters ---- */
+    const endTs       = performance.now();
+    const elapsedS    = (endTs - startTs) / 1000;
+    const downloadedB = totalBytes;
+    const peak        = peakMbps;
+
+    let avgMbps;
+    if (steadyT && endTs - steadyT > 500) {
+      avgMbps = ((downloadedB - steadyBytes) * 8) / ((endTs - steadyT) / 1000) / 1e6;
+    } else {
+      avgMbps = (downloadedB * 8) / Math.max(elapsedS, 0.001) / 1e6;
+    }
+
+    /* ---- DELETE / CLEAR THE CACHE ---- */
+    await cleanup();
+
+    /* ---- show final numbers ---- */
+    running = false;
+    startBtn.disabled = false;
+
+    if (error) {
+      speedTxt.textContent = '0.00';
+      arcFill.style.strokeDashoffset = String(ARC_LEN);
+      progressBar.style.width = '0%';
+      statusTxt.textContent = '❌ Test failed — ' + error.message;
+      logMsg('✖ ' + error.message, 'bad');
+      return;
+    }
+
+    speedTxt.textContent = avgMbps.toFixed(2);
+    setGauge(avgMbps);
+    progressBar.style.width = '100%';
+    metaDown.textContent = (downloadedB / 1048576).toFixed(1) + ' MB';
+    metaPeak.textContent = peak.toFixed(2) + ' Mbps';
+    metaTime.textContent = elapsedS.toFixed(1) + ' s';
+
+    const mbps = avgMbps.toFixed(2);
+    const mbs  = (avgMbps / 8).toFixed(2);
+
+    statusTxt.textContent = '✅ ' + mbps + ' Mbps  (' + mbs + ' MB/s)';
+    logMsg('✔ Result: ' + mbps + ' Mbps ≈ ' + mbs + ' MB/s', 'ok');
+
+    if (avgMbps < 1) {
+      logMsg('⚠ Very low speed — check the connection or the test endpoint.', 'warn');
+    }
+  }
+
+  /* =========================================================
+     EVENTS
+     ========================================================= */
+  startBtn.addEventListener('click', startTest);
+
+  // abort cleanly if the user closes the tab mid-test
+  window.addEventListener('beforeunload', () => {
+    if (controller) { try { controller.abort(); } catch (_) {} }
+  });
+
+  // AbortController support check
+  if (typeof AbortController === 'undefined') {
+    startBtn.disabled = true;
+    statusTxt.textContent = 'This browser is not supported (no AbortController).';
+  }
+})();
+</script>
+</body>
+</html>
