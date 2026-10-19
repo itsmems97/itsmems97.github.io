@@ -2045,12 +2045,12 @@ button.av3d{ -webkit-mask-image:none; mask-image:none; }   /* global button{mask
 #pbub.l{right:auto;left:-6px;transform-origin:20% 100%}
 #pbub.show{opacity:1;transform:none}
 #pbub.out{opacity:0;transform:translateY(-10px) scale(.6);transition:opacity .3s ease,transform .35s cubic-bezier(.5,0,.75,0)}
-#pbub .glass{position:relative;width:max-content;max-width:200px;padding:11px 16px 12px;border-radius:24px 26px 22px 28px;color:#fff;font:600 14px/1.35 -apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,system-ui,sans-serif;letter-spacing:.1px;text-shadow:0 1px 2px rgba(0,0,0,.35);background:linear-gradient(135deg,rgba(255,255,255,.34),rgba(255,255,255,.10) 55%,rgba(255,255,255,.2));-webkit-backdrop-filter:blur(18px) saturate(190%);backdrop-filter:blur(18px) saturate(190%);border:1px solid rgba(255,255,255,.42);box-shadow:inset 0 1.5px 1px rgba(255,255,255,.65),inset 0 -8px 16px rgba(255,255,255,.06),inset 0 0 22px rgba(255,255,255,.08),0 10px 28px rgba(0,0,0,.4),0 0 24px rgba(255,140,80,.16);overflow:hidden;animation:pfloat 3.4s ease-in-out infinite,pmorph 5.2s ease-in-out infinite}
+#pbub .glass{position:relative;width:max-content;max-width:240px;padding:11px 16px 12px;border-radius:24px 26px 22px 28px;color:#fff;font:600 14px/1.35 -apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,system-ui,sans-serif;letter-spacing:.1px;text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:pre-wrap;word-break:break-word;background:linear-gradient(135deg,rgba(255,255,255,.34),rgba(255,255,255,.10) 55%,rgba(255,255,255,.2));-webkit-backdrop-filter:blur(18px) saturate(190%);backdrop-filter:blur(18px) saturate(190%);border:1px solid rgba(255,255,255,.42);box-shadow:inset 0 1.5px 1px rgba(255,255,255,.65),inset 0 -8px 16px rgba(255,255,255,.06),inset 0 0 22px rgba(255,255,255,.08),0 10px 28px rgba(0,0,0,.4),0 0 24px rgba(255,140,80,.16);overflow:hidden;animation:pfloat 3.4s ease-in-out infinite,pmorph 5.2s ease-in-out infinite}
 #pbub .glass::before{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.42),transparent);transform:skewX(-18deg);animation:pshine 3.6s ease-in-out infinite;pointer-events:none}
 #pbub .glass::after{content:'';position:absolute;left:10px;right:10px;top:3px;height:42%;border-radius:20px;background:linear-gradient(rgba(255,255,255,.3),rgba(255,255,255,0));pointer-events:none}
-#pbub .l1{display:block}
-#pbub .l2{display:block;color:#ffb27d;font-weight:800}
-#pbub .c{opacity:0;display:inline-block;transform:translateY(4px) scale(.9);filter:blur(3px);transition:opacity .22s ease,transform .22s ease,filter .22s ease;white-space:pre}
+#pbub .l1{display:block;overflow-wrap:break-word}
+#pbub .l2{display:block;color:#ffb27d;font-weight:800;overflow-wrap:break-word}
+#pbub .c{opacity:0;display:inline-block;transform:translateY(4px) scale(.9);filter:blur(3px);transition:opacity .22s ease,transform .22s ease,filter .22s ease}
 #pbub .c.on{opacity:1;transform:none;filter:none}
 #pbub .dot{position:absolute;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.7),rgba(255,255,255,.14));-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.5);box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 3px 8px rgba(0,0,0,.35);animation:pbob 2.2s ease-in-out infinite}
 #pbub .d1{width:12px;height:12px;right:58px;bottom:-9px}
@@ -2627,6 +2627,7 @@ button.av3d{ -webkit-mask-image:none; mask-image:none; }   /* global button{mask
 <div class="row tap" id="row-spoof-members" hidden><div class="row-left"><svg><use href="#ic-users"/></svg> Spoof Members Count</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="spoof-members-label">OFF</span></div>
 <div class="row tap" id="row-maintenance" hidden><div class="row-left"><svg><use href="#ic-lock"/></svg> Maintenance Mode</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="maintenance-label">OFF</span></div>
 <div class="row tap" id="row-send-messages" hidden><div class="row-left"><svg><use href="#ic-chat"/></svg> Send Messages</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
+<div class="row tap" id="row-send-gift" hidden><div class="row-left"><svg><use href="#ic-sparkle"/></svg> Send Gift</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 <div class="row tap" id="row-console-detector" hidden><div class="row-left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> Console Detector</div><span style="font-size:12px;color:var(--text-faint);font-weight:700" id="console-detector-label">OFF</span></div>
 <div class="row tap" id="row-fix-urls" hidden><div class="row-left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M4 10a8 8 0 0 1 14-5M20 14a8 8 0 0 1-14 5"/></svg> Fix Old URLs</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
   <div class="row tap" id="row-verify"><div class="row-left"><svg><use href="#ic-verified"/></svg> Enter blue-tick code</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
@@ -2846,7 +2847,7 @@ button.av3d{ -webkit-mask-image:none; mask-image:none; }   /* global button{mask
 <div id="search-panel" hidden></div>
 
 <!-- ============ MARIA COMPANION HTML ============ -->
-<div id="pet"><div id="pbub"><div class="glass"><span class="l1" data-t="Hello, I'm Maria."></span><span class="l2" data-t="The PIKAZOO AI Assistant"></span></div></div><i class="dot d1"></i><i class="dot d2"></i></div>
+<div id="pet"><div id="pbub"><div class="glass"><span class="l1"></span><span class="l2"></span></div><i class="dot d1"></i><i class="dot d2"></i></div></div>
 
 <script type="module">
 /* =====================================================================
@@ -4139,6 +4140,7 @@ function enterStore(){
   if (typeof window.startMariaPet === 'function') {
     window.startMariaPet();
   }
+  loadOwnerMessagesForMaria();
 }
 function showGate(notice){
   hideSplash(); $("#app").hidden = true; $("#username-gate").hidden = false;
@@ -5260,24 +5262,31 @@ const OWNER_MSG_SEEN_KEY = "pika_owner_msg_seen";
 
 function updateSendMessagesUI(){
   const row = document.getElementById("row-send-messages");
+  const giftRow = document.getElementById("row-send-gift");
   if(!row) return;
   row.hidden = !state.isOwner;
+  if(giftRow) giftRow.hidden = !state.isOwner;
 }
 
-async function openSendMessagesSheet(){
+async function openSendMessagesSheet(type = 'speak'){
   if(!state.isOwner) return;
+  if(type !== 'speak' && type !== 'gift') type = 'speak';
+  const isGift = type === 'gift';
+  const title = isGift ? "Send Gift Message" : "Send Speaking Message";
+  const placeholder = isGift ? "Type your gift message..." : "Type your message for all users...";
+  const btnText = isGift ? "Send Gift to All" : "Send to All Users";
 
   document.body.insertAdjacentHTML("beforeend", `
   <div class="sheet-backdrop" id="smsg-backdrop"><div class="sheet" style="max-height:88vh;display:flex;flex-direction:column">
       <div class="sheet-handle"></div>
       <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
-      <h3 style="padding:22px 18px 6px;margin:0;font-size:17px">Send Messages</h3>
-      <p class="hint-p" style="margin-bottom:12px">Yeh message har user ko app open karne par floating popup mein 9 second ke liye dikhega.</p>
+      <h3 style="padding:22px 18px 6px;margin:0;font-size:17px">${title}</h3>
+      <p class="hint-p" style="margin-bottom:12px">Yeh message Maria AI ke through har user ko app open karne par 1 din mein max 5 baar dikhega.</p>
 
       <div style="padding:0 18px 14px;">
-        <textarea id="smsg-input" rows="4" placeholder="Type your message for all users…"
+        <textarea id="smsg-input" rows="4" placeholder="${placeholder}"
           style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;resize:vertical;min-height:90px;max-height:220px;outline:none;-webkit-user-select:text;user-select:text;"></textarea>
-        <button class="btn btn-primary btn-block" id="smsg-send" style="margin-top:10px;padding:13px">Send to All Users</button>
+        <button class="btn btn-primary btn-block" id="smsg-send" style="margin-top:10px;padding:13px">${btnText}</button>
       </div>
 
       <div style="padding:6px 18px 4px;display:flex;align-items:center;justify-content:space-between">
@@ -5296,11 +5305,12 @@ async function openSendMessagesSheet(){
   const historyBox = document.getElementById("smsg-history");
 
   const renderHistory = (items)=>{
-    if(!items.length){
+    const filtered = items.filter(m => (m.type || 'speak') === type);
+    if(!filtered.length){
       historyBox.innerHTML = `<div class="mini-row" style="color:var(--text-faint)">No messages sent yet.</div>`;
       return;
     }
-    historyBox.innerHTML = items.map(m=>{
+    historyBox.innerHTML = filtered.map(m=>{
       const time = new Date(m.createdAtMs || Date.now()).toLocaleString([], { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
       return `<div class="mini-row" style="align-items:flex-start;padding:12px 14px;position:relative">
         <div class="mini-main" style="min-width:0">
@@ -5339,11 +5349,11 @@ async function openSendMessagesSheet(){
     }
 
     if(e.target.closest("#smsg-clear")){
-      confirmSheet("Clear all messages?", "Poori history delete ho jayegi aur users ke popup bhi band ho jayenge.", "Clear all").then(async ok=>{
+      confirmSheet("Clear all messages?", "Poori history delete ho jayegi.", "Clear all").then(async ok=>{
         if(!ok) return;
         try{
           const snap = await getDocs(collection(db, "ownerMessages"));
-          await Promise.all(snap.docs.map(d => deleteDoc(d.ref).catch(()=>{})));
+          await Promise.all(snap.docs.filter(d => (d.data().type || 'speak') === type).map(d => deleteDoc(d.ref).catch(()=>{})));
           toast("All messages cleared");
           loadHistory();
         }catch(err){ toast("Clear failed", "ic-close"); }
@@ -5359,9 +5369,10 @@ async function openSendMessagesSheet(){
     sendBtn.disabled = true; sendBtn.textContent = "Sending…";
     try{
       const snap = await getDocs(collection(db, "ownerMessages"));
-      await Promise.all(snap.docs.map(d => deleteDoc(d.ref).catch(()=>{})));
+      await Promise.all(snap.docs.filter(d => (d.data().type || 'speak') === type).map(d => deleteDoc(d.ref).catch(()=>{})));
 
       await addDoc(collection(db, "ownerMessages"), {
+        type: type,
         text: text,
         createdAt: serverTimestamp(),
         createdAtMs: Date.now(),
@@ -5378,68 +5389,54 @@ async function openSendMessagesSheet(){
       }
       toast("Send failed: " + (e.code||e.message), "ic-close");
     }finally{
-      sendBtn.disabled = false; sendBtn.textContent = "Send to All Users";
+      sendBtn.disabled = false; sendBtn.textContent = btnText;
     }
   });
 }
 
 function showOwnerMessagePopup(msg){
-  const existing = document.getElementById("broadcast-backdrop");
-  if(existing) existing.remove();
-  if(broadcastTimer){ clearTimeout(broadcastTimer); broadcastTimer = null; }
-
-  const seenKey = OWNER_MSG_SEEN_KEY + "_" + state.uid;
-  try{ localStorage.setItem(seenKey, String(msg.createdAtMs || msg.id)); }catch(e){}
-
-  document.body.insertAdjacentHTML("beforeend", `
-  <div id="broadcast-backdrop" class="show">
-    <div class="broadcast-card" id="broadcast-card">
-      <div class="broadcast-head">
-        <div class="bc-icon"><svg><use href="#ic-chat"/></svg></div>
-        <div class="bc-title">
-          <b>Pika Store</b>
-          <small>Message from owner</small>
-        </div>
-        <button class="broadcast-close" id="broadcast-close" type="button" aria-label="Close">
-          <svg width="14" height="14"><use href="#ic-close"/></svg>
-        </button>
-      </div>
-      <div class="broadcast-body">${formatMessageText(msg.text || "")}</div>
-      <div class="broadcast-foot">
-        <span>Auto-close</span>
-        <span class="broadcast-progress"><i></i></span>
-      </div>
-    </div>
-  </div>`);
-
-  const backdrop = document.getElementById("broadcast-backdrop");
-  const closeBtn = document.getElementById("broadcast-close");
-  const card = document.getElementById("broadcast-card");
-
-  const dismiss = ()=>{
-    if(broadcastTimer){ clearTimeout(broadcastTimer); broadcastTimer = null; }
-    card.classList.add("out");
-    setTimeout(()=>{ if(backdrop && backdrop.parentNode) backdrop.remove(); }, 320);
-  };
-
-  closeBtn.addEventListener("click", dismiss);
-  broadcastTimer = setTimeout(dismiss, 9000);
+  // Replaced by Maria AI bubble
 }
 
-function listenOwnerMessages(){
+function canShowMariaMessage() {
+  var now = Date.now();
+  var data = JSON.parse(localStorage.getItem('maria_msg_limit') || '{"count":0, "resetAt":0}');
+  if (now > data.resetAt) {
+    data = { count: 1, resetAt: now + 24 * 60 * 60 * 1000 };
+    localStorage.setItem('maria_msg_limit', JSON.stringify(data));
+    return true;
+  }
+  if (data.count < 5) {
+    data.count++;
+    localStorage.setItem('maria_msg_limit', JSON.stringify(data));
+    return true;
+  }
+  return false;
+}
+
+async function loadOwnerMessagesForMaria(){
   if(!firebaseReady) return;
-  if(state.isOwner) return; // owner ko apna message popup nahi chahiye
-  onSnapshot(collection(db, "ownerMessages"), snap=>{
+  if(state.isOwner) return;
+  if(!state.uid) return;
+  try{
+    const snap = await getDocs(collection(db, "ownerMessages"));
     const items = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
     if(!items.length) return;
-    const latest = items[0];
-    const seenKey = OWNER_MSG_SEEN_KEY + "_" + state.uid;
-    const seen = localStorage.getItem(seenKey);
-    const latestStamp = String(latest.createdAtMs || latest.id);
-    if(seen !== latestStamp){
-      showOwnerMessagePopup(latest);
+    
+    const speakMsg = items.find(i => !i.type || i.type === 'speak');
+    const giftMsg = items.find(i => i.type === 'gift');
+
+    if(speakMsg && canShowMariaMessage()){
+      if(window.MariaPet && window.MariaPet.queueMessage){
+        window.MariaPet.queueMessage(speakMsg.text, 'speak');
+      }
     }
-  }, err=> console.warn("ownerMessages listener", err));
+    if(giftMsg && canShowMariaMessage()){
+      if(window.MariaPet && window.MariaPet.queueMessage){
+        window.MariaPet.queueMessage(giftMsg.text, 'gift');
+      }
+    }
+  }catch(e){ console.warn("ownerMessages load failed", e); }
 }
 /* ================= /OWNER BROADCAST MESSAGES ================= */
 
@@ -8950,7 +8947,9 @@ if(_spoofRow) _spoofRow.addEventListener("click", toggleSpoofOnline);
 const _spoofMemRow = document.getElementById("row-spoof-members");
 if(_spoofMemRow) _spoofMemRow.addEventListener("click", setSpoofMembersCount);
   const _sendMsgRow = document.getElementById("row-send-messages");
-if(_sendMsgRow) _sendMsgRow.addEventListener("click", openSendMessagesSheet);
+if(_sendMsgRow) _sendMsgRow.addEventListener("click", () => openSendMessagesSheet('speak'));
+const _sendGiftRow = document.getElementById("row-send-gift");
+if(_sendGiftRow) _sendGiftRow.addEventListener("click", () => openSendMessagesSheet('gift'));
 const _cdRow = document.getElementById("row-console-detector");
 if(_cdRow) _cdRow.addEventListener("click", toggleConsoleDetector);
 const _fixRow = document.getElementById("row-fix-urls");
@@ -13299,34 +13298,70 @@ var IDLE_MS=15000;
 var EDGE=30;
 var pet=document.getElementById('pet'),V={},A={},cur=0,state='routine',ri=-1,edge=null,touched=false,idleT=null,sleptOnce=false,lastTouch=Date.now();
 var down=false,held=false,moved=false,timer=null,sx,sy,ox,oy;
+var messageQueue = [];
+var msgActive = false;
 pet.style.width=SIZE+'px';pet.style.height=SIZE+'px';
 for(var i=1;i<=15;i++){(function(n){
 var v=document.createElement('video');
-v.src=BASE+(n===14?'Maria5loop':n===15?'Maria5pop':'Maria'+n)+'.webm';v.muted=true;v.loop=(n===14);v.playsInline=true;v.setAttribute('playsinline','');v.preload='auto';
+v.src=BASE+(n===14?'Maria5loop':n===15?'Maria5pop':'Maria'+n)+'.webm';v.muted=true;v.loop=(n===14);v.playsInline=true;v.setAttribute('playsinline','');v.preload='metadata';
 v.controls=false;v.removeAttribute('controls');v.disablePictureInPicture=true;
 v.setAttribute('disableRemotePlayback','');v.setAttribute('controlsList','nodownload nofullscreen noremoteplayback');
 v.addEventListener('ended',function(){onEnded(n);});
 pet.appendChild(v);V[n]=v;
 })(i);}
 A[4]=new Audio(BASE+'Maria4.mp3');A[6]=new Audio(BASE+'Maria6.mp3');
-A[4].preload='auto';A[6].preload='auto';
+A[4].preload='metadata';A[6].preload='metadata';
 function stopAudio(){[4,6].forEach(function(n){try{A[n].pause();A[n].currentTime=0;}catch(e){}});}
 var swapToken=0,helloDone=false,helloT=null;
 var bub=document.getElementById('pbub'),typeT=null;
-(function(){var ls=bub.querySelectorAll('[data-t]');for(var i=0;i<ls.length;i++){var t=ls[i].getAttribute('data-t');for(var j=0;j<t.length;j++){var c=document.createElement('span');c.className='c';c.textContent=t.charAt(j);ls[i].appendChild(c);}}})();
+
+function buildTypingSpans(text, container){
+  container.innerHTML = '';
+  var allSpans = [];
+  var lines = String(text).split('\n');
+  for(var l=0; l<lines.length; l++){
+    if(l > 0) container.appendChild(document.createElement('br'));
+    var words = lines[l].split(' ');
+    for(var w=0; w<words.length; w++){
+      var word = words[w];
+      if(word.length === 0) continue;
+      var wordSpan = document.createElement('span');
+      wordSpan.style.whiteSpace = 'nowrap';
+      for(var j=0; j<word.length; j++){
+        var ch = word.charAt(j);
+        var c = document.createElement('span');
+        c.className = 'c';
+        c.textContent = ch;
+        wordSpan.appendChild(c);
+        allSpans.push(c);
+      }
+      container.appendChild(wordSpan);
+      if(w < words.length - 1){
+        container.appendChild(document.createTextNode(' '));
+      }
+    }
+  }
+  return allSpans;
+}
+
 function hideHello(){
 clearTimeout(helloT);clearInterval(typeT);
 if(!bub.classList.contains('show'))return;
 bub.classList.remove('show');bub.classList.add('out');
 setTimeout(function(){bub.classList.remove('out');var cs=bub.querySelectorAll('.c');for(var i=0;i<cs.length;i++)cs[i].classList.remove('on');},420);
 }
+
 function showHello(){
 if(helloDone)return;helloDone=true;
 setTimeout(function(){
+var l1 = bub.querySelector('.l1');
+var l2 = bub.querySelector('.l2');
+var cs = buildTypingSpans("Hello, I'm Maria.", l1);
+l2.textContent = "The PIKAZOO AI Assistant";
 var r=pet.getBoundingClientRect();
 bub.classList.toggle('l',r.left<190);
 bub.classList.add('show');
-var cs=bub.querySelectorAll('.c'),k=0;
+var k=0;
 setTimeout(function(){
 typeT=setInterval(function(){
 if(k>=cs.length){clearInterval(typeT);helloT=setTimeout(hideHello,5000);return;}
@@ -13335,12 +13370,37 @@ cs[k++].classList.add('on');
 },450);
 },500);
 }
-function warm(){
-var j=ri,g=0;
-do{j=(j+1)%ROUTINE.length;g++;}while(!allowed(ROUTINE[j])&&g<20);
-var nv=V[ROUTINE[j]];
-if(nv&&nv!==V[cur]&&!nv.classList.contains('on')){try{nv.pause();nv.currentTime=0;}catch(e){}}
+
+function showMessageBubble(text, type){
+  if(!text) return;
+  hideHello();
+  var l1 = bub.querySelector('.l1');
+  var l2 = bub.querySelector('.l2');
+  var cs = buildTypingSpans(text, l1);
+  l2.textContent = type === 'gift' ? '🎁 Special Gift' : 'Maria AI';
+  var r = pet.getBoundingClientRect();
+  bub.classList.toggle('l', r.left < 190);
+  bub.classList.add('show');
+  var k = 0;
+  clearInterval(typeT);
+  typeT = setInterval(function(){
+    if(k >= cs.length){
+      clearInterval(typeT);
+      helloT = setTimeout(hideHello, 5000);
+      return;
+    }
+    cs[k++].classList.add('on');
+  }, 45);
 }
+
+function warm(){
+  if(msgActive) return;
+  var j=ri,g=0;
+  do{j=(j+1)%ROUTINE.length;g++;}while(!allowed(ROUTINE[j])&&g<20);
+  var nv=V[ROUTINE[j]];
+  if(nv&&nv!==V[cur]&&!nv.classList.contains('on')){try{nv.pause();nv.currentTime=0;}catch(e){}}
+}
+
 function show(n){
 var token=++swapToken,v=V[n],old=V[cur],done=false;
 stopAudio();
@@ -13353,7 +13413,7 @@ done=true;
 for(var k in V){if(+k!==n){V[k].classList.remove('on');V[k].pause();}}
 v.classList.add('on');
 pet.classList.add('ready');
-showHello();
+if(!msgActive) showHello();
 warm();
 }
 var p=v.play();if(p&&p.catch){p.catch(function(){});}
@@ -13363,25 +13423,71 @@ cur=n;
 if(window.MariaPet&&window.MariaPet.onShow){window.MariaPet.onShow(n);}
 if((n===4||n===6)&&CFG.speaking){var q=A[n].play();if(q&&q.catch){q.catch(function(){});}}
 }
+
 function allowed(n){
 if(n===4||n===6)return CFG.speaking&&touched;
 if(n===10)return CFG.gift;
 return true;
 }
-function nextRoutine(){
-var g=0;
-do{ri=(ri+1)%ROUTINE.length;g++;}while(!allowed(ROUTINE[ri])&&g<20);
-state='routine';show(ROUTINE[ri]);
+
+function playNextMessage(){
+  if(!messageQueue.length) return false;
+  var msg = messageQueue.shift();
+  msgActive = true;
+  showMessageBubble(msg.text, msg.type);
+  if(msg.type === 'gift'){
+    state = 'gift';
+    CFG.gift = true;
+    show(10);
+  } else {
+    state = 'speak';
+    CFG.speaking = true;
+    show(4);
+  }
+  return true;
 }
+
+function nextRoutine(){
+  if(playNextMessage()) return;
+  var g=0;
+  do{ri=(ri+1)%ROUTINE.length;g++;}while(!allowed(ROUTINE[ri])&&g<20);
+  state='routine';show(ROUTINE[ri]);
+}
+
 function applyFlip(){pet.classList.toggle('flip',edge==='left');}
+
 function onEnded(n){
 if(n!==cur)return;
-if(state==='routine'){nextRoutine();}
+if(state==='routine'){
+  if(!playNextMessage()) nextRoutine();
+}
 else if(state==='sleep'){if(n===5){show(14);}}
 else if(state==='wake'){resetIdle();nextRoutine();}
 else if(state==='release'){resetIdle();nextRoutine();}
-else if(state==='emerge'){if(n===1){show(7);}else if(n===7){show(2);}else{nextRoutine();}}
+else if(state==='emerge'){
+  if(n===1){show(7);}
+  else if(n===7){show(2);}
+  else {
+    if(!playNextMessage()) nextRoutine();
+  }
 }
+else if(state==='speak'){
+  if(n===4){show(6);}
+  else if(n===6){
+    CFG.speaking = false;
+    msgActive = false;
+    state = 'routine';
+    if(!playNextMessage()) nextRoutine();
+  }
+}
+else if(state==='gift'){
+  CFG.gift = false;
+  msgActive = false;
+  state = 'routine';
+  if(!playNextMessage()) nextRoutine();
+}
+}
+
 function resetIdle(){lastTouch=Date.now();}
 function sleepNow(){
 if(sleptOnce||down)return;
@@ -13447,7 +13553,18 @@ x=Math.min(Math.max(0,x),innerWidth-w);y=Math.min(Math.max(0,y),innerHeight-h);
 pet.style.left=x+'px';pet.style.top=y+'px';
 }
 window.addEventListener('resize',fit);
-window.MariaPet={speaking:function(on){CFG.speaking=!!on;},gift:function(on){CFG.gift=!!on;}};
+
+window.MariaPet = {
+  speaking: function(on){ CFG.speaking = !!on; },
+  gift: function(on){ CFG.gift = !!on; },
+  queueMessage: function(text, type){
+    if(!text) return;
+    messageQueue.push({ text: String(text).trim(), type: type || 'speak' });
+    if(state === 'routine' && !msgActive){
+      playNextMessage();
+    }
+  }
+};
 
 // ⚡ Start hone ka wait karegi (jab tak app load na ho)
 window.startMariaPet = function(){
