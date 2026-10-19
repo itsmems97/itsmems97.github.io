@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Pika Store" />
-<meta name="theme-color" content="#0B0E14" />
+<meta name="theme-color" content="#fdf7dd" />
 <title>Pika Store</title>
 <!-- Eruda removed — using custom Owner Console Detector instead -->
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
@@ -5407,12 +5407,19 @@ function initTheme(){
   const saved = localStorage.getItem("pika_theme") || "dark";
   document.documentElement.setAttribute("data-theme", saved);
   $("#theme-label").textContent = saved === "dark" ? "Dark" : "Light";
+  
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if(metaTheme) metaTheme.setAttribute('content', saved === "dark" ? "#0B0E14" : "#F5F6F8");
+  
   $("#theme-toggle-btn").addEventListener("click", ()=>{
     const cur = document.documentElement.getAttribute("data-theme");
     const next = cur === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("pika_theme", next);
     $("#theme-label").textContent = next === "dark" ? "Dark" : "Light";
+    
+    const metaT = document.querySelector('meta[name="theme-color"]');
+    if(metaT) metaT.setAttribute('content', next === "dark" ? "#0B0E14" : "#F5F6F8");
   });
   const helpBtn = document.getElementById("help-support-btn");
   if(helpBtn){
