@@ -307,24 +307,39 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
     </section>
 
     <section id="screen-profile" class="screen">
-      <div class="screen-pad">
-        <h1 class="screen-title">Profile</h1>
-        <div class="profile-card">
-          <div class="profile-top">
-            <div class="avatar">P</div>
-            <div><h2 style="font-size:20px">Movie Lover</h2><p style="color:var(--text-2);font-size:14px">Guest Account</p></div>
-          </div>
-          <div class="profile-stats">
-            <div class="stat"><b id="stat-list">0</b><span>In My List</span></div>
-            <div class="stat"><b id="stat-theme">Dark</b><span>Theme</span></div>
-          </div>
-          <div class="profile-actions">
-            <button class="btn btn-glass" data-act="theme"><span data-icon="moon" data-size="18"></span> Switch Theme</button>
-            <button class="btn btn-glass" data-act="clear-list"><span data-icon="close" data-size="18"></span> Clear My List</button>
-          </div>
-        </div>
+  <div class="screen-pad">
+    <h1 class="screen-title">Profile</h1>
+    <div class="profile-card">
+      <div class="profile-top">
+        <div class="avatar" style="background:linear-gradient(45deg, #e50914, #ff6a3d)">P</div>
+        <div><h2 style="font-size:20px">PIKAZOO</h2><p style="color:var(--text-2);font-size:14px">Guest Account</p></div>
       </div>
-    </section>
+      <div class="profile-stats">
+        <div class="stat"><b id="stat-list">0</b><span>In My List</span></div>
+        <div class="stat"><b id="stat-theme">Dark</b><span>Theme</span></div>
+      </div>
+      <div class="profile-actions">
+        <button class="btn btn-glass" data-act="theme"><span data-icon="moon" data-size="18"></span> Switch Theme</button>
+        <button class="btn btn-glass" data-act="clear-list"><span data-icon="close" data-size="18"></span> Clear My List</button>
+        <a href="https://itsmems97.github.io/" target="_blank" class="btn btn-glass" style="text-decoration:none"><span data-icon="zap" data-size="18" style="color:#00e676"></span> Visit Pika Store</a>
+        <a href="https://wa.me/923041891897" target="_blank" class="btn btn-glass" style="text-decoration:none"><span data-icon="info" data-size="18" style="color:#25D366"></span> Help & Support</a>
+      </div>
+      
+      <div style="margin-top:30px;text-align:center;line-height:1.6;">
+        <p style="color:#f5b301;font-weight:bold;font-size:15px">Developed By SHOAIB</p>
+        <p style="color:#fff;font-size:13px">First Pakistan OTT</p>
+        <p style="color:#a3a3a8;font-size:12px">Entertainment Mod Hub</p>
+      </div>
+
+      <div style="margin-top:20px;display:flex;justify-content:center;">
+        <a href="https://wa.me/9660570376903" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); padding:8px 20px; border-radius:999px; color:#fff; font-size:13px; display:flex; align-items:center; gap:8px;">
+          <span style="color:#25D366">●</span> Contact
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
   </main>
 
   <nav class="bottom-nav" id="bottom-nav">
@@ -348,8 +363,9 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
   </div>
   <div class="player-bottom">
     <button class="icon-btn hidden" id="player-lang" data-act="lang-open" aria-label="Language"><span data-icon="globe" data-size="22"></span></button>
-    <button class="icon-btn eps-pill hidden" id="player-eps" data-act="eps-open" aria-label="Episodes">Episodes</button>
-    <span class="grow"></span>
+<button class="icon-btn eps-pill hidden" id="player-eps" data-act="eps-open" aria-label="Episodes">Episodes</button>
+<button class="icon-btn" id="player-quality" data-act="quality-open" aria-label="Quality" style="width:auto;padding:0 12px;border-radius:999px;font-size:12px;font-weight:bold">720p</button>
+<span class="grow"></span>
     <button class="icon-btn" data-act="reload" aria-label="Reload"><span data-icon="refresh" data-size="22"></span></button>
     <button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen"><span data-icon="fullscreen" data-size="22"></span></button>
   </div>
@@ -372,9 +388,9 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
 const CONFIG = { API_BASE: 'http://193.122.76.131:4000' };
 const API = CONFIG.API_BASE;
 const CATS = [
-  ['all','All'],['new','New Releases'],['bollywood','Bollywood'],['punjabi','Punjabi'],
-  ['hollywood','Hollywood'],['western','Western'],['kdrama','K-Drama'],
-  ['action','Action'],['comedy','Comedy'],['horror','Horror']
+  ['all','All'],['new','New Releases'],['top10','Top 10'],['trending','Trending'],
+  ['bollywood','Bollywood'],['hollywood','Hollywood'],['kdrama','K-Drama'],
+  ['action','Action'],['comedy','Comedy'],['horror','Horror'],['romance','Romance'],['thriller','Thriller']
 ];
 const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450"><rect width="300" height="450" fill="#1a1a1d"/><g fill="none" stroke="#55555c" stroke-width="6" stroke-linecap="round"><rect x="105" y="190" width="90" height="70" rx="8"/><path d="M125 190v70M175 190v70"/></g></svg>');
 
@@ -856,7 +872,16 @@ function chipsHtml(active){
   }).join('')+'</div>';
 }
 function renderBrowse(){
-  $('#search-body').innerHTML = '<p class="muted">Browse by category</p>' + chipsHtml('');
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('pika_search_history') || '[]'); } catch(e){}
+  
+  let historyHtml = '';
+  if (history.length > 0) {
+    historyHtml = '<p class="muted" style="display:flex;justify-content:space-between;align-items:center">Recent Searches <button data-act="clear-search-history" style="color:var(--accent);font-size:12px;background:none;border:none">Clear All</button></p><div class="chips" style="margin-bottom:20px">' + 
+      history.map(h => '<button class="chip" data-act="search-history-click" data-id="'+esc(h)+'"><span data-icon="clock" data-size="12" style="margin-right:4px"></span>'+esc(h)+'<span data-act="delete-search-history" data-id="'+esc(h)+'" style="margin-left:8px;color:#ff4d4d;padding:4px">✕</span></button>').join('') + '</div>';
+  }
+  
+  $('#search-body').innerHTML = historyHtml + '<p class="muted">Browse by category</p>' + chipsHtml('');
 }
 let browseTok = 0;
 async function browse(cat){
@@ -875,6 +900,14 @@ async function browse(cat){
 }
 async function runSearch(q){
   if (sAbort) sAbort.abort();
+  // Save to history
+  try {
+    let history = JSON.parse(localStorage.getItem('pika_search_history') || '[]');
+    history = history.filter(h => h.toLowerCase() !== q.toLowerCase());
+    history.unshift(q);
+    if (history.length > 8) history.pop();
+    localStorage.setItem('pika_search_history', JSON.stringify(history));
+  } catch(e){}
   const ctl = sAbort = new AbortController();
   const body = $('#search-body');
   body.innerHTML = skeleton(6).replace('class="grid skel"', 'class="grid skel search-grid"');
@@ -984,7 +1017,8 @@ function hideSheetUI(){
 function embedUrl(dubId){
   const it = state.player.item;
   const p = state.player;
-  return API + '/proxy/embed?id=' + encodeURIComponent(it.id) + '&type=' + encodeURIComponent(it.type || 'movie') + (dubId ? '&dubId=' + encodeURIComponent(dubId) : '') + (it.type === 'tv' ? '&season=' + p.season + '&episode=' + p.episode : '');
+  const quality = p.quality || 720;
+  return API + '/proxy/embed?q=' + quality + '&id=' + encodeURIComponent(it.id) + '&type=' + encodeURIComponent(it.type || 'movie') + (dubId ? '&dubId=' + encodeURIComponent(dubId) : '') + (it.type === 'tv' ? '&season=' + p.season + '&episode=' + p.episode : '');
 }
 function loadFrame(url){
   const p = state.player, frame = $('#player-frame'), loader = $('#player-loading');
@@ -1007,9 +1041,20 @@ async function openPlayer(item){
   $('#player-title').textContent = item.title || '';
   $('#player-lang').classList.add('hidden');
   $('#player-eps').classList.add('hidden');
+  
+  // FIX: Hide Episodes button for Movies (only show for TV Shows)
+  if (item.type !== 'tv') {
+    $('#player-eps').style.display = 'none';
+  } else {
+    $('#player-eps').style.display = 'flex';
+  }
+
   $('#eps-drawer').classList.remove('open');
   $('#lang-drawer').classList.remove('open');
   $('#player').classList.add('open');
+  
+  // FIX: Scroll Lock (Background scroll rokne ke liye)
+  document.body.style.overflow = 'hidden';
   if (layers.indexOf('player') < 0) pushLayer('player');
   loadFrame(embedUrl());
   try {
@@ -1035,6 +1080,9 @@ async function openPlayer(item){
 function hidePlayerUI(){
   clearTimeout(state.player.loadTimer);
   $('#player').classList.remove('open');
+  
+  // FIX: Unlock scroll when player closes
+  document.body.style.overflow = '';
   $('#lang-drawer').classList.remove('open');
   $('#player-frame').querySelectorAll('iframe').forEach(function(f){ f.remove(); });
   state.player.item = null;
@@ -1092,8 +1140,20 @@ document.addEventListener('click', function(e){
     case 'theme': toggleTheme(); break;
     case 'search-go': navigate('search'); setTimeout(function(){ $('#search-input').focus(); }, 60); break;
     case 'search-clear':
-      $('#search-input').value = ''; $('#search-clear').classList.add('hidden');
-      if (sAbort) sAbort.abort(); renderBrowse(); break;
+  $('#search-input').value = ''; $('#search-clear').classList.add('hidden');
+  if (sAbort) sAbort.abort(); renderBrowse(); break;
+case 'search-history-click':
+  $('#search-input').value = id; $('#search-clear').classList.remove('hidden');
+  runSearch(id); break;
+case 'delete-search-history':
+  e.stopPropagation();
+  let hist = JSON.parse(localStorage.getItem('pika_search_history') || '[]');
+  hist = hist.filter(h => h !== id);
+  localStorage.setItem('pika_search_history', JSON.stringify(hist));
+  renderBrowse(); break;
+case 'clear-search-history':
+  localStorage.setItem('pika_search_history', '[]');
+  renderBrowse(); break;
     case 'browse': browse(id); break;
     case 'close-sheet': closeTop('sheet'); break;
     case 'close-player': closeTop('player'); break;
@@ -1109,6 +1169,15 @@ document.addEventListener('click', function(e){
       if (state.player.item) $('#player-title').textContent = (state.player.item.title || '') + ' - S' + state.player.season + ' E' + state.player.episode;
       loadFrame(embedUrl(state.player.dubId)); break;
     case 'lang-open': openLangDrawer(); break;
+    case 'lang-open': openLangDrawer(); break;
+case 'quality-open':
+  const newQ = prompt("Select Quality (480, 720, 1080):", state.player.quality || 720);
+  if (newQ && ['480','720','1080'].includes(newQ)) {
+    state.player.quality = newQ;
+    $('#player-quality').textContent = newQ + 'p';
+    loadFrame(embedUrl(state.player.dubId));
+  }
+  break;
     case 'lang-close': $('#lang-drawer').classList.remove('open'); break;
     case 'lang-pick':
       state.player.dubId = id;
