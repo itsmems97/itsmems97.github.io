@@ -224,6 +224,16 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
 #sheet{transition:transform .32s cubic-bezier(.16,1,.3,1),visibility .32s}
 #lang-drawer{transition:transform .3s cubic-bezier(.16,1,.3,1),visibility .3s}
 
+/* ===== Episodes drawer ===== */
+#eps-drawer{position:absolute;z-index:5;left:0;right:0;bottom:0;max-height:70%;overflow-y:auto;padding:18px;border-radius:22px 22px 0 0;background:#171719;transform:translateY(105%);transition:transform .3s cubic-bezier(.16,1,.3,1),visibility .3s;border-top:1px solid rgba(255,255,255,.1);visibility:hidden}
+#eps-drawer.open{transform:translateY(0);visibility:visible}
+.season-btn{display:inline-block;padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:13px;margin:0 8px 10px 0}
+.season-btn.active{background:rgba(229,9,20,.18);border-color:var(--accent);font-weight:700}
+.eps-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.ep-btn{padding:12px 0;border-radius:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:14px;text-align:center}
+.ep-btn.active{background:var(--accent);border-color:var(--accent);font-weight:800}
+.eps-pill{width:auto!important;padding:0 16px;border-radius:999px!important;font-size:13px;font-weight:700;display:flex!important;align-items:center}
+
 /* ===== Android Show Taps Effect (Soft Fade) ===== */
 .tap-dot {
   position: fixed; left: 0; top: 0; width: 22px; height: 22px;
@@ -338,6 +348,7 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
   </div>
   <div class="player-bottom">
     <button class="icon-btn hidden" id="player-lang" data-act="lang-open" aria-label="Language"><span data-icon="globe" data-size="22"></span></button>
+    <button class="icon-btn eps-pill hidden" id="player-eps" data-act="eps-open" aria-label="Episodes">Episodes</button>
     <span class="grow"></span>
     <button class="icon-btn" data-act="reload" aria-label="Reload"><span data-icon="refresh" data-size="22"></span></button>
     <button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen"><span data-icon="fullscreen" data-size="22"></span></button>
@@ -345,6 +356,10 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
   <div id="lang-drawer">
     <div class="drawer-header"><h3>Select Language</h3><button class="icon-btn" data-act="lang-close" aria-label="Close"><span data-icon="close" data-size="18"></span></button></div>
     <div id="lang-list"></div>
+  </div>
+  <div id="eps-drawer">
+    <div class="drawer-header"><h3>Episodes</h3><button class="icon-btn" data-act="eps-close" aria-label="Close"><span data-icon="close" data-size="18"></span></button></div>
+    <div id="eps-list"></div>
   </div>
 </div>
 
@@ -378,8 +393,12 @@ const state = {
   heroIndex: 0,
   cat: 'all',
   catTok: 0,
+  catPage: 1,
+  catMore: true,
+  catLoading: false,
+  catSeen: null,
   sheetId: null,
-  player: { item: null, dubs: [], dubId: null, loadTimer: 0 }
+  player: { item: null, dubs: [], dubId: null, loadTimer: 0, season: 1, episode: 1, seasons: [], viewSeason: 1 }
 };
 const itemCache = new Map();
 const scrollPos = {};
@@ -518,11 +537,76 @@ function updateHeader(){
   headerSolid = solid;
   $('#app-header').classList.toggle('solid', solid);
 }
-let ticking = false;
+/* ===== Endless Scroll: Category Grid ===== */
+function maybeLoadMoreCategory(){
+  if (state.screen !== 'home') return;
+  if (state.cat === 'all') return;
+  if (state.catLoading || !state.catMore) return;
+  if (layers.length) return;
+  const grid = $('#home-rows').querySelector('.grid');
+  if (!grid) return;
+  const rect = grid.getBoundingClientRect();
+  if (rect.bottom - window.innerHeight < 400) loadMoreCategory();
+}
+
+async function loadMoreCategory(){
+  if (state.screen !== 'home' || state.cat === 'all') return;
+  if (state.catLoading || !state.catMore) return;
+  const host = $('#home-rows');
+  const grid = host.querySelector('.grid');
+  if (!grid) return;
+
+  state.catLoading = true;
+  const tok = state.catTok;
+  const page = state.catPage + 1;
+
+  let loader = document.getElementById('cat-loader');
+  if (!loader){
+    loader = document.createElement('div');
+    loader.id = 'cat-loader';
+    loader.style.cssText = 'text-align:center;padding:16px;color:var(--text-2);font-size:13px;';
+    loader.textContent = 'Loading more...';
+    host.appendChild(loader);
+  }
+
+  try {
+    const res = await fetchCategory(state.cat, page);
+    if (tok !== state.catTok) return;
+
+    const fresh = res.items.filter(function(it){ return it && it.id != null && !state.catSeen.has(String(it.id)); });
+
+    if (!fresh.length){
+      state.catMore = false;
+    } else {
+      fresh.forEach(function(it){ state.catSeen.add(String(it.id)); });
+      state.catPage = page;
+      grid.insertAdjacentHTML('beforeend', fresh.map(posterCard).join(''));
+      state.catMore = res.more;
+    }
+
+    const sentinel = document.getElementById('cat-sentinel');
+    if (sentinel) sentinel.textContent = state.catMore ? '' : 'No more movies.';
+  } catch(e){
+    if (tok === state.catTok){
+      const sentinel = document.getElementById('cat-sentinel');
+      if (sentinel) sentinel.textContent = 'Load failed. Scroll again to retry.';
+    }
+  } finally {
+    if (tok === state.catTok){
+      state.catLoading = false;
+      const l = document.getElementById('cat-loader');
+      if (l) l.remove();
+    }
+  }
+
+  setTimeout(maybeLoadMoreCategory, 150);
+}
+
+let catScrollTicking = false;
 window.addEventListener('scroll', function(){
-  if (ticking) return;
-  ticking = true;
-  requestAnimationFrame(function(){ updateHeader(); ticking = false; });
+  if (catScrollTicking) return;
+  catScrollTicking = true;
+  requestAnimationFrame(function(){ catScrollTicking = false; maybeLoadMoreCategory(); });
 }, { passive: true });
 
 /* ============================================
@@ -655,20 +739,35 @@ function pickItems(d){
   }
   return [];
 }
-async function fetchCategory(cat){
+async function fetchCategory(cat, page){
+  page = page || 1;
   var label = (CATS.find(function(c){ return c[0] === cat; }) || [])[1] || cat;
-  var d = await apiGet('/category?genre=' + encodeURIComponent(cat));
+  var d = await apiGet('/category?genre=' + encodeURIComponent(cat) + '&page=' + page, { ttl: page === 1 ? 300000 : 60000 });
   var items = pickItems(d);
-  if (!items.length){
-    try {
-      var s = await apiGet('/search?q=' + encodeURIComponent(label), { ttl: 120000 });
-      items = pickItems(s);
-    } catch(e){}
+  var more = items.length > 0;
+  if (d && typeof d === 'object' && !Array.isArray(d)){
+    if (d.hasMore === false || d.has_more === false) more = false;
+    if (d.nextPage === null || d.next_page === null) more = false;
+    if (typeof d.totalPages === 'number' && page >= d.totalPages) more = false;
+    if (typeof d.total_pages === 'number' && page >= d.total_pages) more = false;
   }
-  return items;
+  if (!items.length){
+    if (page === 1){
+      try {
+        var s = await apiGet('/search?q=' + encodeURIComponent(label), { ttl: 120000 });
+        items = pickItems(s);
+      } catch(e){}
+    }
+    more = false;
+  }
+  return { items: items, more: more };
 }
 async function selectCat(cat){
   state.cat = cat;
+  state.catPage = 1;
+  state.catMore = true;
+  state.catLoading = false;
+  state.catSeen = new Set();
   $$('.cat-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.id === cat); });
   const bar = $('#category-bar');
   const tab = bar.querySelector('.cat-tab.active');
@@ -681,12 +780,20 @@ async function selectCat(cat){
   const tok = ++state.catTok;
   host.innerHTML = skeleton(9);
   try {
-    const items = await fetchCategory(cat);
+    const res = await fetchCategory(cat, 1);
     if (tok !== state.catTok) return;
     const label = (CATS.find(function(c){ return c[0] === cat; }) || [])[1] || cat;
-    host.innerHTML = items.length
-      ? '<div class="row-head" style="margin-top:6px"><h2 class="row-title">'+esc(label)+'</h2></div>' + gridHtml(items)
-      : emptyState('No results found.');
+    if (res.items.length){
+      res.items.forEach(function(it){ if (it && it.id != null) state.catSeen.add(String(it.id)); });
+      state.catMore = res.more;
+      host.innerHTML = '<div class="row-head" style="margin-top:6px"><h2 class="row-title">'+esc(label)+'</h2></div>' +
+        gridHtml(res.items) +
+        '<div id="cat-sentinel" style="text-align:center;padding:16px;color:var(--text-2);font-size:13px;">' + (res.more ? '' : 'No more movies.') + '</div>';
+      setTimeout(maybeLoadMoreCategory, 300);
+    } else {
+      state.catMore = false;
+      host.innerHTML = emptyState('No results found.');
+    }
   } catch(e){
     if (tok !== state.catTok) return;
     host.innerHTML = emptyState('Error loading category.', 'cat:' + cat);
@@ -711,13 +818,13 @@ async function browse(cat){
   const body = $('#search-body');
   body.innerHTML = chipsHtml(cat) + '<div id="browse-res">'+skeleton(9)+'</div>';
   try {
-    const items = await fetchCategory(cat);
+    const res = await fetchCategory(cat, 1);
     if (tok !== browseTok) return;
-    const res = $('#browse-res'); if (!res) return;
-    res.innerHTML = items.length ? gridHtml(items, 'search-grid') : emptyState('No results found.');
+    const host = $('#browse-res'); if (!host) return;
+    host.innerHTML = res.items.length ? gridHtml(res.items, 'search-grid') : emptyState('No results found.');
   } catch(e){
     if (tok !== browseTok) return;
-    const res = $('#browse-res'); if (res) res.innerHTML = emptyState('Error loading category.');
+    const host = $('#browse-res'); if (host) host.innerHTML = emptyState('Error loading category.');
   }
 }
 async function runSearch(q){
@@ -830,7 +937,8 @@ function hideSheetUI(){
    ============================================ */
 function embedUrl(dubId){
   const it = state.player.item;
-  return API + '/proxy/embed?id=' + encodeURIComponent(it.id) + '&type=' + encodeURIComponent(it.type || 'movie') + (dubId ? '&dubId=' + encodeURIComponent(dubId) : '');
+  const p = state.player;
+  return API + '/proxy/embed?id=' + encodeURIComponent(it.id) + '&type=' + encodeURIComponent(it.type || 'movie') + (dubId ? '&dubId=' + encodeURIComponent(dubId) : '') + (it.type === 'tv' ? '&season=' + p.season + '&episode=' + p.episode : '');
 }
 function loadFrame(url){
   const p = state.player, frame = $('#player-frame'), loader = $('#player-loading');
@@ -849,8 +957,11 @@ async function openPlayer(item){
   if (!item) return;
   const p = state.player;
   p.item = item; p.dubs = []; p.dubId = null;
+  p.season = 1; p.episode = 1; p.seasons = []; p.viewSeason = 1;
   $('#player-title').textContent = item.title || '';
   $('#player-lang').classList.add('hidden');
+  $('#player-eps').classList.add('hidden');
+  $('#eps-drawer').classList.remove('open');
   $('#lang-drawer').classList.remove('open');
   $('#player').classList.add('open');
   if (layers.indexOf('player') < 0) pushLayer('player');
@@ -860,10 +971,20 @@ async function openPlayer(item){
     if (p.item !== item) return;
     if (d.item && d.item.dubs && d.item.dubs.length > 1){
       p.dubs = d.item.dubs;
-      p.dubId = d.item.dubs[0].subject_id;
+      p.dubId = item.id;
       $('#player-lang').classList.remove('hidden');
     }
   } catch(e){}
+  if (item.type === 'tv'){
+    try {
+      const e = await apiGet('/episodes?id=' + encodeURIComponent(item.id), { ttl: 300000 });
+      if (p.item !== item) return;
+      if (e.seasons && e.seasons.length){
+        p.seasons = e.seasons;
+        $('#player-eps').classList.remove('hidden');
+      }
+    } catch(err){}
+  }
 }
 function hidePlayerUI(){
   clearTimeout(state.player.loadTimer);
@@ -884,6 +1005,21 @@ function toggleFullscreen(){
     const r = req.call(el);
     if (r && r.then) r.then(function(){ try { screen.orientation.lock('landscape').catch(function(){}); } catch(e){} }).catch(function(){});
   } catch(e){}
+}
+function openEpsDrawer(){
+  const p = state.player;
+  const vs = p.viewSeason || p.season;
+  const sBtns = p.seasons.map(function(s){
+    return '<button class="season-btn'+(s.season === vs ? ' active' : '')+'" data-act="season-pick" data-id="'+s.season+'">Season '+s.season+'</button>';
+  }).join('');
+  const cur = p.seasons.find(function(s){ return s.season === vs; }) || p.seasons[0];
+  let eps = '';
+  const n = cur ? cur.count : 0;
+  for (let i = 1; i <= n; i++){
+    eps += '<button class="ep-btn'+((vs === p.season && i === p.episode) ? ' active' : '')+'" data-act="ep-pick" data-id="'+i+'">'+i+'</button>';
+  }
+  $('#eps-list').innerHTML = '<div>'+sBtns+'</div><div class="eps-grid">'+eps+'</div>';
+  $('#eps-drawer').classList.add('open');
 }
 function openLangDrawer(){
   const p = state.player;
@@ -917,6 +1053,15 @@ document.addEventListener('click', function(e){
     case 'close-player': closeTop('player'); break;
     case 'fullscreen': toggleFullscreen(); break;
     case 'reload': if (state.player.item) loadFrame(embedUrl(state.player.dubId)); break;
+    case 'eps-open': state.player.viewSeason = state.player.season; openEpsDrawer(); break;
+    case 'eps-close': $('#eps-drawer').classList.remove('open'); break;
+    case 'season-pick': state.player.viewSeason = Number(id); openEpsDrawer(); break;
+    case 'ep-pick':
+      state.player.season = state.player.viewSeason || state.player.season;
+      state.player.episode = Number(id);
+      $('#eps-drawer').classList.remove('open');
+      if (state.player.item) $('#player-title').textContent = (state.player.item.title || '') + ' - S' + state.player.season + ' E' + state.player.episode;
+      loadFrame(embedUrl(state.player.dubId)); break;
     case 'lang-open': openLangDrawer(); break;
     case 'lang-close': $('#lang-drawer').classList.remove('open'); break;
     case 'lang-pick':
@@ -927,10 +1072,15 @@ document.addEventListener('click', function(e){
       if (!state.list.length){ toast('Your list is already empty'); break; }
       state.list = []; store.set('pika_list', '[]'); renderProfile(); toast('My List cleared'); break;
     case 'retry':
-      if (id === 'home') loadHome(true);
-      else if (id === 'list') renderListScreen();
-      else if (id && id.indexOf('cat:') === 0){ apiCache.delete('/category?genre=' + encodeURIComponent(id.slice(4))); selectCat(id.slice(4)); }
-      break;
+  if (id === 'home') loadHome(true);
+  else if (id === 'list') renderListScreen();
+  else if (id && id.indexOf('cat:') === 0){
+    var g = id.slice(4);
+    var prefix = '/category?genre=' + encodeURIComponent(g);
+    Array.from(apiCache.keys()).forEach(function(k){ if (k.indexOf(prefix) === 0) apiCache.delete(k); });
+    selectCat(g);
+  }
+  break;
   }
 });
 
