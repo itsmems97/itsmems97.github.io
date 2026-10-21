@@ -2653,7 +2653,7 @@ button.av3d{ -webkit-mask-image:none; mask-image:none; }   /* global button{mask
     <button class="nav-btn active" data-page="home-page"><svg><use href="#ic-home"/></svg>Home</button>
     <button class="nav-btn" data-page="channels-page"><svg><use href="#ic-channel"/></svg>Channels</button>
     <button class="nav-btn" data-page="users-page"><svg><use href="#ic-users"/></svg>Users</button>
-    <button class="nav-btn" data-page="__entertainment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>Entertainment</button>
+    <button class="nav-btn" data-page="__pika-movie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>Pika Movie</button>
   <button class="nav-btn" data-page="upload-page"><svg><use href="#ic-upload"/></svg>Upload</button>
   <button class="nav-btn" data-page="profile-page"><svg><use href="#ic-user"/></svg>Profile</button>
 </nav>
@@ -5467,130 +5467,6 @@ function initTheme(){
     });
   }
 }
-function openMusicPlayer(url, title){
-  const embedUrl = url || "https://193-122-76-131.nip.io/music/music.html";
-  const headerTitle = title || "Pika Music";
-
-  let overlay = document.getElementById("music-overlay");
-  if(!overlay){
-    document.body.insertAdjacentHTML("beforeend", `
-      <div id="music-overlay" style="display:none;position:fixed;inset:0;z-index:220;background:#0B0E14;flex-direction:column;">
-        <div style="display:flex;align-items:center;padding:calc(8px + env(safe-area-inset-top)) 8px 8px;background:var(--bg-elevated);border-bottom:1px solid var(--border);flex-shrink:0;">
-          <button id="music-close-btn" type="button" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text);background:transparent;border:none;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          </button>
-          <div id="music-title" style="flex:1;text-align:center;font-weight:700;font-size:15px;color:var(--text);">Pika Music</div>
-          <div style="width:44px;"></div>
-        </div>
-        <iframe id="music-iframe" src="about:blank" allow="autoplay; encrypted-media; fullscreen; microphone" style="flex:1;width:100%;border:none;background:#0B0E14;"></iframe>
-      </div>
-    `);
-    overlay = document.getElementById("music-overlay");
-    document.getElementById("music-close-btn").addEventListener("click", closeMusicPlayer);
-  }
-
-  const iframe = document.getElementById("music-iframe");
-  const titleEl = document.getElementById("music-title");
-
-  if(iframe.dataset.currentUrl !== embedUrl){
-    iframe.src = embedUrl;
-    iframe.dataset.currentUrl = embedUrl;
-  }
-  if(titleEl) titleEl.textContent = headerTitle;
-
-  overlay.style.display = "flex";
-  document.body.style.overflow = "hidden";
-  try{ history.pushState({ music: true }, ""); }catch(e){}
-}
-function closeMusicPlayer(){
-  const overlay = document.getElementById("music-overlay");
-  if(overlay) overlay.style.display = "none";
-  document.body.style.overflow = "";
-}
-function openEntertainmentPopup(){
-  if(document.getElementById("ent-overlay")) return;
-
-  // ✅ Scroll lock — background freeze karo
-  const _entScrollY = window.scrollY || window.pageYOffset || 0;
-  document.body.style.position = "fixed";
-  document.body.style.top = `-${_entScrollY}px`;
-  document.body.style.left = "0";
-  document.body.style.right = "0";
-  document.body.style.width = "100%";
-  document.body.style.overflow = "hidden";
-  document.documentElement.style.overflow = "hidden";
-
-  document.body.insertAdjacentHTML("beforeend", `
-    <div id="ent-overlay">
-      <div class="ent-card">
-        <h3 class="ent-title">Entertainment</h3>
-        <p class="ent-sub">Choose what you want to enjoy</p>
-
-        <button class="ent-btn" id="ent-music">
-          <div class="ent-btn-icon music">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-            </svg>
-          </div>
-          <div class="ent-btn-text">
-            <b>Music &amp; Podcast</b>
-            <small>Stream songs, playlists &amp; podcasts</small>
-          </div>
-          <svg class="ent-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 6l6 6-6 6"/>
-          </svg>
-        </button>
-
-        <button class="ent-btn" id="ent-movies">
-          <div class="ent-btn-icon movies">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="4" width="20" height="16" rx="2"/>
-              <path d="M7 4v16M17 4v16M2 9h5M2 15h5M17 9h5M17 15h5"/>
-            </svg>
-          </div>
-          <div class="ent-btn-text">
-            <b>Movies &amp; Series</b>
-            <small>Watch the latest films &amp; shows</small>
-          </div>
-          <svg class="ent-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 6l6 6-6 6"/>
-          </svg>
-        </button>
-
-        <button class="ent-close" id="ent-close">Cancel</button>
-      </div>
-    </div>
-  `);
-
-  const ov = document.getElementById("ent-overlay");
-  const close = ()=>{
-    // ✅ Scroll unlock — body ko wapas normal karo
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.left = "";
-    document.body.style.right = "";
-    document.body.style.width = "";
-    document.body.style.overflow = "";
-    document.documentElement.style.overflow = "";
-    window.scrollTo(0, _entScrollY);
-
-    ov.style.animation = "entFadeIn .22s ease-in reverse";
-    setTimeout(()=> ov.remove(), 200);
-  };
-
-  document.getElementById("ent-close").addEventListener("click", close);
-  ov.addEventListener("click", e=>{ if(e.target === ov) close(); });
-
-  document.getElementById("ent-music").addEventListener("click", ()=>{
-  close();
-  setTimeout(()=> openMusicPlayer("https://193-122-76-131.nip.io/music/music.html", "Pika Music"), 130);
-});
-
-  document.getElementById("ent-movies").addEventListener("click", ()=>{
-    close();
-    setTimeout(()=> openMusicPlayer("https://itsmems97.github.io/Pika-Movie.html", "Movies & Series"), 130);
-  });
-}
 /* ============ SPOOF PROFILE PRELOAD STATE ============ */
 let SPOOF_LOAD_STATE = 'idle'; // 'idle' | 'loading' | 'ready'
 let _spoilerPreloadToken = 0;
@@ -5733,8 +5609,8 @@ function initNav(){
       e.stopPropagation();
       
       const target = btn.dataset.page;
-      if(target === "__entertainment"){
-        openEntertainmentPopup();
+      if(target === "__pika-movie"){
+        window.location.href = "http://193.122.76.131:4000";
         return;
       }
       if(target === "__categories"){ openCategoriesSheet(); return; }
@@ -12803,11 +12679,7 @@ async function discSearchAndAppend(q){
   let backExitTimer = null;
 
   function closeTopUI(){
-  // 0. Entertainment popup
-  const entOv = document.getElementById('ent-overlay');
-  if(entOv){ entOv.remove(); return true; }
-
-  // 1. Sheets / dialogs (chat, app detail, user, comments, edit, etc.)
+// 1. Sheets / dialogs (chat, app detail, user, comments, edit, etc.)
     const sheets = document.querySelectorAll('.sheet-backdrop');
     if(sheets.length){
       sheets[sheets.length - 1].remove();
@@ -12860,13 +12732,6 @@ async function discSearchAndAppend(q){
       if(si) si.value = '';
       return true;
     }
-
-    // 8. Music player is open → close it
-const music = document.getElementById('music-overlay');
-if(music && music.style.display !== 'none'){
-  if(typeof closeMusicPlayer === 'function') closeMusicPlayer();
-  return true;
-}
 
 // 9. Channel is open → close it
 const pktg = document.getElementById('pktg');
