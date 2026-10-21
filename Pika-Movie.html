@@ -652,6 +652,26 @@ html[data-theme="dark"] .sheet-hero::after { background: linear-gradient(to top,
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .blob { animation: none !important; }
 }
+
+/* DEVTOOL CSS */
+#pika-devtool-btn {
+    position: fixed; bottom: 100px; right: 20px; z-index: 99999;
+    background: #ff003c; color: white; border-radius: 50%;
+    width: 50px; height: 50px; display: grid; place-items: center;
+    box-shadow: 0 4px 15px rgba(255, 0, 60, 0.6); font-weight: bold;
+    font-size: 24px; cursor: pointer; border: 2px solid #fff;
+}
+#pika-devtool-panel {
+    position: fixed; inset: 0; z-index: 100000; background: rgba(0,0,0,0.95);
+    color: #00ff00; display: none; flex-direction: column; padding: 20px;
+    font-family: monospace; font-size: 13px;
+}
+#pika-devtool-panel.open { display: flex; }
+.dev-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #222; padding: 10px; border-radius: 8px;}
+.dev-header h3 { margin: 0; color: #fff; }
+.dev-header button { background: #444; color: white; padding: 8px 15px; border-radius: 5px; font-size: 14px; cursor: pointer; border: none; margin-left: 10px;}
+.dev-header button:hover { background: #666; }
+#dev-log { flex: 1; overflow-y: auto; background: #111; padding: 15px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; border: 1px solid #333; }
 </style>
 </head>
 <body>
@@ -759,12 +779,25 @@ html[data-theme="dark"] .sheet-hero::after { background: linear-gradient(to top,
 
 <div id="toast-wrap" aria-live="polite"></div>
 
+<!-- DEVTOOL UI -->
+<button id="pika-devtool-btn" onclick="toggleDevTool()">🐞</button>
+<div id="pika-devtool-panel">
+    <div class="dev-header">
+        <h3>🐞 PIKA DevTools (Error Logs)</h3>
+        <div>
+            <button onclick="copyDevLogs()">📋 Copy All Logs</button>
+            <button onclick="toggleDevTool()" style="background: #ff003c;">✖ Close</button>
+        </div>
+    </div>
+    <div id="dev-log">Initializing DevTools...\n</div>
+</div>
+
 <script>
 /* ============================================
    SECTION 1 — CONFIGURATION
    ============================================ */
 const CONFIG = {
-  API_BASE: 'https://144-24-218-100.nip.io/movies-api',
+  API_BASE: 'http://193.122.76.131:4000',
   LOGO: 'https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png',
   HERO_INTERVAL: 8000,
   SPLASH_MS: 1500,
@@ -2742,6 +2775,80 @@ initNavSwipe();
   runSplash();
   if ('serviceWorker' in navigator && false) { /* intentionally disabled */ }
 }
+
+/* ============================================
+   SECTION 18 — DEVTOOL / ERROR LOGGER
+   ============================================ */
+let devLogs = [];
+const devLogEl = document.getElementById('dev-log');
+
+function logDev(msg) {
+    const time = new Date().toLocaleTimeString();
+    const logLine = `[${time}] ${msg}`;
+    devLogs.push(logLine);
+    if (devLogEl) devLogEl.textContent = devLogs.join('\n');
+    console.log(logLine);
+}
+
+function toggleDevTool() {
+    document.getElementById('pika-devtool-panel').classList.toggle('open');
+}
+
+function copyDevLogs() {
+    navigator.clipboard.writeText(devLogs.join('\n')).then(() => {
+        alert('Logs Copied to Clipboard! Paste them in the chat.');
+    }).catch(err => alert('Failed to copy: ' + err));
+}
+
+// API Failures ko pakadne ke liye
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+    const url = args[0];
+    try {
+        logDev(`FETCH START: ${url}`);
+        const res = await originalFetch(...args);
+        if (!res.ok) logDev(`❌ FETCH FAIL (${res.status}): ${url}`);
+        else logDev(`✅ FETCH SUCCESS (${res.status}): ${url}`);
+        return res;
+    } catch (err) {
+        logDev(`❌ FETCH ERROR: ${err.message} - URL: ${url}`);
+        throw err;
+    }
+};
+
+// Js Errors
+window.addEventListener('error', (e) => {
+    logDev(`❌ JS ERROR: ${e.message} at ${e.filename}:${e.lineno}`);
+});
+window.addEventListener('unhandledrejection', (e) => {
+    logDev(`❌ PROMISE REJECTION: ${e.reason}`);
+});
+
+// Naya: Iframe ke andar se Video Errors pakadne ke liye
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'video_error') {
+        logDev(`❌ VIDEO PLAYER ERROR: Code ${event.data.code} - ${event.data.message}`);
+    } else if (event.data && event.data.type === 'video_playing') {
+        logDev(`✅ VIDEO STARTED PLAYING SUCCESSFULLY!`);
+    }
+});
+
+// Player (Iframe) Load Failures
+const originalLoadFrame = loadFrame;
+loadFrame = function(url) {
+    logDev(`🎬 PLAYER IFRAME LOADING: ${url}`);
+    originalLoadFrame(url);
+    
+    const frame = document.getElementById('player-frame');
+    const ifr = frame ? frame.querySelector('iframe') : null;
+    if (ifr) {
+        ifr.addEventListener('load', () => logDev('✅ PLAYER IFRAME HTML LOADED. Waiting for video data...'));
+        ifr.addEventListener('error', () => logDev('❌ PLAYER IFRAME FAILED TO LOAD'));
+    }
+};
+
+logDev('DevTools initialized. Waiting for actions...');
+logDev('If video is not playing, check logs above after clicking Play.');
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 </script>
