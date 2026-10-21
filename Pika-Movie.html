@@ -396,6 +396,10 @@ const state = {
   catPage: 1,
   catMore: true,
   catLoading: false,
+  feedPage: 0,
+  feedMore: true,
+  feedLoading: false,
+  feedSeen: new Set(),
   catSeen: null,
   sheetId: null,
   player: { item: null, dubs: [], dubId: null, loadTimer: 0, season: 1, episode: 1, seasons: [], viewSeason: 1 }
@@ -602,11 +606,49 @@ async function loadMoreCategory(){
   setTimeout(maybeLoadMoreCategory, 150);
 }
 
+/* ===== Endless Scroll: Home feed (movies + series mixed) ===== */
+async function maybeLoadMoreFeed(){
+  if (state.screen !== 'home' || state.cat !== 'all') return;
+  if (state.feedLoading || !state.feedMore || layers.length) return;
+  const feed = document.getElementById('home-feed');
+  if (!feed) return;
+  const r = feed.getBoundingClientRect();
+  if (r.bottom - window.innerHeight > 400) return;
+  state.feedLoading = true;
+  const page = state.feedPage + 1;
+  const sentinel = document.getElementById('feed-sentinel');
+  if (sentinel) sentinel.textContent = 'Loading more...';
+  try {
+    const rs = await Promise.all([fetchCategory('all', page), fetchCategory('allseries', page)]);
+    if (state.cat !== 'all' || document.getElementById('home-feed') !== feed) return;
+    const a = rs[0].items, b = rs[1].items, mixed = [];
+    for (let i = 0; i < Math.max(a.length, b.length); i++){
+      if (a[i]) mixed.push(a[i]);
+      if (b[i]) mixed.push(b[i]);
+    }
+    const fresh = mixed.filter(function(it){ return it && it.id != null && !state.feedSeen.has(String(it.id)); });
+    if (!fresh.length){
+      state.feedMore = false;
+    } else {
+      fresh.forEach(function(it){ state.feedSeen.add(String(it.id)); cacheItem(it); });
+      state.feedPage = page;
+      feed.insertAdjacentHTML('beforeend', fresh.map(posterCard).join(''));
+      state.feedMore = rs[0].more || rs[1].more;
+    }
+    if (sentinel) sentinel.textContent = state.feedMore ? '' : 'No more movies.';
+  } catch(e){
+    if (sentinel) sentinel.textContent = 'Load failed. Scroll again to retry.';
+  } finally {
+    state.feedLoading = false;
+  }
+  setTimeout(maybeLoadMoreFeed, 150);
+}
+
 let catScrollTicking = false;
 window.addEventListener('scroll', function(){
   if (catScrollTicking) return;
   catScrollTicking = true;
-  requestAnimationFrame(function(){ catScrollTicking = false; maybeLoadMoreCategory(); });
+  requestAnimationFrame(function(){ catScrollTicking = false; maybeLoadMoreCategory(); maybeLoadMoreFeed(); });
 }, { passive: true });
 
 /* ============================================
@@ -699,7 +741,11 @@ function renderRows(){
     if (!sec.items || !sec.items.length) return;
     html += '<section class="row"><div class="row-head"><h2 class="row-title">'+icon(icons[idx++ % icons.length],20)+' '+esc(sec.title)+'</h2></div><div class="row-scroll">'+sec.items.map(posterCard).join('')+'</div></section>';
   });
-  host.innerHTML = html || emptyState('Nothing to show yet.', 'home');
+  host.innerHTML = html ? (html + '<div class="row-head" style="margin-top:6px"><h2 class="row-title">More to Explore</h2></div><div class="grid" id="home-feed"></div><div id="feed-sentinel" style="text-align:center;padding:16px;color:var(--text-2);font-size:13px;"></div>') : emptyState('Nothing to show yet.', 'home');
+  if (html){
+    state.feedPage = 0; state.feedMore = true; state.feedLoading = false; state.feedSeen = new Set();
+    setTimeout(maybeLoadMoreFeed, 300);
+  }
 }
 
 function buildCategoryBar(){
