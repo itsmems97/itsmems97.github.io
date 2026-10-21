@@ -9,7 +9,14 @@
 <title>PIKA MOVIE</title>
 <script>try{var t=localStorage.getItem('pika_theme');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}</script>
 <style>
+@font-face {
+  font-family: 'VIP';
+  src: url('https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/main/VIP.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
 :root{
+  --font: 'VIP', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --accent:#e50914;
   --bg:#050506;
   --glass:rgba(255,255,255,.07);
@@ -24,7 +31,6 @@
   --nav-h:68px;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
-  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 }
 html[data-theme="light"]{
   --bg:#f4f4f6;--glass:rgba(0,0,0,.05);--glass-strong:rgba(0,0,0,.09);--glass-border:rgba(0,0,0,.09);
@@ -44,16 +50,24 @@ svg{display:block;flex-shrink:0}
 .hidden{display:none!important}
 .muted{color:var(--text-2);font-size:13px;margin-bottom:10px}
 
-/* ---------- Splash ---------- */
-#splash{position:fixed;inset:0;z-index:9999;background:#000;display:grid;place-items:center;transition:opacity .4s,visibility .4s}
+/* ---------- Premium Splash ---------- */
+#splash{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at center, #1a1a1d 0%, #000 100%);display:grid;place-items:center;transition:opacity .5s,visibility .5s}
 #splash.hide{opacity:0;visibility:hidden;pointer-events:none}
-.splash-inner{display:flex;flex-direction:column;align-items:center;gap:14px}
-.splash-logo{width:min(34vw,128px);height:min(34vw,128px);border-radius:26%;object-fit:cover;animation:pop .5s ease-out both}
-.splash-text{font-size:clamp(28px,9vw,46px);font-weight:900;letter-spacing:.14em;color:#fff;animation:fade .5s .15s both}
-.splash-text span{color:var(--accent)}
-.splash-sub{color:#8d8d92;letter-spacing:.3em;font-size:10px;text-transform:uppercase;animation:fade .5s .4s both}
-@keyframes pop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
-@keyframes fade{from{opacity:0}to{opacity:1}}
+.splash-inner{display:flex;flex-direction:column;align-items:center;gap:15px}
+.splash-logo-wrap{position:relative;animation:pop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) both, float 3s ease-in-out infinite 1s}
+.splash-logo-wrap::before{content:"";position:absolute;inset:-10px;border-radius:30%;background:linear-gradient(45deg, var(--accent), transparent);opacity:0.3;filter:blur(15px);z-index:-1;animation:pulseGlow 2s alternate infinite}
+.splash-logo{width:min(30vw,110px);height:min(30vw,110px);border-radius:26%;object-fit:cover;box-shadow: 0 10px 30px rgba(229,9,20,0.4)}
+.splash-text{font-size:clamp(30px,9vw,46px);font-weight:900;letter-spacing:.14em;color:#fff;animation:slideUp 0.8s 0.3s both;text-shadow:0 0 20px rgba(255,255,255,0.2)}
+.splash-text span{color:var(--accent);text-shadow:0 0 20px var(--accent)}
+.splash-sub{color:#8d8d92;letter-spacing:.3em;font-size:11px;text-transform:uppercase;animation:fadeIn 1s 0.6s both;font-weight:600}
+.splash-loader{width:150px;height:3px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:25px;overflow:hidden;animation:fadeIn 1s 0.8s both}
+.splash-loader::after{content:"";display:block;width:50%;height:100%;background:var(--accent);border-radius:3px;animation:loadingBar 1.5s ease-in-out infinite}
+@keyframes pop{from{opacity:0;transform:scale(.7) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes loadingBar{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+@keyframes pulseGlow{from{opacity:0.2;transform:scale(0.9)}to{opacity:0.5;transform:scale(1.1)}}
 
 /* ---------- New Header ---------- */
 .app-header{
@@ -96,7 +110,7 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
 .nav-btn.active svg{color:var(--accent)}
 
 /* ---------- Hero ---------- */
-.hero{position:relative;height:min(68vh,560px);min-height:380px;overflow:hidden;color:#fff;background:#111;border-radius:0 0 26px 26px}
+.hero{position:relative;height:min(48vh,450px);min-height:320px;overflow:hidden;color:#fff;background:#111;border-radius:0 0 26px 26px}
 .hero-imgs{position:absolute;inset:0}
 .hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 20%;opacity:0;transition:opacity .6s}
 .hero-img.on{opacity:1}
@@ -104,7 +118,7 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
 .hero-content{position:absolute;z-index:2;left:0;right:0;bottom:0;padding:0 18px 40px;display:flex;flex-direction:column;gap:10px;max-width:760px}
 .hero-badge{align-self:flex-start;padding:5px 12px;font-size:12px;font-weight:700;border-radius:999px;background:rgba(255,255,255,.16);display:flex;align-items:center;gap:6px}
 .hero-badge svg{color:#ff6a3d}
-.hero-title{font-size:clamp(28px,8vw,54px);font-weight:900;line-height:1.04;letter-spacing:-.01em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hero-title{font-size:clamp(24px,7vw,40px);font-weight:900;line-height:1.1;letter-spacing:-.01em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .hero-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,.88);align-items:center}
 .hero-meta .rate{color:#f5b301;display:inline-flex;align-items:center;gap:4px}
 .hero-desc{font-size:14px;line-height:1.5;color:rgba(255,255,255,.8);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -187,6 +201,9 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
 .player-bottom .icon-btn,.player-top .icon-btn{background:rgba(255,255,255,.14);color:#fff}
 #lang-drawer{position:absolute;z-index:5;left:0;right:0;bottom:0;max-height:70%;overflow-y:auto;padding:18px;border-radius:22px 22px 0 0;background:#171719;transform:translateY(105%);transition:transform .3s cubic-bezier(.16,1,.3,1);border-top:1px solid rgba(255,255,255,.1);visibility:hidden}
 #lang-drawer.open{transform:translateY(0);visibility:visible}
+
+#quality-drawer{position:absolute;z-index:5;left:0;right:0;bottom:0;max-height:70%;overflow-y:auto;padding:18px;border-radius:22px 22px 0 0;background:#171719;transform:translateY(105%);transition:transform .3s cubic-bezier(.16,1,.3,1),visibility .3s;border-top:1px solid rgba(255,255,255,.1);visibility:hidden}
+#quality-drawer.open{transform:translateY(0);visibility:visible}
 .drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .lang-btn{display:block;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:14px;text-align:left;margin-bottom:8px;width:100%}
 .lang-btn.active{background:rgba(229,9,20,.18);border-color:var(--accent);color:#fff;font-weight:700}
@@ -256,15 +273,39 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
 }
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ===== Light Theme Text Fixes ===== */
+html[data-theme="light"] .btn-glass { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #0b0b0c; }
+html[data-theme="light"] .stat { background: rgba(0,0,0,0.05); }
+html[data-theme="light"] .stat span { color: #6a6a70; }
+html[data-theme="light"] .app-header { background: #f4f4f6 !important; border-bottom: 1px solid rgba(0,0,0,0.1); }
+html[data-theme="light"] .bottom-nav { background: #ffffff; border-color: rgba(0,0,0,0.1); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+html[data-theme="light"] .nav-btn { color: #6a6a70; }
+html[data-theme="light"] .nav-btn.active { color: #0b0b0c; background: rgba(0,0,0,0.05); }
+html[data-theme="light"] .avatar { background: #fff; border-color: rgba(0,0,0,0.1); }
+/* ===== Online Dot Animation ===== */
+.online-dot {
+  width: 8px; height: 8px; background-color: #00e676; border-radius: 50%;
+  display: inline-block; box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7);
+  animation: pulse-green 2s infinite;
+}
+@keyframes pulse-green {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 230, 118, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
+}
 </style>
 </head>
 <body>
 
 <div id="splash">
   <div class="splash-inner">
-    <img class="splash-logo" alt="" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png">
+    <div class="splash-logo-wrap">
+      <img class="splash-logo" alt="" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png">
+    </div>
     <div class="splash-text">PIKA <span>MOVIE</span></div>
     <div class="splash-sub">Unlimited Movies &amp; Shows</div>
+    <div class="splash-loader"></div>
   </div>
 </div>
 
@@ -300,31 +341,33 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
     </section>
 
     <section id="screen-list" class="screen">
-      <div class="screen-pad">
-        <h1 class="screen-title">My List</h1>
-        <div id="list-body"></div>
-      </div>
-    </section>
+  <div class="screen-pad">
+    <h1 class="screen-title">My List</h1>
+    <div class="chips" style="margin-bottom:15px">
+      <button class="chip active" id="btn-tab-saved" data-act="switch-list-tab" data-id="saved">Saved</button>
+      <button class="chip" id="btn-tab-history" data-act="switch-list-tab" data-id="history">Watch History</button>
+    </div>
+    <div id="list-body"></div>
+    <div id="history-body" class="hidden"></div>
+  </div>
+</section>
 
     <section id="screen-profile" class="screen">
   <div class="screen-pad">
     <h1 class="screen-title">Profile</h1>
     <div class="profile-card">
       <div class="profile-top">
-        <div class="avatar" style="background:linear-gradient(45deg, #e50914, #ff6a3d)">P</div>
+        <img class="avatar" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png" alt="Profile" style="object-fit:cover; border:1px solid var(--glass-border)">
         <div><h2 style="font-size:20px">PIKAZOO</h2><p style="color:var(--text-2);font-size:14px">Guest Account</p></div>
       </div>
       <div class="profile-stats">
-        <div class="stat"><b id="stat-list">0</b><span>In My List</span></div>
-        <div class="stat"><b id="stat-theme">Dark</b><span>Theme</span></div>
-      </div>
-      <div class="profile-actions">
-        <button class="btn btn-glass" data-act="theme"><span data-icon="moon" data-size="18"></span> Switch Theme</button>
-        <button class="btn btn-glass" data-act="clear-list"><span data-icon="close" data-size="18"></span> Clear My List</button>
-<button class="btn btn-glass" data-act="view-history"><span data-icon="refresh" data-size="18"></span> Watch History</button>
-        <a href="https://itsmems97.github.io/" target="_blank" class="btn btn-glass" style="text-decoration:none"><span data-icon="zap" data-size="18" style="color:#00e676"></span> Visit Pika Store</a>
-        <a href="https://wa.me/923041891897" target="_blank" class="btn btn-glass" style="text-decoration:none"><span data-icon="info" data-size="18" style="color:#25D366"></span> Help & Support</a>
-      </div>
+  <div class="stat"><b id="stat-online" style="display:flex;align-items:center;justify-content:center;gap:6px"><span class="online-dot"></span><span id="stat-online-num">0</span></b><span>Online</span></div>
+  <div class="stat"><b id="stat-theme">Dark</b><span>Theme</span></div>
+</div>
+<div class="profile-actions">
+  <a href="https://itsmems97.github.io/" target="_blank" class="btn btn-glass" style="text-decoration:none"><span data-icon="zap" data-size="18" style="color:#00e676"></span> Visit Pika Store</a>
+  <a href="https://wa.me/923041891897" target="_blank" class="btn btn-glass" style="text-decoration:none"><span data-icon="info" data-size="18" style="color:#25D366"></span> Help & Support</a>
+</div>
       
       <div style="margin-top:30px;text-align:center;line-height:1.6;">
         <p style="color:#f5b301;font-weight:bold;font-size:15px">Developed By SHOAIB</p>
@@ -374,7 +417,7 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
   <div class="drawer-header"><h3>Select Language</h3><button class="icon-btn" data-act="lang-close" aria-label="Close"><span data-icon="close" data-size="18"></span></button></div>
   <div id="lang-list"></div>
 </div>
-<div id="quality-drawer" style="position:absolute;z-index:5;left:0;right:0;bottom:0;max-height:70%;overflow-y:auto;padding:18px;border-radius:22px 22px 0 0;background:#171719;transform:translateY(105%);transition:transform .3s cubic-bezier(.16,1,.3,1),visibility .3s;border-top:1px solid rgba(255,255,255,.1);visibility:hidden">
+<div id="quality-drawer">
   <div class="drawer-header"><h3>Select Quality</h3><button class="icon-btn" data-act="quality-close" aria-label="Close"><span data-icon="close" data-size="18"></span></button></div>
   <div id="quality-list"></div>
 </div>
@@ -785,7 +828,7 @@ async function loadHome(force){
     state.homeSections = data.sections;
     data.sections.forEach(function(s){ (s.items || []).forEach(cacheItem); });
     const first = data.sections.find(function(s){ return s.items && s.items.length; });
-    state.heroItems = first ? first.items.slice(0, 5) : [];
+    state.heroItems = first ? first.items.slice(0, 9) : [];
     renderHero();
     if (state.cat === 'all') renderRows();
   } catch(e){
@@ -957,6 +1000,7 @@ async function renderListScreen(){
   const host = $('#list-body');
   const ids = state.list.slice();
   if (!ids.length){ host.innerHTML = emptyState('Your list is empty. Start adding movies!'); return; }
+  
   const missing = ids.filter(function(id){ return !itemCache.has(id); });
   if (missing.length){
     host.innerHTML = skeleton(Math.min(ids.length, 9));
@@ -965,29 +1009,163 @@ async function renderListScreen(){
     }));
   }
   if (state.screen !== 'list') return;
+  
   const items = ids.map(function(id){ return itemCache.get(id); }).filter(Boolean);
-  host.innerHTML = items.length ? gridHtml(items, 'search-grid') : emptyState('Error loading list.', 'list');
+  if (!items.length) { host.innerHTML = emptyState('Error loading list.', 'list'); return; }
+  
+  let html = '<div style="display:flex;justify-content:flex-end;margin-bottom:15px">' +
+    '<button data-act="clear-list" style="color:var(--accent);font-size:13px;background:rgba(229,9,20,0.1);padding:6px 12px;border-radius:8px;border:1px solid var(--accent)">Clear All Saved</button>' +
+    '</div><div class="grid">';
+    
+  items.forEach(it => {
+    html += '<div style="position:relative">' +
+      posterCard(it) + 
+      '<button data-act="delete-saved-item" data-id="'+esc(it.id)+'" style="position:absolute;top:5px;left:5px;background:rgba(0,0,0,0.8);color:#ff4d4d;border-radius:50%;width:24px;height:24px;display:grid;place-items:center;z-index:10;border:1px solid rgba(255,255,255,0.2);font-weight:bold;font-size:12px">✕</button>' +
+    '</div>';
+  });
+  
+  html += '</div>';
+  host.innerHTML = html;
 }
+
+function renderWatchHistoryTab(){
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem('pika_watch_history') || '[]'); } catch(e){}
+  
+  const host = $('#history-body');
+  
+  if (!hist.length) { 
+    host.innerHTML = emptyState('No watch history yet.'); 
+    return; 
+  }
+  
+  let html = '<div style="display:flex;justify-content:flex-end;margin-bottom:15px">' +
+    '<button data-act="clear-watch-history" style="color:var(--accent);font-size:13px;background:rgba(229,9,20,0.1);padding:6px 12px;border-radius:8px;border:1px solid var(--accent)">Clear All</button>' +
+    '</div><div class="grid">';
+    
+  hist.forEach(it => {
+    html += '<div style="position:relative">' +
+      posterCard(it) + 
+      '<button data-act="delete-watch-history" data-id="'+esc(it.id)+'" style="position:absolute;top:5px;left:5px;background:rgba(0,0,0,0.8);color:#ff4d4d;border-radius:50%;width:24px;height:24px;display:grid;place-items:center;z-index:10;border:1px solid rgba(255,255,255,0.2);font-weight:bold;font-size:12px">✕</button>' +
+    '</div>';
+  });
+  
+  html += '</div>';
+  host.innerHTML = html;
+}
+
+// --- ADVANCED ONLINE USER SIMULATION ---
+
+// 1. Time aur Day ke hisaab se Target nikalne ka function
+function getTargetOnlineUsers() {
+  const now = new Date();
+  const hour = now.getHours();
+  const day = now.getDay(); // 0 = Sunday, 1 = Monday, 5 = Friday, 6 = Saturday
+
+  let baseMax = 5000;
+  let baseMin = 500;
+  let target = 0;
+
+  // Time of Day Fluctuations
+  if (hour >= 3 && hour < 6) {
+    // 3 AM to 6 AM (Minimum)
+    target = baseMin + (Math.random() * 200);
+  } else if (hour >= 6 && hour < 12) {
+    // 6 AM to 12 PM (Morning Growth)
+    let progress = (hour - 6) / 6; // 0 to 1
+    target = 700 + (progress * 1500) + (Math.random() * 300);
+  } else if (hour >= 12 && hour < 15) {
+    // 12 PM to 3 PM (Afternoon)
+    target = 2500 + (Math.random() * 800);
+  } else if (hour >= 15 && hour < 23) {
+    // 3 PM to 11 PM (Peak Hours - Bell Curve)
+    let progress = Math.sin(((hour - 15) / 8) * Math.PI); 
+    target = 3500 + (progress * 1500) + (Math.random() * 500);
+  } else {
+    // 11 PM to 3 AM (Night Decay)
+    target = 1500 + (Math.random() * 1000);
+  }
+
+  // Day of Week Trends (Friday, Saturday, Sunday boost)
+  if (day === 5 || day === 6 || day === 0) {
+    target *= 1.25; // 25% zyada log weekend pe
+  }
+
+  return Math.floor(target);
+}
+
+// 2. State Variables
+let targetOnline = getTargetOnlineUsers();
+let currentOnline = parseInt(localStorage.getItem('pika_online_live'));
+
+// Agar pehli baar khula hai, ya bohat purana data hai, to naya set karo
+if (!currentOnline || isNaN(currentOnline) || currentOnline < 100) {
+  currentOnline = targetOnline;
+}
+
+let onlineSimulationStarted = false;
+
+// 3. UI Update Function
+function updateOnlineUI() {
+  const el = document.getElementById('stat-online-num');
+  if (!el) return;
+  
+  // Format: 3200 -> 3.2k
+  const display = currentOnline >= 1000 ? (currentOnline / 1000).toFixed(1) + 'k' : currentOnline;
+  el.textContent = display;
+  
+  // Memory mein save karo taake refresh pe jump na kare
+  localStorage.setItem('pika_online_live', currentOnline);
+}
+
+// 4. The Core Simulation Engine (Tick)
+function onlineSimulationTick() {
+  // Har 10-15 minute mein target ko re-calculate karo (Organic shift)
+  if (Math.random() < 0.02) { 
+    targetOnline = getTargetOnlineUsers();
+  }
+
+  // Smooth Movement towards target
+  if (currentOnline < targetOnline) {
+    // Add 1 to 3 users (joins)
+    currentOnline += Math.floor(Math.random() * 3) + 1;
+  } else if (currentOnline > targetOnline) {
+    // Remove 1 to 3 users (leaves)
+    currentOnline -= Math.floor(Math.random() * 3) + 1;
+  } else {
+    // Micro-fluctuations (Jab target par pohanch jaye)
+    // Kabhi 1 add, kabhi 1 remove
+    currentOnline += (Math.random() > 0.5 ? 1 : -1);
+  }
+
+  // Absolute minimum limit
+  if (currentOnline < 350) currentOnline = 350;
+
+  // UI Update karo
+  updateOnlineUI();
+
+  // Random interval (2 se 4.5 seconds ke darmiyan) 
+  // Is se number ek dam se nahi badlega, real lagega
+  const nextTickTime = Math.floor(Math.random() * 2500) + 2000;
+  setTimeout(onlineSimulationTick, nextTickTime);
+}
+
+// 5. Profile Render Hook
 function renderProfile(){
-  $('#stat-list').textContent = state.list.length;
+  if (!onlineSimulationStarted) {
+    updateOnlineUI();
+    onlineSimulationTick();
+    onlineSimulationStarted = true;
+  }
   applyThemeUI();
 }
 
-function showWatchHistory(){
-  let hist = [];
-  try { hist = JSON.parse(localStorage.getItem('pika_watch_history') || '[]'); } catch(e){}
-  if (!hist.length) { toast('No watch history yet'); return; }
-  
-  const sheet = $('#sheet');
-  sheet.innerHTML = '<div style="padding:20px;padding-bottom:80px">' +
-    '<h2 style="font-size:20px;margin-bottom:15px">Watch History</h2>' +
-    '<div class="grid">' + hist.map(it => posterCard(it)).join('') + '</div></div>' +
-    '<button class="icon-btn sheet-close" data-act="close-sheet" aria-label="Close" style="position:sticky;top:10px;float:right;margin:10px;background:rgba(0,0,0,.8)">' + icon('close',20) + '</button>';
-  
-  sheet.classList.add('open');
-  $('#sheet-backdrop').classList.add('open');
-  if (layers.indexOf('sheet') < 0) pushLayer('sheet');
-}
+// 6. Background update (Agar user profile pe nahi hai tab bhi number sync rahe)
+setInterval(() => {
+  if (currentOnline < targetOnline) currentOnline += 2;
+  else if (currentOnline > targetOnline) currentOnline -= 2;
+  localStorage.setItem('pika_online_live', currentOnline);
+}, 60000); // Har minute update
 
 /* ============================================
    DETAIL SHEET
@@ -1211,23 +1389,56 @@ document.addEventListener('click', function(e){
       $('#eps-drawer').classList.remove('open');
       if (state.player.item) $('#player-title').textContent = (state.player.item.title || '') + ' - S' + state.player.season + ' E' + state.player.episode;
       loadFrame(embedUrl(state.player.dubId)); break;
-    case 'lang-open': openLangDrawer(); break;
-    case 'lang-close': $('#lang-drawer').classList.remove('open'); break;
-    case 'lang-pick':
-      state.player.dubId = id;
-      $('#lang-drawer').classList.remove('open');
-      loadFrame(embedUrl(id)); break;
-    case 'quality-open': openQualityDrawer(); break;
-    case 'quality-close': $('#quality-drawer').classList.remove('open'); break;
-    case 'quality-pick':
-      state.player.quality = Number(id);
-      $('#quality-drawer').classList.remove('open');
-      loadFrame(embedUrl(state.player.dubId)); break;
-    case 'view-history': showWatchHistory(); break;
-    case 'clear-list':
-      if (!state.list.length){ toast('Your list is already empty'); break; }
-      state.list = []; store.set('pika_list', '[]'); renderProfile(); toast('My List cleared'); break;
-    case 'retry':
+case 'lang-open': openLangDrawer(); break;
+case 'lang-close': $('#lang-drawer').classList.remove('open'); break;
+case 'quality-open': openQualityDrawer(); break;
+case 'quality-close': $('#quality-drawer').classList.remove('open'); break;
+case 'quality-pick':
+  state.player.quality = Number(id);
+  $('#player-quality').textContent = id + 'p';
+  $('#quality-drawer').classList.remove('open');
+  loadFrame(embedUrl(state.player.dubId)); 
+  break;
+case 'switch-list-tab':
+  if (id === 'saved') {
+    $('#btn-tab-saved').classList.add('active');
+    $('#btn-tab-history').classList.remove('active');
+    $('#list-body').classList.remove('hidden');
+    $('#history-body').classList.add('hidden');
+    renderListScreen();
+  } else {
+    $('#btn-tab-history').classList.add('active');
+    $('#btn-tab-saved').classList.remove('active');
+    $('#history-body').classList.remove('hidden');
+    $('#list-body').classList.add('hidden');
+    renderWatchHistoryTab();
+  }
+  break;
+case 'delete-watch-history':
+  e.stopPropagation();
+  let wh = JSON.parse(localStorage.getItem('pika_watch_history') || '[]');
+  wh = wh.filter(h => String(h.id) !== String(id));
+  localStorage.setItem('pika_watch_history', JSON.stringify(wh));
+  renderWatchHistoryTab(); // Refresh tab
+  break;
+case 'clear-watch-history':
+  localStorage.setItem('pika_watch_history', '[]');
+  renderWatchHistoryTab(); // Refresh tab
+  toast('Watch History Cleared');
+  break;
+case 'delete-saved-item':
+  e.stopPropagation();
+  let newSaved = state.list.filter(h => String(h) !== String(id));
+  state.list = newSaved;
+  store.set('pika_list', JSON.stringify(state.list));
+  renderProfile(); // Update count in profile
+  renderListScreen(); // Refresh Saved list
+  toast('Removed from Saved');
+  break;
+case 'clear-list':
+  if (!state.list.length){ toast('Your list is already empty'); break; }
+  state.list = []; store.set('pika_list', '[]'); renderProfile(); renderListScreen(); toast('Saved List Cleared'); break;
+case 'retry':
       if (id === 'home') loadHome(true);
       else if (id === 'list') renderListScreen();
       else if (id && id.indexOf('cat:') === 0){
