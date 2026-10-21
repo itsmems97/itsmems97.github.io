@@ -127,7 +127,7 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
 .row-title{font-size:19px;font-weight:800;display:flex;align-items:center;gap:8px}
 .row-title svg{color:var(--accent)}
 .row-scroll{display:flex;gap:12px;overflow-x:auto;padding:4px 16px 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.card{position:relative;width:100%;aspect-ratio:2/3;border-radius:16px;overflow:hidden;cursor:pointer;background:var(--glass);border:1px solid var(--glass-border);contain:layout paint;transition:transform .15s}
+.card{position:relative;width:100%;aspect-ratio:2/3;border-radius:16px;overflow:hidden;cursor:pointer;background:#1a1a1d;border:1px solid var(--glass-border);contain:layout paint;transition:transform .15s;transform:translateZ(0);will-change:transform}
 .card:active{transform:scale(.97)}
 .row-scroll .card{flex:0 0 auto;width:clamp(112px,31vw,150px)}
 .poster{width:100%;height:100%;object-fit:cover;background:#1a1a1d}
@@ -321,6 +321,7 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
       <div class="profile-actions">
         <button class="btn btn-glass" data-act="theme"><span data-icon="moon" data-size="18"></span> Switch Theme</button>
         <button class="btn btn-glass" data-act="clear-list"><span data-icon="close" data-size="18"></span> Clear My List</button>
+<button class="btn btn-glass" data-act="view-history"><span data-icon="refresh" data-size="18"></span> Watch History</button>
         <a href="https://itsmems97.github.io/" target="_blank" class="btn btn-glass" style="text-decoration:none"><span data-icon="zap" data-size="18" style="color:#00e676"></span> Visit Pika Store</a>
         <a href="https://wa.me/923041891897" target="_blank" class="btn btn-glass" style="text-decoration:none"><span data-icon="info" data-size="18" style="color:#25D366"></span> Help & Support</a>
       </div>
@@ -370,9 +371,13 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
     <button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen"><span data-icon="fullscreen" data-size="22"></span></button>
   </div>
   <div id="lang-drawer">
-    <div class="drawer-header"><h3>Select Language</h3><button class="icon-btn" data-act="lang-close" aria-label="Close"><span data-icon="close" data-size="18"></span></button></div>
-    <div id="lang-list"></div>
-  </div>
+  <div class="drawer-header"><h3>Select Language</h3><button class="icon-btn" data-act="lang-close" aria-label="Close"><span data-icon="close" data-size="18"></span></button></div>
+  <div id="lang-list"></div>
+</div>
+<div id="quality-drawer" style="position:absolute;z-index:5;left:0;right:0;bottom:0;max-height:70%;overflow-y:auto;padding:18px;border-radius:22px 22px 0 0;background:#171719;transform:translateY(105%);transition:transform .3s cubic-bezier(.16,1,.3,1),visibility .3s;border-top:1px solid rgba(255,255,255,.1);visibility:hidden">
+  <div class="drawer-header"><h3>Select Quality</h3><button class="icon-btn" data-act="quality-close" aria-label="Close"><span data-icon="close" data-size="18"></span></button></div>
+  <div id="quality-list"></div>
+</div>
   <div id="eps-drawer">
     <div class="drawer-header"><h3>Episodes</h3><button class="icon-btn" data-act="eps-close" aria-label="Close"><span data-icon="close" data-size="18"></span></button></div>
     <div id="eps-list"></div>
@@ -388,7 +393,7 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
 const CONFIG = { API_BASE: 'http://193.122.76.131:4000' };
 const API = CONFIG.API_BASE;
 const CATS = [
-  ['all','All'],['new','New Releases'],['top10','Top 10'],['trending','Trending'],
+  ['all','All'],['new','New Releases'],['hindi','Hindi'],['top10','Top 10'],['trending','Trending'],
   ['bollywood','Bollywood'],['hollywood','Hollywood'],['kdrama','K-Drama'],
   ['action','Action'],['comedy','Comedy'],['horror','Horror'],['romance','Romance'],['thriller','Thriller']
 ];
@@ -968,6 +973,22 @@ function renderProfile(){
   applyThemeUI();
 }
 
+function showWatchHistory(){
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem('pika_watch_history') || '[]'); } catch(e){}
+  if (!hist.length) { toast('No watch history yet'); return; }
+  
+  const sheet = $('#sheet');
+  sheet.innerHTML = '<div style="padding:20px;padding-bottom:80px">' +
+    '<h2 style="font-size:20px;margin-bottom:15px">Watch History</h2>' +
+    '<div class="grid">' + hist.map(it => posterCard(it)).join('') + '</div></div>' +
+    '<button class="icon-btn sheet-close" data-act="close-sheet" aria-label="Close" style="position:sticky;top:10px;float:right;margin:10px;background:rgba(0,0,0,.8)">' + icon('close',20) + '</button>';
+  
+  sheet.classList.add('open');
+  $('#sheet-backdrop').classList.add('open');
+  if (layers.indexOf('sheet') < 0) pushLayer('sheet');
+}
+
 /* ============================================
    DETAIL SHEET
    ============================================ */
@@ -1038,41 +1059,53 @@ async function openPlayer(item){
   const p = state.player;
   p.item = item; p.dubs = []; p.dubId = null;
   p.season = 1; p.episode = 1; p.seasons = []; p.viewSeason = 1;
+  
+  // HERO BANNER FIX: Fetch full data first to avoid "Video source not found"
+  toast('Loading...');
+  try {
+    const d = await apiGet('/detail?id=' + encodeURIComponent(item.id));
+    if (d.item) item = d.item; 
+  } catch(e){}
+  
+  p.item = item;
   $('#player-title').textContent = item.title || '';
   $('#player-lang').classList.add('hidden');
   $('#player-eps').classList.add('hidden');
-  
-  // FIX: Hide Episodes button for Movies (only show for TV Shows)
-  if (item.type !== 'tv') {
-    $('#player-eps').style.display = 'none';
-  } else {
-    $('#player-eps').style.display = 'flex';
-  }
+  $('#player-eps').style.display = 'none'; // Hide by default
+
+  // Watch History Logic
+  try {
+    let hist = JSON.parse(localStorage.getItem('pika_watch_history') || '[]');
+    hist = hist.filter(h => String(h.id) !== String(item.id));
+    hist.unshift({ id: String(item.id), title: item.title, poster: item.poster, type: item.type, year: item.year });
+    if (hist.length > 20) hist.pop();
+    localStorage.setItem('pika_watch_history', JSON.stringify(hist));
+  } catch(e){}
 
   $('#eps-drawer').classList.remove('open');
   $('#lang-drawer').classList.remove('open');
+  $('#quality-drawer').classList.remove('open');
   $('#player').classList.add('open');
-  
-  // FIX: Scroll Lock (Background scroll rokne ke liye)
   document.body.style.overflow = 'hidden';
+
   if (layers.indexOf('player') < 0) pushLayer('player');
   loadFrame(embedUrl());
-  try {
-    const d = await apiGet('/detail?id=' + encodeURIComponent(item.id));
-    if (p.item !== item) return;
-    if (d.item && d.item.dubs && d.item.dubs.length > 1){
-      p.dubs = d.item.dubs;
-      p.dubId = item.id;
-      $('#player-lang').classList.remove('hidden');
-    }
-  } catch(e){}
+
+  if (p.item.dubs && p.item.dubs.length > 1){
+    p.dubs = p.item.dubs;
+    p.dubId = item.id;
+    $('#player-lang').classList.remove('hidden');
+  }
+
+  // EPISODES FIX: Only show if there are actual seasons/episodes
   if (item.type === 'tv'){
     try {
       const e = await apiGet('/episodes?id=' + encodeURIComponent(item.id), { ttl: 300000 });
       if (p.item !== item) return;
-      if (e.seasons && e.seasons.length){
+      if (e.seasons && e.seasons.length > 0 && e.seasons[0].count > 1){
         p.seasons = e.seasons;
         $('#player-eps').classList.remove('hidden');
+        $('#player-eps').style.display = 'flex';
       }
     } catch(err){}
   }
@@ -1123,6 +1156,16 @@ function openLangDrawer(){
   $('#lang-drawer').classList.add('open');
 }
 
+function openQualityDrawer(){
+  const p = state.player;
+  const currentQ = p.quality || 720;
+  const qualities = [1080, 720, 480, 360];
+  $('#quality-list').innerHTML = qualities.map(function(q){
+    return '<button class="lang-btn'+(q === currentQ ? ' active' : '')+'" data-act="quality-pick" data-id="'+q+'">'+q+'p</button>';
+  }).join('');
+  $('#quality-drawer').classList.add('open');
+}
+
 /* ============================================
    EVENTS (one delegated handler = less memory)
    ============================================ */
@@ -1140,20 +1183,20 @@ document.addEventListener('click', function(e){
     case 'theme': toggleTheme(); break;
     case 'search-go': navigate('search'); setTimeout(function(){ $('#search-input').focus(); }, 60); break;
     case 'search-clear':
-  $('#search-input').value = ''; $('#search-clear').classList.add('hidden');
-  if (sAbort) sAbort.abort(); renderBrowse(); break;
-case 'search-history-click':
-  $('#search-input').value = id; $('#search-clear').classList.remove('hidden');
-  runSearch(id); break;
-case 'delete-search-history':
-  e.stopPropagation();
-  let hist = JSON.parse(localStorage.getItem('pika_search_history') || '[]');
-  hist = hist.filter(h => h !== id);
-  localStorage.setItem('pika_search_history', JSON.stringify(hist));
-  renderBrowse(); break;
-case 'clear-search-history':
-  localStorage.setItem('pika_search_history', '[]');
-  renderBrowse(); break;
+      $('#search-input').value = ''; $('#search-clear').classList.add('hidden');
+      if (sAbort) sAbort.abort(); renderBrowse(); break;
+    case 'search-history-click':
+      $('#search-input').value = id; $('#search-clear').classList.remove('hidden');
+      runSearch(id); break;
+    case 'delete-search-history':
+      e.stopPropagation();
+      let hist = JSON.parse(localStorage.getItem('pika_search_history') || '[]');
+      hist = hist.filter(h => h !== id);
+      localStorage.setItem('pika_search_history', JSON.stringify(hist));
+      renderBrowse(); break;
+    case 'clear-search-history':
+      localStorage.setItem('pika_search_history', '[]');
+      renderBrowse(); break;
     case 'browse': browse(id); break;
     case 'close-sheet': closeTop('sheet'); break;
     case 'close-player': closeTop('player'); break;
@@ -1169,33 +1212,31 @@ case 'clear-search-history':
       if (state.player.item) $('#player-title').textContent = (state.player.item.title || '') + ' - S' + state.player.season + ' E' + state.player.episode;
       loadFrame(embedUrl(state.player.dubId)); break;
     case 'lang-open': openLangDrawer(); break;
-    case 'lang-open': openLangDrawer(); break;
-case 'quality-open':
-  const newQ = prompt("Select Quality (480, 720, 1080):", state.player.quality || 720);
-  if (newQ && ['480','720','1080'].includes(newQ)) {
-    state.player.quality = newQ;
-    $('#player-quality').textContent = newQ + 'p';
-    loadFrame(embedUrl(state.player.dubId));
-  }
-  break;
     case 'lang-close': $('#lang-drawer').classList.remove('open'); break;
     case 'lang-pick':
       state.player.dubId = id;
       $('#lang-drawer').classList.remove('open');
       loadFrame(embedUrl(id)); break;
+    case 'quality-open': openQualityDrawer(); break;
+    case 'quality-close': $('#quality-drawer').classList.remove('open'); break;
+    case 'quality-pick':
+      state.player.quality = Number(id);
+      $('#quality-drawer').classList.remove('open');
+      loadFrame(embedUrl(state.player.dubId)); break;
+    case 'view-history': showWatchHistory(); break;
     case 'clear-list':
       if (!state.list.length){ toast('Your list is already empty'); break; }
       state.list = []; store.set('pika_list', '[]'); renderProfile(); toast('My List cleared'); break;
     case 'retry':
-  if (id === 'home') loadHome(true);
-  else if (id === 'list') renderListScreen();
-  else if (id && id.indexOf('cat:') === 0){
-    var g = id.slice(4);
-    var prefix = '/category?genre=' + encodeURIComponent(g);
-    Array.from(apiCache.keys()).forEach(function(k){ if (k.indexOf(prefix) === 0) apiCache.delete(k); });
-    selectCat(g);
-  }
-  break;
+      if (id === 'home') loadHome(true);
+      else if (id === 'list') renderListScreen();
+      else if (id && id.indexOf('cat:') === 0){
+        var g = id.slice(4);
+        var prefix = '/category?genre=' + encodeURIComponent(g);
+        Array.from(apiCache.keys()).forEach(function(k){ if (k.indexOf(prefix) === 0) apiCache.delete(k); });
+        selectCat(g);
+      }
+      break;
   }
 });
 
