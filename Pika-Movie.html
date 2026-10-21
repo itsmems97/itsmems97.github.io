@@ -1474,6 +1474,7 @@ async function loadFrame(url, keep){
     };
     v.src = pv.srcUrl;
     v.load();
+    pvSyncQualityLabel();
     clearTimeout(p.loadTimer);
     p.loadTimer = setTimeout(function(){ loader.classList.add('hidden'); }, 15000);
   } catch(e){
@@ -1586,14 +1587,44 @@ function openLangDrawer(){
   $('#lang-drawer').classList.add('open');
 }
 
-function openQualityDrawer(){
+function streamsPath(){
+  const it = state.player.item, p = state.player;
+  return '/streams?id=' + encodeURIComponent(it.id) + '&type=' + encodeURIComponent(it.type || 'movie') + (p.dubId ? '&dubId=' + encodeURIComponent(p.dubId) : '') + (it.type === 'tv' ? '&season=' + p.season + '&episode=' + p.episode : '');
+}
+async function getStreamList(){
+  if (!state.player.item) return [];
+  try {
+    const d = await apiGet(streamsPath(), { ttl: 120000 });
+    return (d && d.ok && d.streams) ? d.streams : [];
+  } catch(e){ return []; }
+}
+function pickQ(list, want){
+  const qs = list.map(function(s){ return s.q; });
+  return qs.find(function(x){ return x === want; }) || qs.find(function(x){ return x < want; }) || qs[qs.length - 1];
+}
+function fmtSize(mb){
+  if (!mb) return '';
+  return mb >= 1024 ? (mb / 1024).toFixed(1) + ' GB' : Math.round(mb) + ' MB';
+}
+async function pvSyncQualityLabel(){
+  const list = await getStreamList();
+  if (!list.length || !state.player.item) return;
+  $('#player-quality').textContent = pickQ(list, state.player.quality || 720) + 'p';
+}
+async function openQualityDrawer(){
   const p = state.player;
-  const currentQ = p.quality || 720;
-  const qualities = [1080, 720, 480, 360];
-  $('#quality-list').innerHTML = qualities.map(function(q){
-    return '<button class="lang-btn'+(q === currentQ ? ' active' : '')+'" data-act="quality-pick" data-id="'+q+'">'+q+'p</button>';
-  }).join('');
+  if (!p.item) return;
+  $('#quality-list').innerHTML = '<p class="muted">Loading...</p>';
   $('#quality-drawer').classList.add('open');
+  const list = await getStreamList();
+  if (!list.length){
+    $('#quality-list').innerHTML = '<p class="muted">Quality options are not available for this video.</p>';
+    return;
+  }
+  const playing = pickQ(list, p.quality || 720);
+  $('#quality-list').innerHTML = list.map(function(s){
+    return '<button class="lang-btn'+(s.q === playing ? ' active' : '')+'" data-act="quality-pick" data-id="'+s.q+'">'+s.label+(s.sizeMb ? '  -  ' + fmtSize(s.sizeMb) : '')+'</button>';
+  }).join('') + '<p class="muted" style="margin-top:10px">Slow internet? Choose a lower quality.</p>';
 }
 
 /* ============================================
