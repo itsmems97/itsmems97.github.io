@@ -449,18 +449,24 @@ html[data-theme="light"] .avatar { background: #fff; border-color: rgba(0,0,0,0.
 
 /* ===== Fullscreen: Video fills screen, bars overlay ===== */
 #player:fullscreen { background: #000; }
+
+/* Top Bar (Back + Title) */
 #player:fullscreen .player-top {
   position: absolute; top: 0; left: 0; right: 0; z-index: 6;
   background: linear-gradient(to bottom, rgba(0,0,0,.8), transparent);
   transition: opacity .3s ease;
+  padding-right: 250px; /* Title ke liye jagah taake buttons ke neeche na jaye */
 }
+
+/* Bottom Bar (Episodes, 720p) ko UPAR RIGHT shift kar diya */
 #player:fullscreen .player-bottom {
-  position: absolute; bottom: 0; left: 0; right: 0; z-index: 6;
-  background: linear-gradient(to top, rgba(0,0,0,.8), transparent);
-  transition: opacity .3s ease;
-  padding-bottom: calc(10px + var(--safe-bottom));
+  position: absolute; top: 0; right: 0; left: auto; bottom: auto; z-index: 7;
+  background: none; transition: opacity .3s ease;
+  padding: calc(10px + var(--safe-top)) 14px 10px;
 }
 #player:fullscreen .player-bottom .grow { display: none; }
+
+/* Hide bars when UI is hidden */
 #player:fullscreen.ui-hidden .player-top,
 #player:fullscreen.ui-hidden .player-bottom {
   opacity: 0; pointer-events: none;
