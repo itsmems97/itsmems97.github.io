@@ -446,6 +446,25 @@ html[data-theme="light"] .avatar { background: #fff; border-color: rgba(0,0,0,0.
 #ip-overlay .ip-install{ background:linear-gradient(135deg,#e50914,#ff4d4d); color:#fff; box-shadow:0 4px 12px rgba(229,9,20,.4); }
 @keyframes ipFade{ from{opacity:0} to{opacity:1} }
 @keyframes ipSpring{ from{opacity:0; transform:scale(.8) translateY(20px)} to{opacity:1; transform:scale(1) translateY(0)} }
+
+/* ===== Fullscreen: Video fills screen, bars overlay ===== */
+#player:fullscreen { background: #000; }
+#player:fullscreen .player-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 6;
+  background: linear-gradient(to bottom, rgba(0,0,0,.8), transparent);
+  transition: opacity .3s ease;
+}
+#player:fullscreen .player-bottom {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 6;
+  background: linear-gradient(to top, rgba(0,0,0,.8), transparent);
+  transition: opacity .3s ease;
+  padding-bottom: calc(10px + var(--safe-bottom));
+}
+#player:fullscreen .player-bottom .grow { display: none; }
+#player:fullscreen.ui-hidden .player-top,
+#player:fullscreen.ui-hidden .player-bottom {
+  opacity: 0; pointer-events: none;
+}
 </style>
 </head>
 <body>
@@ -1475,12 +1494,25 @@ function pvHud(txt){
 }
 function pvShowUI(){
   const ui = $('#pv-ui'); ui.classList.remove('hide');
+  const player = $('#player'); if(player) player.classList.remove('ui-hidden');
   clearTimeout(pv.uiTimer);
-  pv.uiTimer = setTimeout(function(){ if (pv.v && !pv.v.paused && !pv.seeking) ui.classList.add('hide'); }, 3500);
+  pv.uiTimer = setTimeout(function(){ 
+    if (pv.v && !pv.v.paused && !pv.seeking) {
+      ui.classList.add('hide'); 
+      if(player) player.classList.add('ui-hidden');
+    } 
+  }, 3500);
 }
 function pvToggleUI(){
   const ui = $('#pv-ui');
-  if (ui.classList.contains('hide')) pvShowUI(); else { ui.classList.add('hide'); clearTimeout(pv.uiTimer); }
+  const player = $('#player');
+  if (ui.classList.contains('hide')) {
+    pvShowUI(); 
+  } else { 
+    ui.classList.add('hide'); 
+    if(player) player.classList.add('ui-hidden');
+    clearTimeout(pv.uiTimer); 
+  }
 }
 function pvSetBright(b){
   pv.bright = Math.max(0.25, Math.min(1.8, b));
