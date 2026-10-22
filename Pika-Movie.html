@@ -301,7 +301,16 @@ main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px)}
   .tap-dot, .tap-dot.visible { transition-duration: 50ms; }
 }
 
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+.pv-soon{position:absolute;inset:0;z-index:4;background:#121214;overflow-y:auto;color:#fff}
+.pv-soon-hero{height:34%;min-height:150px;background:#111}
+.pv-soon-hero img{width:100%;height:100%;object-fit:cover;filter:brightness(.8)}
+.pv-soon-info{display:flex;gap:14px;align-items:flex-start;padding:14px 16px}
+.pv-soon-poster{width:84px;aspect-ratio:2/3;object-fit:cover;border-radius:10px;background:#1a1a1d;flex:0 0 auto}
+.pv-soon-info h2{font-size:20px;font-weight:800;margin:0 0 6px}
+.pv-soon-info p{font-size:13px;color:#a3a3a8;margin:0}
+.pv-soon-card{margin:8px 16px 24px;padding:22px 16px;border-radius:16px;background:#1f1f22;text-align:center}
+.pv-soon-card h3{font-size:20px;font-weight:700;margin:0 0 8px}
+.pv-soon-card p{font-size:14px;color:#a3a3a8;line-height:1.5;margin:0 0 16px}
 
 /* ===== Light Theme Text Fixes ===== */
 html[data-theme="light"] .btn-glass { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #0b0b0c; }
@@ -1566,6 +1575,29 @@ function pvBindGestures(){
 }
 
 /* Old iframe player = safety net: if the custom player cannot start, the video still plays like before */
+function pvComingSoon(){
+  const p = state.player, it = p.item;
+  if (!it) return;
+  clearTimeout(p.loadTimer);
+  $('#player-loading').classList.add('hidden');
+  try { pv.v.pause(); pv.v.removeAttribute('src'); pv.v.load(); } catch(e){}
+  $('#pv-video').classList.add('hidden');
+  $('#pv-gest').classList.add('hidden');
+  $('#pv-ui').classList.add('hidden');
+  $('#player-frame').querySelectorAll('iframe').forEach(function(f){ f.remove(); });
+  const prev = $('#pv-soon'); if (prev) prev.remove();
+  const meta = [it.type === 'tv' ? 'TV Show' : 'Movie', Number(it.rating) > 0 ? 'Rating ' + it.rating : '', it.year || '', it.description || ''].filter(Boolean);
+  const el = document.createElement('div');
+  el.id = 'pv-soon';
+  el.className = 'pv-soon';
+  el.innerHTML =
+    '<div class="pv-soon-hero"><img src="' + esc(it.backdrop || it.poster || PLACEHOLDER) + '" alt=""></div>' +
+    '<div class="pv-soon-info"><img class="pv-soon-poster" src="' + esc(it.poster || it.backdrop || PLACEHOLDER) + '" alt="">' +
+    '<div><h2>' + esc(it.title) + '</h2><p>' + esc(meta.join('  |  ')) + '</p></div></div>' +
+    '<div class="pv-soon-card"><h3>Coming soon</h3><p>This title is not available yet. It will be added as soon as it is ready.</p>' +
+    '<button class="btn btn-primary" data-act="list" data-id="' + esc(it.id) + '">' + listBtnHtml(String(it.id)) + '</button></div>';
+  $('#player-frame').appendChild(el);
+}
 function pvFallback(){
   const p = state.player, frame = $('#player-frame'), loader = $('#player-loading');
   if (!p.item || pv.fell) return;
@@ -1608,10 +1640,13 @@ async function loadFrame(url, keep){
   pv.lastUrl = url;
   const resumeAt = keep && pv.v.getAttribute('src') ? (pv.v.currentTime || 0) : 0;
   loader.classList.remove('hidden');
+  const soon = $('#pv-soon');
+  if (soon){ soon.remove(); $('#pv-video').classList.remove('hidden'); $('#pv-gest').classList.remove('hidden'); $('#pv-ui').classList.remove('hidden'); }
   if (pv.fell){ pvFallback(); return; }
   $('#player-frame').querySelectorAll('iframe').forEach(function(f){ f.remove(); });
   try {
     const res = await fetch(url);
+    if (res.status === 404){ if (tok === pv.tok && p.item) pvComingSoon(); return; }
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const html = await res.text();
     if (tok !== pv.tok || !p.item) return;
