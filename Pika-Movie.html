@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#000000" id="meta-theme-color">
 <meta name="description" content="PIKA MOVIE - Premium Streaming">
 <link rel="icon" href="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png">
+<link rel="manifest" href="pika-movie-manifest.json" />
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pika Movie">
 <title>PIKA MOVIE</title>
 <script>try{var t=localStorage.getItem('pika_theme');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}</script>
 <style>
@@ -318,6 +323,120 @@ html[data-theme="light"] .avatar { background: #fff; border-color: rgba(0,0,0,0.
   70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 230, 118, 0); }
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
 }
+
+/* ============ INSTALLING ANIMATION (PIKA MOVIE STYLE) ============ */
+#install-anim{
+  position:fixed; inset:0; z-index:10500;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.72);
+  backdrop-filter:blur(14px) saturate(160%);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  padding:20px;
+  animation: installFadeIn .35s ease-out;
+}
+@keyframes installFadeIn{ from{opacity:0} to{opacity:1} }
+#install-anim.out{ animation: installFadeOut .35s ease-in forwards; }
+@keyframes installFadeOut{ to{opacity:0} }
+
+.install-card{
+  position:relative;
+  width:100%; max-width:320px;
+  padding:32px 24px 28px;
+  border-radius:28px;
+  background:linear-gradient(155deg, #1a1a1d 0%, #000000 100%);
+  border:1px solid rgba(229,9,20,.35);
+  box-shadow:
+    0 30px 80px rgba(0,0,0,.7),
+    0 0 0 1px rgba(229,9,20,.12),
+    inset 0 1px 0 rgba(255,255,255,.08);
+  text-align:center; color:#fff;
+  overflow:hidden;
+  animation: installCardIn .55s cubic-bezier(.34,1.4,.64,1);
+}
+@keyframes installCardIn{
+  from{ transform:scale(.85) translateY(30px); opacity:0; }
+  to  { transform:scale(1) translateY(0); opacity:1; }
+}
+.install-card::before{
+  content:""; position:absolute; top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg,#e50914,#ff4d4d,#e50914);
+  background-size:200% 100%;
+  animation: installShimmerBar 2s linear infinite;
+}
+@keyframes installShimmerBar{
+  0%{ background-position:0% 0; }
+  100%{ background-position:200% 0; }
+}
+.install-card::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(circle at 100% 0%, rgba(229,9,20,.15), transparent 55%);
+}
+
+.install-logo{
+  position:relative; z-index:2;
+  width:88px; height:88px; margin:0 auto 18px;
+  border-radius:24px; overflow:hidden;
+  background:linear-gradient(135deg,#e50914,#ff4d4d);
+  box-shadow:
+    0 14px 34px rgba(229,9,20,.5),
+    0 0 60px rgba(229,9,20,.35),
+    inset 0 1px 0 rgba(255,255,255,.5);
+  animation: installLogoPop .8s cubic-bezier(.34,1.56,.64,1),
+             installLogoPulse 2.5s ease-in-out 1s infinite;
+}
+@keyframes installLogoPop{
+  0%{ transform:scale(.4) rotate(-15deg); opacity:0; }
+  60%{ opacity:1; }
+  100%{ transform:scale(1) rotate(0); opacity:1; }
+}
+@keyframes installLogoPulse{
+  0%,100%{ transform:scale(1); }
+  50%    { transform:scale(1.05); }
+}
+.install-logo img{
+  width:100%; height:100%; object-fit:cover; display:block;
+  position:relative; z-index:2;
+}
+.install-logo .shine{
+  position:absolute; inset:0; z-index:3;
+  background:linear-gradient(115deg, transparent 35%, rgba(255,255,255,.7) 48%, rgba(255,255,255,1) 50%, rgba(255,255,255,.7) 52%, transparent 65%);
+  transform:translateX(-150%) skewX(-15deg);
+  animation: installLogoShine 2.5s ease-in-out infinite;
+  mix-blend-mode:screen;
+}
+@keyframes installLogoShine{
+  0%   { transform:translateX(-150%) skewX(-15deg); }
+  100% { transform:translateX(150%) skewX(-15deg); }
+}
+
+.install-title{ position:relative; z-index:2; font-size:17px; font-weight:800; margin:0 0 6px; color:#fff; letter-spacing:-.01em; }
+.install-sub{ position:relative; z-index:2; font-size:12.5px; color:rgba(255,255,255,.6); margin:0 0 22px; }
+.install-bar{ position:relative; z-index:2; width:100%; height:6px; border-radius:6px; background:rgba(255,255,255,.1); overflow:hidden; box-shadow:inset 0 1px 2px rgba(0,0,0,.2); }
+.install-bar i{ display:block; height:100%; width:0%; border-radius:6px; background:linear-gradient(90deg,#e50914,#ff4d4d); background-size:200% 100%; box-shadow:0 0 14px rgba(229,9,20,.7); transition:width .3s cubic-bezier(.4,0,.2,1); animation: installBarShimmer 1.5s linear infinite; }
+@keyframes installBarShimmer{ 0%{ background-position:0% 0; } 100%{ background-position:200% 0; } }
+.install-pct{ position:relative; z-index:2; font-size:11.5px; font-weight:700; color:rgba(255,255,255,.7); margin-top:12px; letter-spacing:.08em; font-variant-numeric: tabular-nums; }
+
+.install-success-check{ position:relative; z-index:2; width:88px; height:88px; margin:0 auto 18px; border-radius:50%; background:linear-gradient(135deg,#e50914,#b80710); display:grid; place-items:center; box-shadow: 0 14px 34px rgba(229,9,20,.5), 0 0 60px rgba(229,9,20,.35); animation: installSuccessPop .7s cubic-bezier(.34,1.56,.64,1); }
+@keyframes installSuccessPop{ 0% { transform:scale(0) rotate(-180deg); opacity:0; } 60% { opacity:1; } 100% { transform:scale(1) rotate(0); opacity:1; } }
+.install-success-check svg{ width:48px; height:48px; stroke:#fff; stroke-width:3.5; fill:none; stroke-dasharray:50; stroke-dashoffset:50; animation: installCheckDraw .6s ease-out .5s forwards; }
+@keyframes installCheckDraw{ to{ stroke-dashoffset:0; } }
+.install-ripple{ position:absolute; top:50%; left:50%; width:20px; height:20px; border-radius:50%; transform:translate(-50%,-50%) scale(0); background:radial-gradient(circle, rgba(229,9,20,.5), transparent 70%); pointer-events:none; z-index:1; animation: installRippleOut .9s cubic-bezier(.22,1,.36,1) forwards; }
+@keyframes installRippleOut{ 0% { transform:translate(-50%,-50%) scale(0); opacity:1; } 100% { transform:translate(-50%,-50%) scale(40); opacity:0; } }
+
+#ip-overlay{ position:fixed; inset:0; z-index:10400; display:flex; justify-content:center; align-items:center; padding:20px; background:rgba(0,0,0,.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); animation:ipFade .3s ease-out forwards; }
+#ip-overlay *{ box-sizing:border-box; font-family:'VIP',-apple-system,sans-serif; }
+#ip-overlay .ip-card{ position:relative; width:100%; max-width:320px; background:rgba(30,30,30,.8); border-radius:28px; padding:24px 20px 20px; backdrop-filter:blur(25px) saturate(190%); border:1px solid rgba(255,255,255,.15); box-shadow:0 20px 40px rgba(0,0,0,.6); display:flex; flex-direction:column; align-items:center; text-align:center; color:#fff; transform:scale(.9); animation:ipSpring .4s cubic-bezier(.175,.885,.32,1.275) forwards; }
+#ip-overlay .ip-icon{ width:72px; height:72px; margin-bottom:14px; border-radius:18px; background:#000; display:flex; justify-content:center; align-items:center; box-shadow:0 8px 16px rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.1); overflow:hidden; }
+#ip-overlay .ip-icon img{ width:100%; height:100%; object-fit:cover; display:block; }
+#ip-overlay .ip-title{ font-size:20px; font-weight:700; margin:0 0 4px; color:#fff; }
+#ip-overlay .ip-domain{ font-size:13px; color:rgba(255,255,255,.65); margin:0 0 18px; }
+#ip-overlay .ip-desc{ font-size:13px; color:rgba(255,255,255,.85); line-height:1.4; margin:0 0 22px; padding:0 4px; }
+#ip-overlay .ip-btns{ display:flex; gap:12px; width:100%; }
+#ip-overlay .ip-btn{ flex:1; padding:12px 16px; border-radius:14px; font-size:15px; font-weight:600; border:none; cursor:pointer; transition:all .2s; }
+#ip-overlay .ip-cancel{ background:rgba(255,255,255,.12); color:rgba(255,255,255,.9); border:1px solid rgba(255,255,255,.15); }
+#ip-overlay .ip-install{ background:linear-gradient(135deg,#e50914,#ff4d4d); color:#fff; box-shadow:0 4px 12px rgba(229,9,20,.4); }
+@keyframes ipFade{ from{opacity:0} to{opacity:1} }
+@keyframes ipSpring{ from{opacity:0; transform:scale(.8) translateY(20px)} to{opacity:1; transform:scale(1) translateY(0)} }
 </style>
 </head>
 <body>
@@ -470,6 +589,19 @@ html[data-theme="light"] .avatar { background: #fff; border-color: rgba(0,0,0,0.
 </div>
 
 <div id="toast-wrap"></div>
+
+<div id="ip-overlay" style="display: none;">
+  <div class="ip-card">
+    <div class="ip-icon"><img src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png" alt="Pika Movie" /></div>
+    <h2 class="ip-title">Pika Movie</h2>
+    <p class="ip-domain" id="ip-domain">itsmems97.github.io</p>
+    <p class="ip-desc">Install this application on your home screen for quick access and a native full-screen experience.</p>
+    <div class="ip-btns">
+      <button class="ip-btn ip-cancel" id="ip-cancel" type="button">Cancel</button>
+      <button class="ip-btn ip-install" id="ip-install" type="button">Install</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ============================================
@@ -1813,18 +1945,222 @@ loadHome().then(function(){}, function(){}).then(function(){
 });
 setTimeout(hideSplash, 4500);
 
-// Pika Store ke andar khulne par apna header aur nav chhupao
-if (window.self !== window.top) {
-  setTimeout(function() {
-    var hdr = document.querySelector('.app-header');
-    if (hdr) hdr.style.display = 'none';
-    var nav = document.querySelector('.bottom-nav');
-    if (nav) nav.style.display = 'none';
-    var screenHome = document.getElementById('screen-home');
-    if (screenHome) screenHome.style.paddingTop = '10px'; // Thori space upar
-    var main = document.querySelector('main');
-    if (main) main.style.paddingBottom = '10px';
-  }, 100);
+/* ============================================
+   PWA INSTALL SYSTEM (SAME AS PIKA STORE)
+   ============================================ */
+let deferredInstall = null;
+
+function isStandalone(){
+  return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true || String(document.referrer).startsWith("android-app://");
+}
+
+const isWebView = () => /; wv\)|\bwv\b/.test(navigator.userAgent || "");
+
+window.addEventListener("beforeinstallprompt", e=>{
+  e.preventDefault();
+  deferredInstall = e;
+});
+
+window.addEventListener("appinstalled", ()=>{
+  deferredInstall = null;
+  closeInstallPrompt();
+});
+
+function closeInstallPrompt(){
+  const o = document.getElementById("ip-overlay");
+  if(!o) return;
+  o.style.display = "none";
+}
+
+function showInstallPrompt(){
+  if(isStandalone() || isWebView()) return;
+  const o = document.getElementById("ip-overlay");
+  if(o) {
+    document.getElementById("ip-domain").textContent = location.hostname;
+    o.style.display = "flex";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  const ipCancel = document.getElementById("ip-cancel");
+  const ipInstall = document.getElementById("ip-install");
+  if(ipCancel) ipCancel.addEventListener("click", closeInstallPrompt);
+  if(ipInstall) ipInstall.addEventListener("click", installApp);
+
+  // PWA install prompt ko 3.5 seconds baad dikhao taake splash screen khatam ho jaye
+  setTimeout(showInstallPrompt, 3500);
+});
+
+function infoSheet(title, html, okLabel="OK"){
+  return new Promise(resolve=>{
+    document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="info-backdrop" style="z-index: 10500; position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: flex-end;">
+      <div class="sheet" style="width:100%; padding:26px 20px; border-radius: 26px 26px 0 0; background: #121214; color: #fff; text-align: center;">
+        <h3 style="font-size:18px;margin:0 0 10px;">${title}</h3>
+        <p style="color:#aaa; font-size:14px; line-height:1.5; margin-bottom: 20px;">${html}</p>
+        <button class="btn btn-primary" id="info-ok" type="button" style="width:100%; justify-content:center; padding: 14px; border-radius: 999px; font-weight: bold; background: var(--accent); color: white; border: none;">${okLabel}</button>
+      </div>
+    </div>`);
+    document.getElementById("info-ok").addEventListener("click", ()=>{ document.getElementById("info-backdrop").remove(); resolve(true); });
+  });
+}
+
+function installInstructions(){
+  const ua = navigator.userAgent || "";
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isSafari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
+  const isAndroid = /Android/.test(ua);
+  const isFirefox = /Firefox|FxiOS/.test(ua);
+  const isSamsung = /SamsungBrowser/.test(ua);
+  
+  if(isIOS){
+    return isSafari
+      ? "Tap the <b>Share</b> icon at the bottom of Safari, then choose <b>Add to Home Screen</b>."
+      : "Please open this page in <b>Safari</b> — on iPhone only Safari can install. Then tap <b>Share</b> → <b>Add to Home Screen</b>.";
+  }
+  if(isFirefox) return "Tap the <b>⋮ menu</b> and look for <b>Install</b> — or open in Chrome instead.";
+  if(isSamsung) return "Tap the <b>menu</b>, then choose <b>Add page to</b> → <b>Home screen</b>.";
+  if(isAndroid) return "Tap the <b>⋮ menu</b>, then choose <b>Install app</b> (or <b>Add to Home screen</b>).";
+  return "Tap your browser's <b>menu</b> and look for <b>Install Pika Movie</b> or <b>Add to Home screen</b>.";
+}
+
+async function installApp(){
+  if(isStandalone()){ 
+    await infoSheet("Already installed", "Pika Movie is already installed.", "OK"); 
+    return; 
+  }
+  
+  const LOGO = "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png";
+
+  if(!deferredInstall){
+    document.body.insertAdjacentHTML("beforeend", `
+      <div id="install-anim">
+        <div class="install-card">
+          <div class="install-logo">
+            <img alt="Pika Movie" src="${LOGO}" />
+            <div class="shine"></div>
+          </div>
+          <h3 class="install-title">Downloading.......</h3>
+          <p class="install-sub">Getting things ready</p>
+          <div class="install-bar"><i id="install-bar-manual"></i></div>
+          <div class="install-pct" id="install-pct-manual">0%</div>
+        </div>
+      </div>`);
+
+    const animEl = document.getElementById("install-anim");
+    const bar = document.getElementById("install-bar-manual");
+    const pct = document.getElementById("install-pct-manual");
+
+    await new Promise(resolve=>{
+      let p = 0;
+      const t = setInterval(()=>{
+        p = Math.min(100, p + Math.floor(Math.random()*4) + 2);
+        if(bar) bar.style.width = p + "%";
+        if(pct) pct.textContent = p + "%";
+        if(p >= 100){ clearInterval(t); setTimeout(resolve, 250); }
+      }, 120);
+    });
+
+    if(animEl) animEl.classList.add("out");
+    await new Promise(r => setTimeout(r, 350));
+    if(animEl) animEl.remove();
+
+    await infoSheet("Install Pika Movie", installInstructions(), "OK");
+    return;
+  }
+
+  // STAGE 1
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="install-anim">
+      <div class="install-card">
+        <div class="install-logo">
+          <img alt="Pika Movie" src="${LOGO}" />
+          <div class="shine"></div>
+        </div>
+        <h3 class="install-title">Downloading.......</h3>
+        <p class="install-sub">Getting things ready</p>
+        <div class="install-bar"><i id="install-bar-1"></i></div>
+        <div class="install-pct" id="install-pct-1">0%</div>
+      </div>
+    </div>`);
+
+  const animEl1 = document.getElementById("install-anim");
+  const bar1 = document.getElementById("install-bar-1");
+  const pct1 = document.getElementById("install-pct-1");
+
+  await new Promise(resolve=>{
+    let pct = 0;
+    const t = setInterval(()=>{
+      pct = Math.min(100, pct + Math.floor(Math.random()*4) + 2);
+      if(bar1) bar1.style.width = pct + "%";
+      if(pct1) pct1.textContent = pct + "%";
+      if(pct >= 100){ clearInterval(t); setTimeout(resolve, 250); }
+    }, 120);
+  });
+
+  if(animEl1) animEl1.classList.add("out");
+  await new Promise(r => setTimeout(r, 350));
+  if(animEl1) animEl1.remove();
+
+  // STAGE 2 (Native Prompt)
+  let accepted = false;
+  try{
+    deferredInstall.prompt();
+    const c = await deferredInstall.userChoice;
+    deferredInstall = null;
+    accepted = !!(c && c.outcome === "accepted");
+  }catch(e){ console.warn(e); }
+
+  if(!accepted){
+    return; // User cancelled
+  }
+
+  // STAGE 3
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="install-anim">
+      <div class="install-card">
+        <div class="install-logo">
+          <img alt="Pika Movie" src="${LOGO}" />
+          <div class="shine"></div>
+        </div>
+        <h3 class="install-title">Installing Pika Movie</h3>
+        <p class="install-sub">Almost done…</p>
+        <div class="install-bar"><i id="install-bar-3" style="width:30%"></i></div>
+        <div class="install-pct" id="install-pct-3">30%</div>
+      </div>
+    </div>`);
+
+  const animEl3 = document.getElementById("install-anim");
+  const bar3 = document.getElementById("install-bar-3");
+  const pct3 = document.getElementById("install-pct-3");
+
+  await new Promise(resolve=>{
+    let pct = 30;
+    const t = setInterval(()=>{
+      pct = Math.min(100, pct + Math.floor(Math.random()*3) + 1);
+      if(bar3) bar3.style.width = pct + "%";
+      if(pct3) pct3.textContent = pct + "%";
+      if(pct >= 100){ clearInterval(t); setTimeout(resolve, 400); }
+    }, 150);
+  });
+
+  // STAGE 4 (Success)
+  if(animEl3){
+    animEl3.querySelector(".install-card").innerHTML = `
+      <div class="install-ripple"></div>
+      <div class="install-success-check">
+        <svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>
+      </div>
+      <h3 class="install-title" style="font-size:19px">Ready to launch!</h3>
+      <p class="install-sub" style="margin-bottom:0">Pika Movie is installed on your device</p>
+    `;
+  }
+
+  await new Promise(r => setTimeout(r, 2500));
+
+  if(animEl3) animEl3.classList.add("out");
+  await new Promise(r => setTimeout(r, 350));
+  if(animEl3) animEl3.remove();
 }
 </script>
 </body>
