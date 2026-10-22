@@ -1,90 +1,61 @@
 {
-  "id": "/",
-  "name": "Pika Store",
-  "short_name": "Pika",
-  "description": "Pika Store - download apps, share files and chat with the community.",
-  "start_url": "/?source=pwa",
-  "scope": "/",
+  "id": "https://itsmems97.github.io/Pika-Movie.html",
+  "name": "Pika Movie",
+  "short_name": "Pika Movie",
+  "description": "PIKA MOVIE - Premium Streaming. Unlimited Movies & Shows.",
+  "start_url": "https://itsmems97.github.io/Pika-Movie.html",
+  "scope": "https://itsmems97.github.io/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "portrait-primary",
-  "background_color": "#fdf7dd",
-  "theme_color": "#fdf7dd",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "lang": "en",
   "dir": "ltr",
-  "categories": ["utilities", "social", "productivity"],
+  "categories": ["entertainment", "video"],
   "prefer_related_applications": false,
-  "related_applications": [
-    {
-      "platform": "webapp",
-      "url": "/pika-manifest.json"
-    }
-  ],
-  "launch_handler": {
-    "client_mode": ["focus-existing", "auto"]
-  },
-  "file_handlers": [
-    {
-      "action": "/",
-      "accept": {
-        "application/vnd.android.package-archive": [".apk"],
-        "application/zip": [".zip"],
-        "application/x-rar-compressed": [".rar"],
-        "application/vnd.rar": [".rar"]
-      }
-    }
-  ],
   "icons": [
-    { "src": "pika.png", "sizes": "72x72", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "pika.png", "sizes": "512x512", "type": "image/png", "purpose": "monochrome" }
+    { "src": "Pika-Movie.png", "sizes": "72x72", "type": "image/png", "purpose": "any" },
+    { "src": "Pika-Movie.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+    { "src": "Pika-Movie.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "Pika-Movie.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "Pika-Movie.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
+    { "src": "Pika-Movie.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "Pika-Movie.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "Pika-Movie.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "Pika-Movie.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "Pika-Movie.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
-  "shortcuts": [
+  "screenshots": [
     {
-      "name": "Upload App",
-      "short_name": "Upload",
-      "description": "Upload a new app to Pika Store",
-      "url": "/?action=upload",
-      "icons": [{ "src": "pika.png", "sizes": "96x96", "type": "image/png" }]
+      "src": "Pika-MovieSs1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
     },
     {
-      "name": "My Profile",
-      "short_name": "Profile",
-      "description": "Open your profile page",
-      "url": "/?action=profile",
-      "icons": [{ "src": "pika.png", "sizes": "96x96", "type": "image/png" }]
+      "src": "Pika-MovieSs2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
     },
     {
-      "name": "Channels",
-      "short_name": "Channels",
-      "description": "Open channels list",
-      "url": "/?action=channels",
-      "icons": [{ "src": "pika.png", "sizes": "96x96", "type": "image/png" }]
+      "src": "Pika-MovieSs3.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
     },
     {
-      "name": "Search Apps",
-      "short_name": "Search",
-      "description": "Search apps in Pika Store",
-      "url": "/?action=search",
-      "icons": [{ "src": "pika.png", "sizes": "96x96", "type": "image/png" }]
+      "src": "Pika-MovieSs4.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "Pika-MovieSs5.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
-  ],
-  "share_target": {
-    "action": "/share",
-    "method": "GET",
-    "enctype": "application/x-www-form-urlencoded",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  }
+  ]
 }

@@ -1,10 +1,10 @@
 {
-  "id": "https://itsmems97.github.io/Pika-Movie.html",
+  "id": "/",
   "name": "Pika Movie",
   "short_name": "Pika Movie",
   "description": "PIKA MOVIE - Premium Streaming. Unlimited Movies & Shows.",
-  "start_url": "https://itsmems97.github.io/Pika-Movie.html",
-  "scope": "https://itsmems97.github.io/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "portrait-primary",
