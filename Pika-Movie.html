@@ -2162,6 +2162,14 @@ async function installApp(){
   await new Promise(r => setTimeout(r, 350));
   if(animEl3) animEl3.remove();
 }
+// Register Service Worker for PWA installability
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('Service Worker registered', reg))
+      .catch(err => console.warn('Service Worker registration failed', err));
+  });
+}
 </script>
 </body>
 </html>

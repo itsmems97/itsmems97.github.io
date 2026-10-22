@@ -5610,9 +5610,9 @@ function initNav(){
       
       const target = btn.dataset.page;
       if(target === "__pika-movie"){
-        window.location.href = "https://itsmems97.github.io/Pika-Movie.html";
-        return;
-      }
+  window.location.href = "https://itsmems97.github.io/Pika-Movie.html";
+  return;
+}
       if(target === "__categories"){ openCategoriesSheet(); return; }
       if(target === "upload-page" && guestBlock("upload apps")) return;
       $$(".nav-btn").forEach(b=>b.classList.remove("active"));
