@@ -1,10 +1,10 @@
 {
-  "id": "/",
+  "id": "/Pika-Movie.html",
   "name": "Pika Movie",
   "short_name": "Pika Movie",
   "description": "PIKA MOVIE - Premium Streaming. Unlimited Movies & Shows.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/Pika-Movie.html",
+  "scope": "/Pika-Movie.html",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "portrait-primary",
@@ -25,5 +25,37 @@
     { "src": "Pika-Movie.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
     { "src": "Pika-Movie.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "Pika-Movie.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    {
+      "src": "Pika-MovieSs1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "Pika-MovieSs2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "Pika-MovieSs3.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "Pika-MovieSs4.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "Pika-MovieSs5.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
   ]
 }
