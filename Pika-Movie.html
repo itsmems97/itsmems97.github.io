@@ -607,7 +607,7 @@ html[data-theme="light"] .avatar { background: #fff; border-color: rgba(0,0,0,0.
 /* ============================================
    CONFIG & STATE
    ============================================ */
-const CONFIG = { API_BASE: '' };
+const CONFIG = { API_BASE: 'https://pikamovie-api.duckdns.org' };
 const API = CONFIG.API_BASE;
 const CATS = [
   ['all','All'],['new','New Releases'],['hindi','Hindi'],['top10','Top 10'],['trending','Trending'],
@@ -1492,12 +1492,34 @@ function pvCycleFit(){
 }
 function pvDownload(){
   const p = state.player;
-  if (!pv.srcUrl || !p.item){ toast('Video not ready yet'); return; }
-  const a = document.createElement('a');
-  a.href = pv.srcUrl;
-  a.download = ((p.item.title || 'video') + (p.item.type === 'tv' ? ' S' + p.season + 'E' + p.episode : '') + ' ' + (p.quality || 720) + 'p').replace(/[^\w\- ]+/g, '') + '.mp4';
-  document.body.appendChild(a); a.click(); a.remove();
-  toast('Download started');
+  if (!p.item){ toast('Video not ready yet'); return; }
+  openQualityDrawer('download');
+}
+async function pvDownloadQ(q){
+  const p = state.player;
+  if (!p.item) return;
+  const keep = p.quality;
+  p.quality = q;
+  const url = embedUrl(p.dubId);
+  p.quality = keep;
+  toast('Preparing ' + q + 'p download...');
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const html = await res.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const node = doc.querySelector('video source[src]') || doc.querySelector('video[src]');
+    const src = node ? node.getAttribute('src') : '';
+    if (!src) throw new Error('no video');
+    const href = new URL(src, new URL(url, location.href)).href.replace('http://193.122.76.131:4000', 'https://pikamovie-api.duckdns.org');
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = ((p.item.title || 'video') + (p.item.type === 'tv' ? ' S' + p.season + 'E' + p.episode : '') + ' ' + q + 'p').replace(/[^\w\- ]+/g, '') + '.mp4';
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('Download started');
+  } catch(e){
+    toast('Download failed. Try again.');
+  }
 }
 function pvBindGestures(){
   const g = $('#pv-gest');
@@ -1597,7 +1619,7 @@ async function loadFrame(url, keep){
     const node = doc.querySelector('video source[src]') || doc.querySelector('video[src]');
     const src = node ? node.getAttribute('src') : '';
     if (!src) throw new Error('no video tag');
-    pv.srcUrl = new URL(src, url).href;
+    pv.srcUrl = new URL(src, url).href.replace('http://193.122.76.131:4000', 'https://pikamovie-api.duckdns.org');
     const v = pv.v;
     v.onloadedmetadata = function(){
       v.onloadedmetadata = null;
@@ -1743,9 +1765,11 @@ async function pvSyncQualityLabel(){
   if (!list.length || !state.player.item) return;
   $('#player-quality').textContent = pickQ(list, state.player.quality || 720) + 'p';
 }
-async function openQualityDrawer(){
+async function openQualityDrawer(mode){
   const p = state.player;
   if (!p.item) return;
+  const dl = mode === 'download';
+  $('#quality-drawer h3').textContent = dl ? 'Download Quality' : 'Select Quality';
   $('#quality-list').innerHTML = '<p class="muted">Loading...</p>';
   $('#quality-drawer').classList.add('open');
   const list = await getStreamList();
@@ -1754,9 +1778,10 @@ async function openQualityDrawer(){
     return;
   }
   const playing = pickQ(list, p.quality || 720);
+  const act = dl ? 'quality-dl-pick' : 'quality-pick';
   $('#quality-list').innerHTML = list.map(function(s){
-    return '<button class="lang-btn'+(s.q === playing ? ' active' : '')+'" data-act="quality-pick" data-id="'+s.q+'">'+s.label+(s.sizeMb ? '  -  ' + fmtSize(s.sizeMb) : '')+'</button>';
-  }).join('') + '<p class="muted" style="margin-top:10px">Slow internet? Choose a lower quality.</p>';
+    return '<button class="lang-btn'+(!dl && s.q === playing ? ' active' : '')+'" data-act="'+act+'" data-id="'+s.q+'">'+s.label+(s.sizeMb ? '  -  ' + fmtSize(s.sizeMb) : '')+'</button>';
+  }).join('') + (dl ? '' : '<p class="muted" style="margin-top:10px">Slow internet? Choose a lower quality.</p>');
 }
 
 /* ============================================
@@ -1814,6 +1839,10 @@ case 'lang-open': openLangDrawer(); break;
 case 'lang-close': $('#lang-drawer').classList.remove('open'); break;
 case 'quality-open': openQualityDrawer(); break;
 case 'quality-close': $('#quality-drawer').classList.remove('open'); break;
+case 'quality-dl-pick':
+  $('#quality-drawer').classList.remove('open');
+  pvDownloadQ(Number(id));
+  break;
 case 'quality-pick':
   state.player.quality = Number(id);
   $('#player-quality').textContent = id + 'p';
