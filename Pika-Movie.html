@@ -1826,6 +1826,20 @@ if (window.self !== window.top) {
     if (main) main.style.paddingBottom = '10px';
   }, 100);
 }
+
+// Pika Store ke andar khulne par apna header aur nav chhupao
+if (window.self !== window.top) {
+  setTimeout(function() {
+    var hdr = document.querySelector('.app-header');
+    if (hdr) hdr.style.display = 'none';
+    var nav = document.querySelector('.bottom-nav');
+    if (nav) nav.style.display = 'none';
+    var screenHome = document.getElementById('screen-home');
+    if (screenHome) screenHome.style.paddingTop = '10px'; // Thori space upar
+    var main = document.querySelector('main');
+    if (main) main.style.paddingBottom = '10px';
+  }, 100);
+}
 </script>
 </body>
 </html>

@@ -5602,6 +5602,26 @@ function openUsersSlowPopup(){
   setTimeout(checkAutoClose, 400);
 }
 
+function openPikaMovie() {
+  let overlay = document.getElementById("pika-movie-overlay");
+  if (overlay) {
+    overlay.style.display = "flex";
+    return;
+  }
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="pika-movie-overlay" style="position:fixed;inset:0;z-index:10000;background:#0B0E14;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:#0B0E14;border-bottom:1px solid rgba(255,255,255,.1);">
+        <button onclick="document.getElementById('pika-movie-overlay').style.display='none'" style="color:#fff;background:none;border:none;font-size:15px;font-weight:bold;padding:8px;display:flex;align-items:center;gap:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m6-6-6 6 6 6"/></svg> Back
+        </button>
+        <div style="flex:1;text-align:center;color:#fff;font-weight:800;font-size:16px;">Pika Movie</div>
+        <div style="width:60px;"></div>
+      </div>
+      <iframe id="pika-movie-iframe" src="https://itsmems97.github.io/Pika-Movie.html" style="flex:1;width:100%;height:100%;border:none;background:#000;" allow="autoplay; fullscreen; encrypted-media"></iframe>
+    </div>
+  `);
+}
+
 function initNav(){
   $$(".nav-btn").forEach(btn=>{
     btn.addEventListener("click", (e)=>{
@@ -5610,7 +5630,7 @@ function initNav(){
       
       const target = btn.dataset.page;
       if(target === "__pika-movie"){
-        window.location.href = "http://193.122.76.131:4000";
+        openPikaMovie();
         return;
       }
       if(target === "__categories"){ openCategoriesSheet(); return; }
