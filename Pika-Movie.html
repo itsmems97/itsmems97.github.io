@@ -3506,15 +3506,33 @@ function installInstructions(){
 }
 
 async function installApp(){
-    if (isStandalone()){ showToast('Already installed'); closeInstallPrompt(); return; }
+    if (isStandalone()){ closeInstallPrompt(); return; }
     closeInstallPrompt();
-    if (!deferredInstall){ showToast(installInstructions()); return; }
+    
+    if (!deferredInstall){ 
+        showToast(installInstructions()); 
+        return; 
+    }
+    
     try {
         deferredInstall.prompt();
         const c = await deferredInstall.userChoice;
         deferredInstall = null;
-        if (c && c.outcome === 'accepted') showToast('Installing...');
-    } catch(e){ showToast(installInstructions()); }
+        
+        if (c && c.outcome === 'accepted') {
+            showToast('Installing Pika Movie... Please wait.');
+            // 3 second baad check karo, agar app drawer mein nahi aayi toh manual guide dikhao
+            setTimeout(() => {
+                if (!isStandalone()) {
+                    alert("App install nahi hui. Please 3-dot menu (⋮) se 'Install App' ya 'Add to Home Screen' par click karein.");
+                }
+            }, 3000);
+        } else if (c && c.outcome === 'dismissed') {
+            showToast('Install cancelled.');
+        }
+    } catch(e){ 
+        showToast(installInstructions()); 
+    }
 }
 
 /* Build install prompt overlay dynamically */
