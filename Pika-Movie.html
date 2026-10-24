@@ -660,9 +660,9 @@ html, body {
             gap: 10px;
         }
 
-        .cat-card {
+.cat-card {
     flex: 0 0 auto;
-    width: 110px; /* Better ratio */
+    width: 110px;
     height: 65px;
     border-radius: 8px;
     overflow: hidden;
@@ -673,10 +673,18 @@ html, body {
     font-weight: 600;
     color: #fff;
     cursor: pointer;
-    background-size: cover;
-    background-position: center;
     position: relative;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    background-color: #1c1c21; /* Fallback color if image fails */
+}
+.cat-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 25%;
+    z-index: 0;
 }
         .cat-card::before {
             content: '';
@@ -2273,13 +2281,13 @@ function renderCard(it){
 
 /* ---------- HOME (hero + categories + sections + endless feed) ---------- */
 var CAT_ROW = [
-    ['all', 'All', 'https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?q=80&w=200&auto=format&fit=crop'], // Cinema collage
-    ['new', 'New', 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=200&auto=format&fit=crop'], // Clapperboard
-    ['hollywood', 'Hollywood', 'https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?q=80&w=200&auto=format&fit=crop'], // Actress/Action
-    ['bollywood', 'Bollywood', 'https://images.unsplash.com/photo-1583744946564-b52ac1c389c8?q=80&w=200&auto=format&fit=crop'], // SRK Style
-    ['punjabi', 'Punjabi', 'https://images.unsplash.com/photo-1516280440502-861f28b6c4e6?q=80&w=200&auto=format&fit=crop'], // Diljit/Singer style
-    ['western', 'Western', 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?q=80&w=200&auto=format&fit=crop'], // Western Cowboy/Actor
-    ['kdrama', 'K-Drama', 'https://images.unsplash.com/photo-1616083004841-1e5e5357fb7c?q=80&w=200&auto=format&fit=crop'] // K-Drama Star
+    ['all', 'All', 'pika-movie-banner/cat-all.jpg', '#134e5e,#71b280'],
+    ['new', 'New', 'pika-movie-banner/cat-new.jpg', '#8e2de2,#4a00e0'],
+    ['hollywood', 'Hollywood', 'pika-movie-banner/cat-hollywood.jpg', '#1e3c72,#2a5298'],
+    ['bollywood', 'Bollywood', 'pika-movie-banner/cat-bollywood.jpg', '#f12711,#f5af19'],
+    ['punjabi', 'Punjabi', 'pika-movie-banner/cat-punjabi.jpg', '#11998e,#38ef7d'],
+    ['western', 'Western', 'pika-movie-banner/cat-western.jpg', '#603813,#b29f94'],
+    ['kdrama', 'K-Drama', 'pika-movie-banner/cat-kdrama.jpg', '#ee0979,#ff6a00']
 ];
 function genreForTitle(t){
     t = String(t || '').toLowerCase();
@@ -2307,9 +2315,13 @@ function buildHomeHtml(sections){
         html += '<div class="hero clickable" id="hero-box" style="' + heroStyle(h) + '" onclick="heroPlay()"><div class="hero-title" id="hero-title">' + esc(h.title) + '</div></div>';
     }
     html += '<div class="section-header"><h3>Categories</h3></div><div class="category-row">' +
-    CAT_ROW.map(function(c){
-        return '<div class="cat-card" style="background-image:url(\'' + c[2] + '\');" data-g="' + c[0] + '" data-t="' + esc(c[1]) + '" onclick="openListEl(this)"><span>' + esc(c[1]) + '</span></div>';
-    }).join('') + '</div>';
+CAT_ROW.map(function(c){
+    // Photo fail ho to image hat jati hai aur neeche ka rang dikhta hai
+    return '<div class="cat-card" style="background-image:linear-gradient(135deg,' + c[3] + ');" data-g="' + c[0] + '" data-t="' + esc(c[1]) + '" onclick="openListEl(this)">' +
+                '<img src="' + c[2] + '" class="cat-img" onerror="this.remove()">' +
+                '<span>' + esc(c[1]) + '</span>' +
+           '</div>';
+}).join('') + '</div>';
     sections.forEach(function(sec){
         if (!sec.items || !sec.items.length) return;
         var g = genreForTitle(sec.title);
