@@ -9,11 +9,124 @@
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>MovieBox Pro</title>
-    <style>
-        /* ==========================================================================
-           CSS VARIABLES & RESET
-           ========================================================================== */
+<title>MovieBox Pro</title>
+<style>
+    /* =========================================
+   PREMIUM SPLASH SCREEN STYLES
+   ========================================= */
+#splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: radial-gradient(circle at center, #1a1a1d 0%, #000000 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
+}
+#splash-screen.hide {
+    opacity: 0;
+    visibility: hidden;
+}
+.splash-logo {
+    width: 110px;
+    height: 110px;
+    border-radius: 24px;
+    animation: pulseLogo 2s infinite alternate;
+    box-shadow: 0 0 40px rgba(0, 230, 118, 0.4);
+    margin-bottom: 20px;
+}
+.splash-text {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    background: linear-gradient(90deg, #00ff87, #00d2ff, #00ff87);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientTextAnim 3s linear infinite;
+    margin-bottom: 30px;
+}
+.splash-progress-container {
+    width: 200px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+}
+.splash-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #00ff87, #00d2ff);
+    border-radius: 10px;
+    transition: width 0.2s ease-out;
+    box-shadow: 0 0 10px rgba(0, 230, 118, 0.8);
+}
+.splash-percentage {
+    margin-top: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #8e8e93;
+    font-variant-numeric: tabular-nums;
+}
+@keyframes pulseLogo {
+    0% { transform: scale(1); box-shadow: 0 0 20px rgba(0,230,118,0.2); }
+    100% { transform: scale(1.08); box-shadow: 0 0 60px rgba(0,230,118,0.7); }
+}
+
+/* =========================================
+   APP STUCK MODAL STYLES
+   ========================================= */
+#stuck-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10005;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+}
+.stuck-box {
+    background: #1c1c21;
+    border: 1px solid #2c2c35;
+    border-radius: 20px;
+    padding: 30px 20px;
+    max-width: 320px;
+    width: 100%;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+}
+.stuck-box h2 {
+    color: #fff;
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+.stuck-box p {
+    color: #8e8e93;
+    font-size: 14px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+.stuck-btn {
+    background: #ff3b30;
+    color: #fff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    width: 100%;
+    cursor: pointer;
+}
+
+    /* ==========================================================================
+       CSS VARIABLES & RESET
+       ========================================================================== */
         :root {
             /* Default Gray Theme */
             --bg-base: #0d0d0f;
@@ -379,13 +492,15 @@ html, body {
         }
 
         /* Horizontal Lists */
-        .scroll-row {
-            display: flex;
-            overflow-x: auto;
-            padding: 0 15px 15px 15px;
-            gap: 12px;
-            scroll-snap-type: x mandatory;
-        }
+.scroll-row {
+    display: flex;
+    overflow-x: auto;
+    padding: 0 15px 15px 15px;
+    gap: 12px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    transform: translate3d(0, 0, 0); /* Smooth scroll GPU */
+}
 
         /* Grid for Most Trending */
 .grid-3 {
@@ -407,61 +522,68 @@ html, body {
     width: 100%;
 }
 
-        /* Cards */
-        .card {
-            flex: 0 0 auto;
-            width: 105px; 
-            scroll-snap-align: start;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-        }
+/* Cards */
+.card {
+    flex: 0 0 auto;
+    width: 105px; 
+    scroll-snap-align: start;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    transform: translate3d(0, 0, 0); /* Force GPU rendering */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
 
-        .card-img-container {
-            position: relative;
-            width: 100%;
-            height: 155px; 
-            border-radius: 8px 8px 0 0;
-            overflow: hidden;
-            background-color: var(--bg-surface);
-        }
+.card-img-container {
+    position: relative;
+    width: 100%;
+    height: 155px; 
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+    background-color: var(--bg-surface);
+    transform: translate3d(0, 0, 0);
+}
 
-        .card-img {
+.card-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s;
     pointer-events: none;
+    backface-visibility: hidden;
 }
-        .card:active .card-img {
-            transform: scale(1.05);
-        }
+.card:active .card-img {
+    transform: scale(1.05);
+}
 
-        .badge {
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            background: rgba(0,0,0,0.8);
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            z-index: 2;
-            color: #fff;
-        }
+.badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(0,0,0,0.8);
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    z-index: 2;
+    color: #fff;
+}
 
-        .card-title {
-            background-color: var(--bg-surface);
-            padding: 8px;
-            border-radius: 0 0 8px 8px;
-            font-size: 13px;
-            color: var(--text-main);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-weight: 500;
-            width: 100%;
-        }
+.card-title {
+    background-color: var(--bg-surface);
+    padding: 8px;
+    border-radius: 0 0 8px 8px;
+    font-size: 13px;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    width: 100%;
+    /* GPU Acceleration for Text */
+    transform: translateZ(0); 
+}
 
         .rank-num {
             position: absolute;
@@ -883,19 +1005,40 @@ html, body {
             transform: translateY(-2px);
         }
 
-        .store-icon, .list-icon, .user-icon {
-            stroke: var(--text-muted);
-            fill: none;
-            stroke-width: 1.8;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
+.store-icon, .list-icon, .user-icon {
+    stroke: var(--text-muted);
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: all 0.3s ease;
+}
 
-        .nav-item.active .store-icon, 
-        .nav-item.active .list-icon, 
-        .nav-item.active .user-icon {
-            stroke: var(--text-main); 
-        }
+/* Home Icon Default Color */
+.nav-item .home-path {
+    fill: var(--text-muted);
+    transition: all 0.3s ease;
+}
+
+/* Active Tab Highlights */
+.nav-item.active .home-path {
+    fill: url(#homeGrad); /* Gradient for Home Icon */
+}
+.nav-item.active .store-icon, 
+.nav-item.active .list-icon, 
+.nav-item.active .user-icon {
+    stroke: #00ff87; /* Solid green */
+    stroke-width: 2.2;
+}
+
+.nav-item.active span {
+    background: linear-gradient(135deg, #00ff87, #00d2ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+    color: #00ff87; 
+}
 
         /* ==========================================================================
            MODALS & TOASTS
@@ -1576,6 +1719,33 @@ html.player-open, html.player-open body { overflow: hidden !important; overscrol
 </style>
 </head>
 <body>
+<!-- Premium Splash Screen -->
+<div id="splash-screen">
+    <img class="splash-logo" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png" alt="Pika Movie Logo">
+    <div class="splash-text">PIKA MOVIE</div>
+    <div class="splash-progress-container">
+        <div class="splash-progress-bar" id="splash-progress-bar"></div>
+    </div>
+    <div class="splash-percentage" id="splash-percentage">0%</div>
+</div>
+
+<!-- App Stuck Modal -->
+<div id="stuck-modal">
+    <div class="stuck-box">
+        <h2>App Not Responding</h2>
+        <p>The app is taking too long to load. Please clear the cache and restart to continue.</p>
+        <button class="stuck-btn" onclick="clearCacheAndReload()">Clear Cache & Restart</button>
+    </div>
+</div>
+<!-- Global Gradient for Bottom Nav Icons -->
+<svg width="0" height="0" style="position:absolute;">
+    <defs>
+        <linearGradient id="homeGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#00ff87" />
+            <stop offset="100%" stop-color="#00d2ff" />
+        </linearGradient>
+    </defs>
+</svg>
 
     <!-- ==================== 1. HOME VIEW ==================== -->
     <div id="home-view" class="view active">
@@ -1673,21 +1843,21 @@ html.player-open, html.player-open body { overflow: hidden !important; overscrol
         </div>
         
         <div class="mylist-tabs">
-            <div class="mylist-tab active" id="tab-saved" onclick="switchMyListTab('saved')">Saved</div>
-            <div class="mylist-tab" id="tab-history" onclick="switchMyListTab('history')">Watch History</div>
-        </div>
+    <div class="mylist-tab active" id="tab-history" onclick="switchMyListTab('history')">Watch History</div>
+    <div class="mylist-tab" id="tab-saved" onclick="switchMyListTab('saved')">Saved</div>
+</div>
 
-        <!-- Saved Tab -->
-        <div class="mylist-content active" id="section-saved">
-            <button class="clear-all-btn" onclick="clearSavedMovies()">Clear All Saved</button>
-            <div id="saved-list-container"></div>
-        </div>
+<!-- History Tab -->
+<div class="mylist-content active" id="section-history">
+    <button class="clear-all-btn" onclick="clearWatchHistory()">Clear All History</button>
+    <div id="watch-history-container"></div>
+</div>
 
-        <!-- History Tab -->
-        <div class="mylist-content" id="section-history">
-            <button class="clear-all-btn" onclick="clearWatchHistory()">Clear All History</button>
-            <div id="watch-history-container"></div>
-        </div>
+<!-- Saved Tab -->
+<div class="mylist-content" id="section-saved">
+    <button class="clear-all-btn" onclick="clearSavedMovies()">Clear All Saved</button>
+    <div id="saved-list-container"></div>
+</div>
     </div>
 
 <!-- ==================== 4. PROFILE VIEW (ME) ==================== -->
@@ -1751,49 +1921,43 @@ html.player-open, html.player-open body { overflow: hidden !important; overscrol
 
     <!-- ==================== BOTTOM NAVIGATION ==================== -->
     <nav class="bottom-nav">
-        <div class="nav-item active" id="nav-home" onclick="switchView('home-view', this)">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <linearGradient id="homeGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stop-color="#00ff87" />
-                        <stop offset="100%" stop-color="#00d2ff" />
-                    </linearGradient>
-                </defs>
-                <path d="M12 2.5L2.5 11.5V21.5H9.5V16.5C9.5 15.9477 9.94772 15.5 10.5 15.5H13.5C14.0523 15.5 14.5 15.9477 14.5 16.5V21.5H21.5V11.5L12 2.5Z" fill="url(#homeGrad)"/>
-                <path d="M10.5 15.5H13.5V21.5H10.5V15.5Z" fill="var(--bg-base)"/>
-            </svg>
-            <span>Home</span>
-        </div>
+    <div class="nav-item active" id="nav-home" onclick="switchView('home-view', 'nav-home')">
+        <svg viewBox="0 0 24 24" class="home-icon-svg" xmlns="http://www.w3.org/2000/svg">
+            <path class="home-path" d="M12 2.5L2.5 11.5V21.5H9.5V16.5C9.5 15.9477 9.94772 15.5 10.5 15.5H13.5C14.0523 15.5 14.5 15.9477 14.5 16.5V21.5H21.5V11.5L12 2.5Z" fill="currentColor"/>
+            <path d="M10.5 15.5H13.5V21.5H10.5V15.5Z" fill="var(--bg-base)"/>
+        </svg>
+        <span>Home</span>
+    </div>
 
-        <div class="nav-item" id="nav-pikastore" onclick="openPikaStore(this)">
-            <svg viewBox="0 0 24 24" class="store-icon">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <path d="M16 10a4 4 0 0 1-8 0"></path>
-            </svg>
-            <span>Pika Store</span>
-        </div>
+    <div class="nav-item" id="nav-pikastore" onclick="openPikaStore('nav-pikastore')">
+        <svg viewBox="0 0 24 24" class="store-icon">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+        </svg>
+        <span>Pika Store</span>
+    </div>
 
-        <div class="nav-item" id="nav-downloads" onclick="switchView('downloads-view', this)">
-            <svg viewBox="0 0 24 24" class="list-icon">
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-            </svg>
-            <span>My List</span>
-        </div>
+    <div class="nav-item" id="nav-downloads" onclick="switchView('downloads-view', 'nav-downloads')">
+        <svg viewBox="0 0 24 24" class="list-icon">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        <span>My List</span>
+    </div>
 
-        <div class="nav-item" id="nav-profile" onclick="switchView('profile-view', this)">
-            <svg viewBox="0 0 24 24" class="user-icon">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <span>Me</span>
-        </div>
-    </nav>
+    <div class="nav-item" id="nav-profile" onclick="switchView('profile-view', 'nav-profile')">
+        <svg viewBox="0 0 24 24" class="user-icon">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>Me</span>
+    </div>
+</nav>
 
     <!-- ==================== MODAL & TOAST ==================== -->
     <!-- ==================== NEW FULLSCREEN PLAYER VIEW ==================== -->
@@ -1975,35 +2139,40 @@ function applyThemeFromState(){
 
 /* ---------- VIEW SWITCHING (KEEP FROM DEMO) ---------- */
 let currentView = 'home-view';
-function switchViewUI(viewId, navElement){
+function switchViewUI(viewId, navId){
     document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
     document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+    
     const target = document.getElementById(viewId);
     if (target) target.classList.add('active');
-    if (navElement) navElement.classList.add('active');
-    else {
-        const idMap = { 'home-view': 'nav-home', 'downloads-view': 'nav-downloads', 'profile-view': 'nav-profile' };
-        if (document.getElementById(idMap[viewId])) document.getElementById(idMap[viewId]).classList.add('active');
+    
+    if (navId) {
+        const navBtn = document.getElementById(navId);
+        if (navBtn) navBtn.classList.add('active');
     }
+    
     if (viewId === 'profile-view') renderProfile();
     if (viewId === 'downloads-view') renderMyLists();
     window.scrollTo(0, 0);
     currentView = viewId;
 }
-function switchView(viewId, navElement){
+function switchView(viewId, navId){
     if (viewId === 'home-view' && currentView === 'home-view' && state.mode === 'list'){
-        switchViewUI(viewId, navElement);
+        switchViewUI(viewId, navId);
         closeList();
         return;
     }
-    switchViewUI(viewId, navElement);
+    switchViewUI(viewId, navId);
     if (viewId !== 'home-view'){
         try { history.pushState({ page: viewId }, '', '#' + viewId); } catch(e){}
     }
 }
-function openPikaStore(element){
+function openPikaStore(navId){
     document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
-    if (element) element.classList.add('active');
+    if (navId) {
+        const btn = document.getElementById(navId);
+        if (btn) btn.classList.add('active');
+    }
     setTimeout(function(){ window.open("https://itsmems97.github.io/", "_blank"); }, 150);
 }
 
@@ -2076,7 +2245,8 @@ function renderCard(it){
     var typeBadge = it.type === 'tv' ? '<span class="badge">TV</span>' : (Number(it.rating) > 0 ? '<span class="badge">' + esc(it.rating) + '</span>' : '');
     return '<div class="card clickable" data-id="' + id + '" onclick="playById(\'' + id + '\')">' +
         '<div class="card-img-container">' +
-            '<img class="card-img" src="' + poster + '" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=PLACEHOLDER">' +
+            // Removed loading="lazy" to force instant load
+            '<img class="card-img" src="' + poster + '" alt="" decoding="async" onerror="this.onerror=null;this.src=PLACEHOLDER">' +
             typeBadge + watchBarHtml(it.id) +
         '</div>' +
         '<div class="card-title">' + esc(it.title || 'Untitled') + '</div>' +
@@ -2513,7 +2683,16 @@ function pvTogglePlay(){
 function pvSeekBy(sec){
     if (!pv.v) return;
     if (!(pv.v.duration > 0)){ showToast('Video not loaded yet'); return; }
-    pv.v.currentTime = Math.max(0, Math.min(pv.v.duration - 1, pv.v.currentTime + sec));
+    
+    // Calculate new time
+    const newTime = Math.max(0, Math.min(pv.v.duration - 1, pv.v.currentTime + sec));
+    pv.v.currentTime = newTime;
+    
+    // Force immediate UI update (Fix for rapid clicks)
+    if (!pv.seeking) {
+        pvPaint((newTime / pv.v.duration) * 100, newTime, pv.v.duration);
+    }
+    
     pvHud((sec > 0 ? '+' : '') + sec + 's');
 }
 function pvHud(txt){
@@ -2542,8 +2721,19 @@ function pvShowCenter(){
 }
 function pvToggleCenter(){
     const c = document.getElementById('pv-center');
-    if (!c) return;
-    if (c.classList.contains('show')){ c.classList.remove('show'); clearTimeout(pv.uiTimer); } else pvShowCenter();
+    const topBar = document.querySelector('.player-top-bar');
+    const controls = document.querySelector('.player-controls');
+    
+    if (c && c.classList.contains('show')) {
+        // Agar controls dikh rahe hain, toh sab chupao
+        c.classList.remove('show'); 
+        if (topBar) topBar.style.opacity = '0';
+        if (controls) controls.style.opacity = '0';
+        clearTimeout(pv.uiTimer);
+    } else {
+        // Agar chhupe hue hain, toh wapas dikhao
+        pvShowCenter();
+    }
 }
 
 /* progress bar: tap or drag to seek */
@@ -2578,6 +2768,7 @@ function pvBindGestures(){
     area.addEventListener('touchstart', function(e){
         if (e.touches.length === 2 && pv.v) {
             isPinching = true;
+            st = null; // reset single touch state
             startDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         }
     }, {passive: true});
@@ -2603,23 +2794,30 @@ function pvBindGestures(){
         }
     });
 
-    // Swipe / Tap
+    // Single Touch Gestures (Swipe to Seek, Brightness, Volume)
     area.addEventListener('pointerdown', function(e){
         if (ignore(e.target) || isPinching) return;
         const r = area.getBoundingClientRect();
         st = { x: e.clientX, y: e.clientY, w: r.width || 1, h: r.height || 1, left: e.clientX < r.left + (r.width || 1) / 2,
-            mode: null, b: pv.bright, vol: pv.v ? pv.v.volume : 1, moved: false, left0: r.left };
+            mode: null, b: pv.bright, vol: pv.v ? pv.v.volume : 1, from: pv.v ? pv.v.currentTime : 0, to: null, moved: false, left0: r.left };
         try { area.setPointerCapture(e.pointerId); } catch(err){}
     });
+    
     area.addEventListener('pointermove', function(e){
         if (!st || !pv.v || isPinching) return;
         const dx = e.clientX - st.x, dy = e.clientY - st.y;
+        
         if (!st.mode){
             if (Math.abs(dx) < 15 && Math.abs(dy) < 15) return;
-            // Disabled Left/Right Seek. Only Brightness/Volume allowed.
-            st.mode = st.left ? 'bright' : 'vol';
+            
+            if (Math.abs(dy) > Math.abs(dx)) {
+                st.mode = st.left ? 'bright' : 'vol';
+            } else {
+                st.mode = 'seek'; // Restored Swipe to Seek
+            }
             st.moved = true;
         }
+        
         if (st.mode === 'bright'){
             pv.bright = Math.max(0.25, Math.min(1.8, st.b - dy / st.h * 1.4));
             pv.v.style.filter = 'brightness(' + pv.bright + ')';
@@ -2628,12 +2826,24 @@ function pvBindGestures(){
             const x = Math.max(0, Math.min(1, st.vol - dy / st.h * 1.4));
             pv.v.volume = x; if (x > 0) pv.v.muted = false;
             pvHud('Volume ' + Math.round(x * 100) + '%');
+        } else if (st.mode === 'seek') {
+            const d = pv.v.duration || 0;
+            st.to = Math.max(0, Math.min(d, st.from + dx / st.w * 120));
+            const diff = Math.round(st.to - st.from);
+            pvHud((diff >= 0 ? '+' : '-') + Math.abs(diff) + 's  (' + pvFmt(st.to) + ')');
         }
     });
+    
     area.addEventListener('pointerup', function(e){
         if (!st) return;
         const s = st; st = null;
+        
+        if (s.mode === 'seek' && s.to != null && pv.v && pv.v.duration > 0){ 
+            pv.v.currentTime = s.to; 
+            return; 
+        }
         if (s.moved) return;
+        
         const now = Date.now();
         if (now - lastTap < 300 && Math.abs(e.clientX - lastX) < 70){
             clearTimeout(tapTimer); lastTap = 0;
@@ -3237,17 +3447,17 @@ window.addEventListener('popstate', function(event){
         return;
     }
     if (st.page && st.page !== 'home-view'){
-        const navId = { 'home-view': 'nav-home', 'downloads-view': 'nav-downloads', 'profile-view': 'nav-profile' }[st.page];
-        switchViewUI(st.page, document.getElementById(navId));
+    const navId = { 'home-view': 'nav-home', 'downloads-view': 'nav-downloads', 'profile-view': 'nav-profile' }[st.page];
+    switchViewUI(st.page, navId);
+} else {
+    if (currentView === 'home-view'){
+        const now = Date.now();
+        if (now - lastBackPress < 2000){ try { history.back(); } catch(e){} }
+        else { lastBackPress = now; showToast('Press back again to exit'); try { history.pushState({ page: 'dummy' }, '', '#dummy'); } catch(e){} }
     } else {
-        if (currentView === 'home-view'){
-            const now = Date.now();
-            if (now - lastBackPress < 2000){ try { history.back(); } catch(e){} }
-            else { lastBackPress = now; showToast('Press back again to exit'); try { history.pushState({ page: 'dummy' }, '', '#dummy'); } catch(e){} }
-        } else {
-            switchViewUI('home-view', document.getElementById('nav-home'));
-        }
+        switchViewUI('home-view', 'nav-home');
     }
+}
 });
 
 /* ============================================================
@@ -3333,8 +3543,55 @@ document.addEventListener('DOMContentLoaded', function(){
     renderSearchHistory();
     renderMyLists();
     pvInit();
-    loadHomeFromAPI();
     
+    // ====== NEW PREMIUM SPLASH LOGIC ======
+    let progress = 0;
+    const progressBar = document.getElementById('splash-progress-bar');
+    const progressText = document.getElementById('splash-percentage');
+    const splash = document.getElementById('splash-screen');
+    
+    // Simulate 1% to 99% loading
+    const interval = setInterval(() => {
+        if (progress < 90) {
+            progress += Math.floor(Math.random() * 15) + 5; // Fast initially
+        } else if (progress < 99) {
+            progress += 1; // Slow down near the end
+        }
+        if (progress > 99) progress = 99;
+        
+        if (progressBar) progressBar.style.width = progress + '%';
+        if (progressText) progressText.innerText = progress + '%';
+    }, 100);
+
+    // Start API Load
+    loadHomeFromAPI().then(() => {
+        // API finished, force to 100%
+        clearInterval(interval);
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressText) progressText.innerText = '100%';
+        
+        // Wait for 0.5s to show 100%, then hide splash
+        setTimeout(() => {
+            if (splash) splash.classList.add('hide');
+            setTimeout(() => { if(splash) splash.style.display = 'none'; }, 600);
+            
+            // Start 5-second stuck timer AFTER splash hides
+            setTimeout(() => {
+                // If home view is not active or still loading
+                if (!document.getElementById('hero-box') || !document.getElementById('dynamic-content-area').innerText.includes('More to Explore')) {
+                    const modal = document.getElementById('stuck-modal');
+                    if (modal) modal.style.display = 'flex';
+                }
+            }, 5000);
+
+        }, 500);
+    }).catch(() => {
+        // If API fails completely, still hide splash
+        clearInterval(interval);
+        if (splash) splash.classList.add('hide');
+        setTimeout(() => { if(splash) splash.style.display = 'none'; }, 600);
+    });
+
     // Share Link Auto-Play Logic
     setTimeout(function() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -3342,7 +3599,6 @@ document.addEventListener('DOMContentLoaded', function(){
         if (sharedId) {
             showToast('Opening shared movie...');
             playById(sharedId);
-            // URL ko saaf kardo taake back button kaam kare
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     }, 1000);
@@ -3350,6 +3606,23 @@ document.addEventListener('DOMContentLoaded', function(){
     // Install prompt after 5s
     setTimeout(showInstallPrompt, 5000);
 });
+
+// Function to clear cache and reload
+window.clearCacheAndReload = function() {
+    if ('caches' in window) {
+        caches.keys().then((names) => {
+            for (let name of names) { caches.delete(name); }
+        });
+    }
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) { registration.unregister(); }
+        });
+    }
+    setTimeout(() => {
+        window.location.reload(true);
+    }, 500);
+};
 
 /* Context menu disable (from demo) */
 document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
