@@ -499,7 +499,8 @@ html, body {
     gap: 12px;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    transform: translate3d(0, 0, 0); /* Smooth scroll GPU */
+    /* Remove content-visibility to prevent disappearing */
+    transform: translateZ(0); 
 }
 
         /* Grid for Most Trending */
@@ -530,9 +531,7 @@ html, body {
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    transform: translate3d(0, 0, 0); /* Force GPU rendering */
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
+    /* Removed heavy transforms. Let browser handle it naturally */
 }
 
 .card-img-container {
@@ -541,8 +540,15 @@ html, body {
     height: 155px; 
     border-radius: 8px 8px 0 0;
     overflow: hidden;
-    background-color: var(--bg-surface);
-    transform: translate3d(0, 0, 0);
+    /* Add a shimmer loading background instead of black */
+    background: linear-gradient(90deg, #1c1c21 25%, #2a2a32 50%, #1c1c21 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    contain: layout style paint;
+}
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 .card-img {
@@ -2238,15 +2244,27 @@ function refreshProgressBars(){
     });
 }
 
+// IndexedDB Preloader Helper
+const preloadedImages = new Set();
+function preloadImage(url) {
+    if (!url || preloadedImages.has(url) || url === PLACEHOLDER) return;
+    preloadedImages.add(url);
+    const img = new Image();
+    img.src = url; // Browser isko memory mein cache kar lega
+}
+
 function renderCard(it){
     cacheItem(it);
     var id = esc(it.id);
     var poster = esc(it.poster || it.backdrop || PLACEHOLDER);
     var typeBadge = it.type === 'tv' ? '<span class="badge">TV</span>' : (Number(it.rating) > 0 ? '<span class="badge">' + esc(it.rating) + '</span>' : '');
+    
+    // Preload image in background instantly
+    if (it.poster) preloadImage(it.poster);
+
     return '<div class="card clickable" data-id="' + id + '" onclick="playById(\'' + id + '\')">' +
         '<div class="card-img-container">' +
-            // Removed loading="lazy" to force instant load
-            '<img class="card-img" src="' + poster + '" alt="" decoding="async" onerror="this.onerror=null;this.src=PLACEHOLDER">' +
+            '<img class="card-img" src="' + poster + '" alt="" fetchpriority="high" onerror="this.onerror=null;this.src=PLACEHOLDER">' +
             typeBadge + watchBarHtml(it.id) +
         '</div>' +
         '<div class="card-title">' + esc(it.title || 'Untitled') + '</div>' +
@@ -2255,13 +2273,13 @@ function renderCard(it){
 
 /* ---------- HOME (hero + categories + sections + endless feed) ---------- */
 var CAT_ROW = [
-    ['all', 'All', 'https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?q=80&w=200&auto=format&fit=crop'], 
-    ['new', 'New', 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=200&auto=format&fit=crop'], 
-    ['hollywood', 'Hollywood', 'https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?q=80&w=200&auto=format&fit=crop'],
-    ['bollywood', 'Bollywood', 'https://images.unsplash.com/photo-1583744946564-b52ac1c389c8?q=80&w=200&auto=format&fit=crop'], 
-    ['punjabi', 'Punjabi', 'https://images.unsplash.com/photo-1516280440502-861f28b6c4e6?q=80&w=200&auto=format&fit=crop'],
-    ['western', 'Western', 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?q=80&w=200&auto=format&fit=crop'], 
-    ['kdrama', 'K-Drama', 'https://images.unsplash.com/photo-1616088009088-8b9a4b0e8a53?q=80&w=200&auto=format&fit=crop']
+    ['all', 'All', 'https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?q=80&w=200&auto=format&fit=crop'], // Cinema collage
+    ['new', 'New', 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=200&auto=format&fit=crop'], // Clapperboard
+    ['hollywood', 'Hollywood', 'https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?q=80&w=200&auto=format&fit=crop'], // Actress/Action
+    ['bollywood', 'Bollywood', 'https://images.unsplash.com/photo-1583744946564-b52ac1c389c8?q=80&w=200&auto=format&fit=crop'], // SRK Style
+    ['punjabi', 'Punjabi', 'https://images.unsplash.com/photo-1516280440502-861f28b6c4e6?q=80&w=200&auto=format&fit=crop'], // Diljit/Singer style
+    ['western', 'Western', 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?q=80&w=200&auto=format&fit=crop'], // Western Cowboy/Actor
+    ['kdrama', 'K-Drama', 'https://images.unsplash.com/photo-1616083004841-1e5e5357fb7c?q=80&w=200&auto=format&fit=crop'] // K-Drama Star
 ];
 function genreForTitle(t){
     t = String(t || '').toLowerCase();
