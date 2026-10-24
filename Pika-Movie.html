@@ -3640,16 +3640,20 @@ function installInstructions(){
 }
 
 async function installApp(){
-    // Agar app pehle se install hai toh popup band kardo
     if (isStandalone()){ closeInstallPrompt(); return; }
-    
     closeInstallPrompt();
     
-    // Agar browser ne install prompt support nahi kiya (Jaise iPhone Safari)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    // Agar iPhone user hai, toh Premium Liquid UI dikhao
+    if (isIOS && !deferredInstall) {
+        showIOSLiquidModal();
+        return;
+    }
+    
+    // Agar normal Android/Chrome hai par install prompt nahi mila
     if (!deferredInstall){ 
-        // Alert ki jagah hum apni app ka custom toast use karenge
-        const msg = installInstructions();
-        showToast(msg);
+        showToast('Please use browser menu to install this app.');
         return; 
     }
     
@@ -3659,12 +3663,111 @@ async function installApp(){
         deferredInstall = null;
         
         if (c && c.outcome === 'accepted') {
-            // Bas success message dikhao, koi timer/alerts nahi
             showToast('Pika Movie installed successfully!');
         }
     } catch(e){ 
         console.log("Install cancelled or failed");
     }
+}
+
+// ==== PREMIUM LIQUID iOS INSTALL MODAL ====
+function showIOSLiquidModal() {
+    // Purana modal hata do agar pehle se khula hai
+    let old = document.getElementById('ios-liquid-modal');
+    if (old) old.remove();
+
+    // CSS Animations Inject karo
+    if (!document.getElementById('ios-liquid-styles')) {
+        const style = document.createElement('style');
+        style.id = 'ios-liquid-styles';
+        style.innerHTML = `
+            @keyframes liquidBlob1 {
+                0% { transform: translate(0, 0) scale(1); }
+                33% { transform: translate(30px, -50px) scale(1.2); }
+                66% { transform: translate(-20px, 20px) scale(0.8); }
+                100% { transform: translate(0, 0) scale(1); }
+            }
+            @keyframes liquidBlob2 {
+                0% { transform: translate(0, 0) scale(1); }
+                33% { transform: translate(-30px, 50px) scale(1.1); }
+                66% { transform: translate(20px, -20px) scale(0.9); }
+                100% { transform: translate(0, 0) scale(1); }
+            }
+            @keyframes slideUpLiquid {
+                from { transform: translateY(100%); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            @keyframes bounceShare {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-8px); }
+            }
+            @keyframes glowPink {
+                0%, 100% { box-shadow: 0 0 20px rgba(219, 39, 119, 0.4); }
+                50% { box-shadow: 0 0 40px rgba(219, 39, 119, 0.7); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    const modalHtml = `
+        <div id="ios-liquid-modal" style="position:fixed;inset:0;z-index:10500;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:opacity 0.3s;">
+            <div style="position:relative;width:100%;max-width:500px;margin:0 auto;background:rgba(28, 28, 33, 0.85);backdrop-filter:blur(25px);-webkit-backdrop-filter:blur(25px);border-radius:32px 32px 0 0;border-top:1px solid rgba(255,255,255,0.15);box-shadow:0 -15px 50px rgba(0,0,0,0.5);overflow:hidden;animation:slideUpLiquid 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+                
+                <!-- Liquid Blobs Background -->
+                <div style="position:absolute;top:-20%;left:-10%;width:200px;height:200px;background:rgba(219, 39, 119, 0.25);filter:blur(50px);border-radius:50%;animation:liquidBlob1 8s infinite alternate ease-in-out;z-index:0;"></div>
+                <div style="position:absolute;bottom:-20%;right:-10%;width:250px;height:250px;background:rgba(0, 230, 118, 0.15);filter:blur(60px);border-radius:50%;animation:liquidBlob2 10s infinite alternate ease-in-out;z-index:0;"></div>
+
+                <!-- Content -->
+                <div style="position:relative;z-index:1;padding:24px 24px calc(24px + var(--safe-area-bottom));display:flex;flex-direction:column;align-items:center;text-align:center;">
+                    <div style="width:40px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;margin-bottom:20px;"></div>
+                    
+                    <!-- App Icon/Logo -->
+                    <img src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png" style="width:80px;height:80px;border-radius:22px;object-fit:cover;margin-bottom:16px;animation:glowPink 3s infinite alternate;border:2px solid rgba(255,255,255,0.1);">
+                    
+                    <h2 style="color:#fff;font-size:22px;font-weight:800;margin:0 0 8px;letter-spacing:0.5px;">Install Pika Movie</h2>
+                    <p style="color:#a3a3a8;font-size:14px;margin:0 0 24px;line-height:1.4;">Get the full app experience on your iPhone.</p>
+                    
+                    <!-- Step 1 -->
+                    <div style="display:flex;align-items:center;width:100%;background:rgba(255,255,255,0.05);padding:14px 16px;border-radius:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,0.08);">
+                        <div style="width:40px;height:40px;background:rgba(219, 39, 119, 0.2);border-radius:12px;display:grid;place-items:center;margin-right:14px;flex-shrink:0;">
+                            <!-- Share Icon -->
+                            <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:#db2777;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;animation:bounceShare 2s infinite ease-in-out;">
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                                <polyline points="16 6 12 2 8 6"></polyline>
+                                <line x1="12" y1="2" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
+                        <div style="text-align:left;">
+                            <div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:2px;">Step 1</div>
+                            <div style="color:#a3a3a8;font-size:13px;">Tap the <b>Share</b> button below.</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div style="display:flex;align-items:center;width:100%;background:rgba(255,255,255,0.05);padding:14px 16px;border-radius:16px;margin-bottom:24px;border:1px solid rgba(255,255,255,0.08);">
+                        <div style="width:40px;height:40px;background:rgba(0, 230, 118, 0.15);border-radius:12px;display:grid;place-items:center;margin-right:14px;flex-shrink:0;">
+                            <!-- Plus Home Icon -->
+                            <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:#00e676;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                <line x1="12" y1="11" x2="12" y2="17"></line>
+                                <line x1="9" y1="14" x2="15" y2="14"></line>
+                            </svg>
+                        </div>
+                        <div style="text-align:left;">
+                            <div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:2px;">Step 2</div>
+                            <div style="color:#a3a3a8;font-size:13px;">Scroll down and tap <b>Add to Home Screen</b>.</div>
+                        </div>
+                    </div>
+
+                    <button onclick="document.getElementById('ios-liquid-modal').remove()" style="width:100%;padding:16px;background:linear-gradient(135deg, #db2777, #be185d);color:#fff;border:none;border-radius:16px;font-weight:700;font-size:16px;cursor:pointer;box-shadow:0 8px 20px rgba(219, 39, 119, 0.3);">
+                        Got it!
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
 /* Build install prompt overlay dynamically */
