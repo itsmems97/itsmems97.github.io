@@ -8,7 +8,7 @@
     <link rel="icon" href="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/Pika-Movie.png">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>MovieBox Pro</title>
 <style>
     /* =========================================
@@ -251,15 +251,18 @@ html, body {
             top: 0;
             background-color: var(--header-bg);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             z-index: 100;
-            padding: 12px 15px 5px 15px;
+            padding: calc(12px + env(safe-area-inset-top, 0px)) 15px 5px 15px;
         }
 
         .top-bar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    transform: translateZ(0); /* iOS Safari rendering bug fix */
+}
 
         .app-logo {
             width: 36px;
@@ -303,14 +306,17 @@ html, body {
         }
 
         .search-container input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: var(--text-main);
-            outline: none;
-            font-size: 14px;
-            min-width: 0;
-        }
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    outline: none;
+    font-size: 14px;
+    min-width: 0;
+    width: 100%;
+    -webkit-appearance: none; /* iOS default styling fix */
+    border-radius: 0;
+}
 
         .search-btn {
             color: var(--primary);
@@ -1184,6 +1190,7 @@ html, body {
     flex-direction: column;
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding-top: env(safe-area-inset-top, 0px);
 }
 .player-screen.active {
     display: flex;
@@ -3411,7 +3418,15 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 function pvToggleFullscreen(){
     const el = document.querySelector('.player-video-area');
+    const v = document.getElementById('pv-video');
     if (!el) return;
+    
+    // iOS Safari ke liye special fix (Video ko direct fullscreen karega aur landscape karega)
+    if (v && v.webkitEnterFullscreen && !document.webkitFullscreenElement && !document.fullscreenElement) {
+        v.webkitEnterFullscreen();
+        return;
+    }
+
     const fs = document.fullscreenElement || document.webkitFullscreenElement;
     if (fs){
         try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch(e){}
@@ -3630,9 +3645,11 @@ async function installApp(){
     
     closeInstallPrompt();
     
-    // Agar browser ne install prompt support nahi kiya
+    // Agar browser ne install prompt support nahi kiya (Jaise iPhone Safari)
     if (!deferredInstall){ 
-        alert("Please browser ke 3-dot menu (⋮) se 'Install App' ya 'Add to Home Screen' par click karein.");
+        // Alert ki jagah hum apni app ka custom toast use karenge
+        const msg = installInstructions();
+        showToast(msg);
         return; 
     }
     
