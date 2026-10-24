@@ -3506,11 +3506,14 @@ function installInstructions(){
 }
 
 async function installApp(){
+    // Agar app pehle se install hai toh popup band kardo
     if (isStandalone()){ closeInstallPrompt(); return; }
+    
     closeInstallPrompt();
     
+    // Agar browser ne install prompt support nahi kiya
     if (!deferredInstall){ 
-        showToast(installInstructions()); 
+        alert("Please browser ke 3-dot menu (⋮) se 'Install App' ya 'Add to Home Screen' par click karein.");
         return; 
     }
     
@@ -3520,18 +3523,11 @@ async function installApp(){
         deferredInstall = null;
         
         if (c && c.outcome === 'accepted') {
-            showToast('Installing Pika Movie... Please wait.');
-            // 3 second baad check karo, agar app drawer mein nahi aayi toh manual guide dikhao
-            setTimeout(() => {
-                if (!isStandalone()) {
-                    alert("App install nahi hui. Please 3-dot menu (⋮) se 'Install App' ya 'Add to Home Screen' par click karein.");
-                }
-            }, 3000);
-        } else if (c && c.outcome === 'dismissed') {
-            showToast('Install cancelled.');
+            // Bas success message dikhao, koi timer/alerts nahi
+            showToast('Pika Movie installed successfully!');
         }
     } catch(e){ 
-        showToast(installInstructions()); 
+        console.log("Install cancelled or failed");
     }
 }
 
