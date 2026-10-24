@@ -1245,13 +1245,22 @@ html, body {
 
     .player-subtitle {
         position: absolute;
-        bottom: 50px;
+        bottom: 56px;
+        left: 0;
         width: 100%;
+        padding: 0 14px;
+        box-sizing: border-box;
         text-align: center;
-        color: rgba(255,255,255,0.7);
-        font-size: 14px;
-        z-index: 5;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.35;
+        text-shadow: 0 0 3px #000, 0 0 6px #000, 1px 1px 2px #000;
+        pointer-events: none;
+        z-index: 9;
     }
+    .player-video-area:fullscreen .player-subtitle { font-size: 22px; bottom: 70px; }
+    .player-video-area:-webkit-full-screen .player-subtitle { font-size: 22px; bottom: 70px; }
 
     /* Video Controls (FIXED) */
 .player-controls {
@@ -3039,6 +3048,7 @@ function pvAttach(src, t){
     pvShowCenter();
     clearTimeout(pv.waitTimer);
     setTimeout(function(){ if (pv.v === v && v.readyState >= 2) pvLoading(false); }, 25000);
+        ccLoadList();
     pvSyncQualityLabel();
 }
 /* if the chosen file cannot load, try the smallest quality once */
@@ -3283,25 +3293,122 @@ function showInfo() {
     alert(item.title + '\n\n' + desc);
 }
 
-function openCCDrawer() {
-    const list = document.getElementById('cc-list');
-    if (!list) return;
+/* ---------- Subtitles (CC) ---------- */
+const cc = { list: [], cues: [], idx: -1, key: '', last: -1 };
+function ccPref(){ try { return localStorage.getItem('pika_cc') || ''; } catch(e){ return ''; } }
+function ccKey(){
+    const p = state.player, it = p.item;
+    return it ? [it.id, p.dubId || '', p.season, p.episode].join('|') : '';
+}
+function ccShow(txt){
+    const el = document.getElementById('player-subtitle');
+    if (!el) return;
+    if (!txt){ el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.innerHTML = esc(txt).replace(/\n/g, '<br>');
+    el.style.display = 'block';
+}
+function ccParse(vtt){
+    const out = [];
+    String(vtt || '').replace(/\r/g, '').split(/\n\n+/).forEach(function(block){
+        const lines = block.split('\n');
+        const i = lines.findIndex(function(l){ return l.indexOf('-->') > -1; });
+        if (i < 0) return;
+        const m = lines[i].match(/(?:(\d+):)?(\d+):(\d+)[.,](\d+)\s*-->\s*(?:(\d+):)?(\d+):(\d+)[.,](\d+)/);
+        if (!m) return;
+        const s = (+(m[1] || 0)) * 3600 + (+m[2]) * 60 + (+m[3]) + parseFloat('0.' + m[4]);
+        const e = (+(m[5] || 0)) * 3600 + (+m[6]) * 60 + (+m[7]) + parseFloat('0.' + m[8]);
+        const t = lines.slice(i + 1).join('\n').replace(/<[^>]+>/g, '').replace(/\{\\an?\d+\}/g, '').trim();
+        if (t) out.push({ s: s, e: e, t: t });
+    });
+    return out;
+}
+function ccTick(){
+    if (!cc.cues.length || !pv.v) return;
+    const t = pv.v.currentTime;
+    let c = cc.cues[cc.last];
+    if (!(c && t >= c.s && t <= c.e)){
+        c = null; cc.last = -1;
+        for (let i = 0; i < cc.cues.length; i++){
+            if (t >= cc.cues[i].s && t <= cc.cues[i].e){ c = cc.cues[i]; cc.last = i; break; }
+        }
+    }
+    ccShow(c ? c.t : '');
+}
+async function ccLoadList(){
+    const p = state.player, it = p.item;
+    if (!it) return;
+    const key = ccKey();
+    if (cc.key === key) return;
+    cc.key = key; cc.list = []; cc.cues = []; cc.idx = -1; cc.last = -1;
+    ccShow('');
+    const type = it.type || 'movie';
+    const path = '/captions?id=' + encodeURIComponent(it.id) + '&type=' + encodeURIComponent(type) +
+        (p.dubId && String(p.dubId) !== String(it.id) ? '&dubId=' + encodeURIComponent(p.dubId) : '') +
+        (type === 'tv' ? '&season=' + p.season + '&episode=' + p.episode : '');
+    try {
+        const d = await apiGet(path, { ttl: 600000 });
+        if (cc.key !== key) return;
+        cc.list = (d && d.captions) || [];
+        const want = ccPref();
+        if (want){
+            const i = cc.list.findIndex(function(c){ return c.code === want; });
+            if (i > -1) ccSelect(i, true);
+        }
+    } catch(e){}
+}
+async function ccSelect(i, silent){
+    if (i < 0){
+        cc.idx = -1; cc.cues = []; cc.last = -1; ccShow('');
+        try { localStorage.setItem('pika_cc', ''); } catch(e){}
+        if (!silent) showToast('Subtitles off');
+        return;
+    }
+    const c = cc.list[i];
+    if (!c) return;
+    const key = cc.key;
+    try {
+        if (!silent) showToast('Loading subtitles...');
+        const res = await fetch(API + c.url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const cues = ccParse(await res.text());
+        if (cc.key !== key) return;
+        if (!cues.length){ showToast('Subtitle file is empty'); return; }
+        cc.cues = cues; cc.idx = i; cc.last = -1;
+        try { localStorage.setItem('pika_cc', c.code || ''); } catch(e){}
+        if (!silent) showToast('Subtitles: ' + (c.code || c.language));
+        ccTick();
+    } catch(e){ showToast('Could not load subtitles'); }
+}
+function openCCDrawer(){
+    if (!state.player.item) return;
     let drawer = document.getElementById('cc-drawer');
-    if (!drawer) {
+    if (!drawer){
         drawer = document.createElement('div');
         drawer.id = 'cc-drawer';
         drawer.className = 'pv-drawer';
         drawer.innerHTML = '<div class="pv-drawer-header"><h3>Subtitles</h3><button class="pv-drawer-close" onclick="document.getElementById(\'cc-drawer\').classList.remove(\'open\')">✕</button></div><div id="cc-list"></div>';
         document.body.appendChild(drawer);
     }
-    const langs = ['Off', 'English', 'Arabic', 'Hindi', 'Spanish'];
-    document.getElementById('cc-list').innerHTML = langs.map(l => `<button class="pv-drawer-item" onclick="pickCC('${l}')">${l}</button>`).join('');
+    const box = document.getElementById('cc-list');
+    if (!cc.list.length){
+        box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">No subtitles available for this video.</p>';
+    } else {
+        box.innerHTML = '<button class="pv-drawer-item' + (cc.idx < 0 ? ' active' : '') + '" onclick="pickCC(-1)">Off</button>' +
+            cc.list.map(function(c, i){
+                return '<button class="pv-drawer-item' + (cc.idx === i ? ' active' : '') + '" onclick="pickCC(' + i + ')">' + esc(c.language) + (c.code ? ' (' + esc(c.code) + ')' : '') + '</button>';
+            }).join('');
+    }
     drawer.classList.add('open');
 }
-function pickCC(lang) {
-    document.getElementById('cc-drawer').classList.remove('open');
-    showToast('Subtitles: ' + lang);
+function pickCC(i){
+    const d = document.getElementById('cc-drawer');
+    if (d) d.classList.remove('open');
+    ccSelect(i);
 }
+document.addEventListener('DOMContentLoaded', function(){
+    const v = document.getElementById('pv-video');
+    if (v){ v.addEventListener('timeupdate', ccTick); v.addEventListener('seeked', ccTick); }
+});
 function pvToggleFullscreen(){
     const el = document.querySelector('.player-video-area');
     if (!el) return;
