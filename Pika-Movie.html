@@ -256,12 +256,14 @@ html, body {
             padding: calc(12px + env(safe-area-inset-top, 0px)) 15px 5px 15px;
         }
 
-        .top-bar {
+.top-bar {
     display: flex;
     align-items: center;
     gap: 10px;
     width: 100%;
-    transform: translateZ(0); /* iOS Safari rendering bug fix */
+    transform: translateZ(0); 
+    position: relative;
+    z-index: 999; /* Top Tabs ke upar lane ke liye */
 }
 
         .app-logo {
@@ -282,16 +284,17 @@ html, body {
         }
 
         .search-container {
-            flex: 1;
-            display: flex;
-            background-color: var(--bg-surface);
-            border-radius: 20px;
-            padding: 10px 16px;
-            align-items: center;
-            border: 1px solid var(--border-color);
-            transition: border var(--transition-speed);
-            position: relative;
-        }
+    flex: 1;
+    display: flex;
+    background-color: var(--bg-surface);
+    border-radius: 20px;
+    padding: 10px 16px;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    transition: border var(--transition-speed);
+    position: relative;
+    z-index: 1000; /* Search dropdown ko sab se aage rakhne ke liye */
+}
 
         .search-container:focus-within {
             border-color: var(--primary);
@@ -331,19 +334,21 @@ html, body {
 
         /* Search History Dropdown */
         .search-history-dropdown {
-            position: absolute;
-            top: 110%;
-            left: 0;
-            width: 100%;
-            background: var(--bg-surface);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            z-index: 999;
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-        }
+    position: absolute;
+    top: 110%;
+    left: 0;
+    width: 100%;
+    background: #1c1c21; /* Solid fallback background */
+    background: var(--bg-surface);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.9); /* Gehra shadow taake alag dikhe */
+    z-index: 9999; /* Sab se upar */
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    isolation: isolate; /* Naya layer banata hai */
+}
         .search-history-dropdown.active { display: flex; }
         .history-header {
             display: flex;
@@ -1622,27 +1627,30 @@ body.light-pink .section-header h3 {
     z-index: 6;
     pointer-events: none;
     opacity: 0;
-    transition: opacity .25s;
+    transition: none; /* NO FADE-IN (Instant Display) */
 }
 .pv-player-center.show { opacity: 1; pointer-events: auto; }
+
+/* MAIN BUTTON (Netflix Style Solid Color) */
 .pv-center-btn {
     width: 66px;
     height: 66px;
     border-radius: 50%;
-    background: rgba(0,0,0,.55);
     color: #fff;
     display: grid;
     place-items: center;
     border: 1px solid rgba(255,255,255,.28);
     cursor: pointer;
-    backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.8); /* Solid dark color, no blur delay */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* Premium Depth Shadow */
 }
 .pv-center-btn svg { width: 30px; height: 30px; fill: currentColor; }
+
+/* SKIP BUTTONS (-10 / +10) */
 .pv-skip-btn {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: rgba(0,0,0,.45);
     color: #fff;
     font-size: 13px;
     font-weight: 800;
@@ -1650,6 +1658,8 @@ body.light-pink .section-header h3 {
     place-items: center;
     cursor: pointer;
     border: 1px solid rgba(255,255,255,.22);
+    background: rgba(0, 0, 0, 0.7); /* Solid dark color */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4); /* Premium Depth Shadow */
 }
 .pv-skip-btn:active, .pv-center-btn:active { transform: scale(0.94); }
 
@@ -2085,6 +2095,8 @@ html.player-open, html.player-open body { overflow: hidden !important; overscrol
     <div class="pv-drawer-header"><h3>Video Quality</h3><button class="pv-drawer-close" onclick="document.getElementById('pq-drawer').classList.remove('open')">✕</button></div>
     <div id="pq-list"></div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dashjs/4.7.4/dash.all.min.js" defer></script>
 
 <!-- ==================== JAVASCRIPT LOGIC ==================== -->
 <script>
@@ -3037,6 +3049,9 @@ async function pvStart(keepTime){
         pvFail('Network problem. Check your internet and press Retry.');
     }
 }
+function pvDashStop(){
+    if (pv.dash){ try { pv.dash.reset(); } catch(e){} pv.dash = null; }
+}
 function pvAttach(src, t){
     const v = pv.v;
     v.style.transform = 'scale(1)'; // Reset zoom on new video
@@ -3046,8 +3061,23 @@ function pvAttach(src, t){
         const r = v.play();
         if (r && r.catch) r.catch(function(){ pvUpdatePlayUI(); pvShowCenter(); });
     };
-    v.src = src;
-    v.load();
+    pvDashStop();
+    if (src.indexOf('/pdash/') > -1 && window.dashjs){
+        try {
+            let dashFailed = false;
+            pv.dash = dashjs.MediaPlayer().create();
+            pv.dash.updateSettings({ streaming: { abr: { autoSwitchBitrate: { video: true } } } });
+            pv.dash.on(dashjs.MediaPlayer.events.ERROR, function(){
+                if (dashFailed || v.readyState >= 2) return;
+                dashFailed = true;
+                pvOnVideoError();
+            });
+            pv.dash.initialize(v, src, false);
+        } catch(e){ pvFail('This video format is not supported on this device.'); return; }
+    } else {
+        v.src = src;
+        v.load();
+    }
     v.classList.add('active');
     const img = document.getElementById('playerBgImage'); if (img) img.style.display = 'none';
     const ctrl = document.querySelector('.player-controls'); if (ctrl) ctrl.style.display = 'flex';
@@ -3217,7 +3247,7 @@ async function pvLoadEpisodes(){
         const e = await apiGet('/episodes?id=' + encodeURIComponent(item.id));
         if (pv.openTok !== myTok || !state.player.item) return;
         if (e && e.seasons && e.seasons.length){
-            p.seasons = e.seasons;
+            if (!p.seasons.some(function(s){ return s.season === p.season; })){ p.season = p.seasons[0].season; p.viewSeason = p.season; p.episode = 1; }
             const seasonBtn = document.getElementById('season-btn');
             if (seasonBtn) seasonBtn.style.display = 'inline-flex';
             pvRenderEpisodes();
@@ -3267,6 +3297,7 @@ function closePlayerUI(){
     clearTimeout(pv.waitTimer); clearTimeout(pv.uiTimer);
     if (playerScreen) playerScreen.classList.remove('active');
     pvLockPage(false);
+    pvDashStop();
     try { pv.v.pause(); pv.v.removeAttribute('src'); pv.v.load(); pv.v.classList.remove('active'); } catch(e){}
     const fs = document.fullscreenElement || document.webkitFullscreenElement;
     if (fs){ try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch(e){} }
@@ -3848,8 +3879,8 @@ document.addEventListener('DOMContentLoaded', function(){
             
             // Start 5-second stuck timer AFTER splash hides
             setTimeout(() => {
-                // If home view is not active or still loading
-                if (!document.getElementById('hero-box') || !document.getElementById('dynamic-content-area').innerText.includes('More to Explore')) {
+                // Only show the stuck popup if the home page never loaded
+                if (!state.homeLoaded) {
                     const modal = document.getElementById('stuck-modal');
                     if (modal) modal.style.display = 'flex';
                 }
