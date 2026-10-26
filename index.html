@@ -12150,25 +12150,45 @@ function _apptekaToPika(raw){
 
 async function discoverFetch(path){
   if(!DISCOVER_API) throw new Error("Discover not configured");
+
+  // SEARCH → Ab yahan se VPS par request jayegi
+  if(path.startsWith('/search') || path.startsWith('/app/search')){
+    const afterQuestion = path.split('?')[1] || '';
+    const params = new URLSearchParams(afterQuestion);
+    const q = params.get('query') || params.get('q') || '';
+    const vpsUrl = 'https://193-122-76-131.nip.io/discover/search?q=' + encodeURIComponent(q) + '&_t=' + Date.now();
+    
+    const r = await fetch(vpsUrl, { cache: "no-store" });
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    
+    let entries = [];
+    if(data && data.result && Array.isArray(data.result.entries)) entries = data.result.entries;
+    else if(Array.isArray(data)) entries = data;
+    else if(data && Array.isArray(data.apps)) entries = data.apps;
+    
+    const apps = entries.map(_apptekaToPika).filter(a => a && a.id);
+    return { ok: true, apps };
+  }
+
+  // BAAKI SAB (Home page etc.) purane VPS DISCOVER_API se
   let realPath = path;
   if(path.startsWith('/random')){
     realPath = '/app/top/list?locale=en';
-  } else if(path.startsWith('/search')){
-    const qPart = (path.split('?')[1] || '').replace(/^q=/, '') || '';
-    realPath = '/app/search?query=' + qPart + '&locale=en';
   } else if(path.startsWith('/download/')){
     const id = path.slice('/download/'.length);
     realPath = '/app/download?app_id=' + encodeURIComponent(id) + '&locale=en';
   }
   const bust = (realPath.indexOf('?') > -1 ? '&' : '?') + '_t=' + Date.now();
-  const apiBase = realPath.startsWith('/app/search') ? 'https://pika-discover.itsme16241897.workers.dev/api/1' : DISCOVER_API;
-  const r = await fetch(apiBase + realPath + bust, { cache: "no-store" });
+  const r = await fetch(DISCOVER_API + realPath + bust, { cache: "no-store" });
   if(!r.ok) throw new Error("HTTP " + r.status);
   const data = await r.json();
+  
   let entries = [];
   if(data && data.result && Array.isArray(data.result.entries)) entries = data.result.entries;
   else if(Array.isArray(data)) entries = data;
   else if(data && Array.isArray(data.apps)) entries = data.apps;
+  
   const apps = entries.map(_apptekaToPika).filter(a => a && a.id);
   return { ok: true, apps };
 }
@@ -12630,27 +12650,48 @@ async function discSearchAndAppend(q){
   const inputEl = document.getElementById('search-input');
   if(!inputEl || inputEl.value.trim() !== q) return;
 
-  // 8 second baad spinner band, chahe remote jawab na de
   const giveUpTimer = setTimeout(()=>{
     if(inputEl.value.trim() !== q) return;
     if(discSearchState.query === q && !discSearchState.done){
       discSearchState = { query:q, apps:[], pending:false, done:true };
       if(typeof renderSearch === "function") renderSearch(q);
     }
-  }, 8000);
+  }, 15000);
 
   try{
-    const data = await discoverFetch('/app/search?query=' + encodeURIComponent(q) + '&locale=en');
+    const vpsUrl = 'https://193-122-76-131.nip.io/discover/search?q=' + encodeURIComponent(q) + '&_t=' + Date.now();
+    console.log('[PikaSearch] Fetching:', vpsUrl);
+    const r = await fetch(vpsUrl, { cache: "no-store" });
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    console.log('[PikaSearch] Response:', data);
+
+    let entries = [];
+    if(data && data.result && Array.isArray(data.result.entries)) entries = data.result.entries;
+    else if(Array.isArray(data)) entries = data;
+    else if(data && Array.isArray(data.apps)) entries = data.apps;
+
+    const apps = entries.map(raw => {
+      const app = _apptekaToPika(raw);
+      if(app && raw.sizeLabel) app.sizeLabel = raw.sizeLabel;
+      return app;
+    }).filter(a => a && a.id).slice(0, 40);
+
     clearTimeout(giveUpTimer);
-    const apps = (data.apps || []).slice(0, 40);
     if(inputEl.value.trim() !== q) return;
     discSearchState = { query:q, apps, pending:false, done:true };
     if(typeof renderSearch === "function") renderSearch(q);
   }catch(e){
     clearTimeout(giveUpTimer);
-    console.warn('Discover search failed:', e);
+    console.error('[PikaSearch] VPS failed, using local cache fallback:', e);
     if(inputEl.value.trim() !== q) return;
-    discSearchState = { query:q, apps:[], pending:false, done:true };
+    
+    const _ql = q.toLowerCase();
+    const localApps = ((typeof discover !== 'undefined' && discover && discover.apps) ? discover.apps : [])
+        .filter(a => ((a.name || '') + ' ' + (a.package || '') + ' ' + (a.author || '')).toLowerCase().includes(_ql))
+        .slice(0, 40);
+
+    discSearchState = { query:q, apps:localApps, pending:false, done:true };
     if(typeof renderSearch === "function") renderSearch(q);
   }
 }
