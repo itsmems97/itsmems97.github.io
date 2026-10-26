@@ -6376,25 +6376,39 @@ function renderSearch(term){
     discSearchState = { query:'', apps:[], pending:false, done:false };
     return;
   }
+  
+  // 1. Local User Apps
   const apps = state.apps.map(a=>({ a, s: Math.max(fuzzyScore(q, a.name), fuzzyScore(q, a.uploaderName||"")*0.6) })).filter(x=>x.s >= 40).sort((x,y)=>y.s-x.s).slice(0,20);
   const members = [];
-  const _remoteDisc = (discSearchState.query === q && discSearchState.done) ? discSearchState.apps : [];
-  const _ql = q.toLowerCase();
+  
+  // 2. Local Discover Cache (Fuzzy search applied here)
   const _localDisc = ((typeof discover !== 'undefined' && discover && discover.apps) ? discover.apps : [])
-    .filter(a => ((a.name || '') + ' ' + (a.package || '') + ' ' + (a.author || '')).toLowerCase().includes(_ql))
-    .sort((x, y) => {
-      const xs = (x.name || '').toLowerCase().startsWith(_ql) ? 1 : 0;
-      const ys = (y.name || '').toLowerCase().startsWith(_ql) ? 1 : 0;
-      if(xs !== ys) return ys - xs;
-      return (y.downloads || 0) - (x.downloads || 0);
-    })
+    .map(a => ({ a, s: Math.max(fuzzyScore(q, a.name), fuzzyScore(q, a.package || "")*0.8) }))
+    .filter(x => x.s >= 40)
+    .sort((x, y) => y.s - x.s)
+    .map(x => x.a)
     .slice(0, 60);
+
+  // 3. Remote Discover Results (from VPS)
+  const _remoteDisc = (discSearchState.query === q && discSearchState.apps) ? discSearchState.apps : [];
+
   const discoverResults = [];
   const _seenDisc = new Set();
-  [..._remoteDisc, ..._localDisc].forEach(a => { if(!_seenDisc.has(a.id)){ _seenDisc.add(a.id); discoverResults.push(a); } });
-  const searching = discSearchState.query === q && discSearchState.pending;
+  
+  [..._remoteDisc, ..._localDisc].forEach(a => { 
+    if(!_seenDisc.has(a.id)){ 
+      _seenDisc.add(a.id); 
+      discoverResults.push(a); 
+    } 
+  });
+
+  const isCurrentQuery = discSearchState.query === q;
+  const searching = isCurrentQuery && discSearchState.pending;
+  const done = isCurrentQuery && discSearchState.done;
+
   const top = document.querySelector(".topbar").getBoundingClientRect().bottom;
   panel.style.top = top + "px"; panel.hidden = false;
+  
   let html = '';
   if(apps.length){
     html += `<h4>Apps &amp; files</h4><div class="settings-list">${apps.map(({a})=>`
@@ -6408,7 +6422,9 @@ function renderSearch(term){
     html += `<h4>Discover</h4><div class="settings-list">${discoverResults.map(app=>`
       <div class="mini-row tap" data-disc-app="${escapeHtml(app.id)}"><img class="thumb" alt="" src="${escapeHtml(app.icon || placeholderIcon(app.name))}" /><div class="mini-main"><b>${escapeHtml(app.name)}</b><small>${escapeHtml(app.category)} • ${escapeHtml(app.sizeLabel)}</small></div></div>`).join("")}</div>`;
   }
+  
   const totalFound = apps.length + members.length + discoverResults.length;
+  
   if(totalFound === 0){
     if(searching){
       html = `<div class="empty-row" style="margin:24px 18px;display:flex;align-items:center;justify-content:center;gap:10px"><div class="spinner" style="width:18px;height:18px;border-width:2px;margin:0"></div><span>Searching…</span></div>`;
@@ -6418,6 +6434,7 @@ function renderSearch(term){
   } else if(searching){
     html += `<div style="margin:14px 18px;padding:12px;text-align:center;font-size:12px;color:var(--text-dim);display:flex;align-items:center;justify-content:center;gap:8px"><div class="spinner" style="width:14px;height:14px;border-width:2px;margin:0"></div><span>Finding more…</span></div>`;
   }
+  
   panel.innerHTML = html;
 }
 $("#search-input").addEventListener("input", e=>{
@@ -6428,11 +6445,21 @@ $("#search-input").addEventListener("input", e=>{
     renderSearch(q);
     return;
   }
-  discSearchState = { query:q, apps:[], pending:true, done:false };
+
+  const oldQuery = discSearchState.query || "";
+  const oldApps = discSearchState.apps || [];
+  
+  // Keep previous results if the new query is just extending or deleting from the old query
+  // Example: VPN -> VP (keeps VPN results on screen while VP loads)
+  const isSimilar = oldQuery && (oldQuery.toLowerCase().includes(q.toLowerCase()) || q.toLowerCase().includes(oldQuery.toLowerCase()));
+  const keepApps = isSimilar ? oldApps : [];
+
+  discSearchState = { query:q, apps:keepApps, pending:true, done:false };
   renderSearch(q);
+  
   if(typeof discSearchTimer !== 'undefined'){
-  discSearchTimer = setTimeout(()=>{ if(typeof discSearchAndAppend === 'function') discSearchAndAppend(q); }, 150);
-}
+    discSearchTimer = setTimeout(()=>{ if(typeof discSearchAndAppend === 'function') discSearchAndAppend(q); }, 600);
+  }
 });
 $("#search-panel").addEventListener("click", e=>{
   const a = e.target.closest("[data-s-app]");
@@ -12653,19 +12680,20 @@ async function discSearchAndAppend(q){
   const giveUpTimer = setTimeout(()=>{
     if(inputEl.value.trim() !== q) return;
     if(discSearchState.query === q && !discSearchState.done){
-      discSearchState = { query:q, apps:[], pending:false, done:true };
+      // Keep whatever apps we have and stop spinner after 10s
+      discSearchState = { query:q, apps:discSearchState.apps || [], pending:false, done:true };
       if(typeof renderSearch === "function") renderSearch(q);
     }
-  }, 15000);
+  }, 10000);
 
   try{
-    const vpsUrl = 'https://193-122-76-131.nip.io/discover/search?q=' + encodeURIComponent(q) + '&_t=' + Date.now();
+    const b64Q = btoa(unescape(encodeURIComponent(q)));
+    const vpsUrl = 'https://193-122-76-131.nip.io/discover/search?q=' + encodeURIComponent(b64Q) + '&_t=' + Date.now();
     console.log('[PikaSearch] Fetching:', vpsUrl);
     const r = await fetch(vpsUrl, { cache: "no-store" });
     if(!r.ok) throw new Error("HTTP " + r.status);
     const data = await r.json();
-    console.log('[PikaSearch] Response:', data);
-
+    
     let entries = [];
     if(data && data.result && Array.isArray(data.result.entries)) entries = data.result.entries;
     else if(Array.isArray(data)) entries = data;
@@ -12675,7 +12703,10 @@ async function discSearchAndAppend(q){
       const app = _apptekaToPika(raw);
       if(app && raw.sizeLabel) app.sizeLabel = raw.sizeLabel;
       return app;
-    }).filter(a => a && a.id).slice(0, 40);
+    }).filter(a => a && a.id);
+
+    // Sort API results using fuzzyScore so the best match comes first
+    apps.sort((a, b) => fuzzyScore(q, b.name) - fuzzyScore(q, a.name));
 
     clearTimeout(giveUpTimer);
     if(inputEl.value.trim() !== q) return;
@@ -12683,15 +12714,11 @@ async function discSearchAndAppend(q){
     if(typeof renderSearch === "function") renderSearch(q);
   }catch(e){
     clearTimeout(giveUpTimer);
-    console.error('[PikaSearch] VPS failed, using local cache fallback:', e);
+    console.error('[PikaSearch] Failed:', e);
     if(inputEl.value.trim() !== q) return;
     
-    const _ql = q.toLowerCase();
-    const localApps = ((typeof discover !== 'undefined' && discover && discover.apps) ? discover.apps : [])
-        .filter(a => ((a.name || '') + ' ' + (a.package || '') + ' ' + (a.author || '')).toLowerCase().includes(_ql))
-        .slice(0, 40);
-
-    discSearchState = { query:q, apps:localApps, pending:false, done:true };
+    // On error (like VPS 500), keep old results visible instead of showing "No Results"
+    discSearchState = { query:q, apps:discSearchState.apps || [], pending:false, done:true };
     if(typeof renderSearch === "function") renderSearch(q);
   }
 }
