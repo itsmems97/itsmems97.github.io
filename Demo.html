@@ -311,10 +311,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-end; /* FIXED: Pushes content to bottom */
+            justify-content: flex-end; 
             text-align: center;
             padding: 20px 15px;
-            padding-bottom: 30px; /* FIXED: Added breathing room at bottom */
+            padding-bottom: 30px; 
             border: 1px solid rgba(0, 123, 255, 0.2);
             border-radius: var(--border-radius-lg);
             min-height: 100%;
@@ -323,8 +323,8 @@
             background: #050914; 
         }
 
-        /* --- Smart Background Image Layers --- */
-        .menu-bg-clear, .menu-bg-blur {
+        /* --- Clean Background Image Layer (No Blur/Overlay) --- */
+        .menu-bg-clear {
             position: absolute;
             inset: 0;
             background-image: url('https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/menu-bg.png');
@@ -333,30 +333,15 @@
             z-index: 0;
         }
 
-        .menu-bg-blur {
-            filter: blur(8px);
-            /* The mask makes the top 35% transparent (unblurred) and the rest blurred */
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 30%, black 45%, black 100%);
-            mask-image: linear-gradient(to bottom, transparent 0%, transparent 30%, black 45%, black 100%);
-        }
-
-        /* Dark overlay to ensure text readability */
-        .menu-bg-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(5, 9, 20, 0.4); 
-            z-index: 0;
-        }
-
         .menu-hero-content {
             width: 100%;
             max-width: 340px;
             position: relative;
             z-index: 1; 
-            margin-top: auto; /* FIXED: Pushes this container to the bottom */
+            margin-top: auto; 
         }
 
-        /* FIXED: Hidden to prevent overlap with background image text */
+        /* Hidden to prevent overlap with background image text */
         .menu-title, .menu-subtitle {
             display: none; 
         }
@@ -377,7 +362,7 @@
             font-size: 13px;
             font-weight: 600;
             color: var(--text-feature);
-            background: rgba(10, 18, 35, 0.7); /* Semi-transparent dark bg */
+            background: rgba(10, 18, 35, 0.7); 
             padding: 10px;
             border-radius: var(--border-radius-md);
             border: 1px solid rgba(255,255,255,0.1);
@@ -754,10 +739,8 @@
             <!-- TAB 1: MAIN MENU -->
             <section id="tab-menu" class="tab-panel active">
                 <div class="menu-hero">
-                    <!-- Background Layers for Blur Effect -->
+                    <!-- Clean Background Layer -->
                     <div class="menu-bg-clear"></div>
-                    <div class="menu-bg-blur"></div>
-                    <div class="menu-bg-overlay"></div>
 
                     <div class="menu-hero-content">
                         <!-- HTML Titles hidden, relying on background image -->
