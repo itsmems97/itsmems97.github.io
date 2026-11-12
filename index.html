@@ -3,10 +3,13 @@
 <head>
 <script>(function(){var nested=false;try{nested=window.top!==window.self&&window.top.location.origin===location.origin&&location.protocol.indexOf("http")===0;}catch(e){}if(nested){try{window.top.postMessage({pika:"home"},location.origin);}catch(e){}try{document.documentElement.style.display="none";window.stop();}catch(e){}}})();</script>
 <script>(function(){
+try{if(!screen.orientation){Object.defineProperty(screen,'orientation',{configurable:true,value:{type:'portrait-primary',angle:0,lock:function(){return Promise.resolve();},unlock:function(){},addEventListener:function(){},removeEventListener:function(){}}});}}catch(e){}
+window.__pksOpenOnline=function(){location.href='https://itsmems97.github.io/';};
 window.addEventListener('error',function(e){window.__pksLastErr=(e.message||'error')+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:'');});
 window.addEventListener('unhandledrejection',function(e){var r=e.reason;window.__pksLastErr='promise: '+((r&&r.message)||r);});
 ['localStorage','sessionStorage'].forEach(function(k){try{window[k].getItem('x');}catch(e){var m={};try{Object.defineProperty(window,k,{configurable:true,value:{getItem:function(a){return a in m?m[a]:null;},setItem:function(a,b){m[a]=String(b);},removeItem:function(a){delete m[a];},clear:function(){m={};},key:function(i){return Object.keys(m)[i]||null;},get length(){return Object.keys(m).length;}}});}catch(_){}}});
 })();</script>
+<script nomodule>document.addEventListener("DOMContentLoaded",function(){var s=document.getElementById("pks2-splash");if(s)s.parentNode.removeChild(s);document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:#0d0f14;color:#cfd3dc;font:16px/1.5 -apple-system,Roboto,sans-serif">Your browser is too old for Pika Store.<br>Please update Chrome / Safari and try again.</div>';});</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -4042,13 +4045,13 @@ function enterStore(){
   loadOwnerMessagesForMaria();
 }
 function showGate(notice){
-  if(notice !== "banned" && !window.__gateForce && firebaseReady && __autoGuestTries < 2){ autoGuest(notice); return; }
+  if(notice !== "banned" && !window.__gateForce && firebaseReady && __autoGuestTries < 2 && new URLSearchParams(location.search).get("owner") !== "1"){ autoGuest(notice); return; }
   hideSplash(); $("#app").hidden = true; $("#username-gate").hidden = false;
   const msgs = { session:"You were signed out because this account was opened in another browser.", revoked:"You were logged out by the store admin.", guestExpired:"Your Guest account expired after 3 days." };
   const n = $("#gate-notice");
   if(msgs[notice]){ n.textContent = msgs[notice]; n.hidden = false; } else { n.hidden = true; }
   if(notice === "banned") showBannedDialog();
-  showGateStep((isStandalone() || notice) ? "login" : "welcome");
+  showGateStep((isStandalone() || notice || new URLSearchParams(location.search).get("owner") === "1") ? "login" : "welcome");
 }
 var __autoGuestTries = 0;
 async function autoGuest(notice){
@@ -4198,6 +4201,7 @@ if(firebaseReady){
   try{ await withTimeout(auth.authStateReady(), 6000); }catch(e){}
   if(window.__pksStage) window.__pksStage(62, 82);
   const user = auth.currentUser;
+  if(ownerBypass && (!user || user.isAnonymous)){ if(user){ try{ await signOut(auth); }catch(e){} } showGate(notice); return; }
   if(!user){ showGate(notice); return; }
   if(!user.isAnonymous && !isGoogleUser(user)){ try{ await signOut(auth); }catch(e){} showGate(notice); return; }
   const r = await applyIdentity(user);
@@ -4659,8 +4663,8 @@ async function initAuthWithRetry(){
         if(!document.getElementById("boot-stuck")){
           document.body.insertAdjacentHTML("beforeend", `
             <div id="boot-stuck" style="position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
-              <p style="margin:0;color:var(--text-dim);font-size:14px">Connection is slow. Please retry once.</p><p style="margin:0;color:var(--text-faint);font-size:11px;max-width:300px;word-break:break-all">${String(window.__pksLastErr||"").replace(/</g,"&lt;")}</p>
-              <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+              <p style="margin:0;color:var(--text-dim);font-size:14px">${/^https?:$/.test(location.protocol) ? "Connection is slow. Please retry once." : "Local file mode: your browser blocks sign-in and the database for local files. Open the online version of Pika Store."}</p><p style="margin:0;color:var(--text-faint);font-size:11px;max-width:300px;word-break:break-all">${String(window.__pksLastErr||"").replace(/</g,"&lt;")}</p>
+              ${/^https?:$/.test(location.protocol) ? "" : `<button class="btn btn-primary" onclick="__pksOpenOnline()">Open online version</button>`}<button class="btn btn-primary" onclick="location.reload()">Retry</button>
             </div>`);
         }
       }
@@ -4682,8 +4686,8 @@ setTimeout(()=>{
   if(!appVisible && !gateVisible && !document.getElementById("boot-stuck")){
     document.body.insertAdjacentHTML("beforeend", `
       <div id="boot-stuck" style="position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
-        <p style="margin:0;color:var(--text-dim);font-size:14px">Connection is slow. Please retry once.</p><p style="margin:0;color:var(--text-faint);font-size:11px;max-width:300px;word-break:break-all">${String(window.__pksLastErr||"").replace(/</g,"&lt;")}</p>
-        <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+        <p style="margin:0;color:var(--text-dim);font-size:14px">${/^https?:$/.test(location.protocol) ? "Connection is slow. Please retry once." : "Local file mode: your browser blocks sign-in and the database for local files. Open the online version of Pika Store."}</p><p style="margin:0;color:var(--text-faint);font-size:11px;max-width:300px;word-break:break-all">${String(window.__pksLastErr||"").replace(/</g,"&lt;")}</p>
+        ${/^https?:$/.test(location.protocol) ? "" : `<button class="btn btn-primary" onclick="__pksOpenOnline()">Open online version</button>`}<button class="btn btn-primary" onclick="location.reload()">Retry</button>
       </div>`);
   }
 }, 15000);
