@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
+<script>(function(){var nested=false;try{nested=window.top!==window.self&&window.top.location.origin===location.origin&&location.protocol.indexOf("http")===0;}catch(e){}if(nested){try{window.top.postMessage({pika:"home"},location.origin);}catch(e){}try{document.documentElement.style.display="none";window.stop();}catch(e){}}})();</script>
+<script>(function(){
+window.addEventListener('error',function(e){window.__pksLastErr=(e.message||'error')+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:'');});
+window.addEventListener('unhandledrejection',function(e){var r=e.reason;window.__pksLastErr='promise: '+((r&&r.message)||r);});
+['localStorage','sessionStorage'].forEach(function(k){try{window[k].getItem('x');}catch(e){var m={};try{Object.defineProperty(window,k,{configurable:true,value:{getItem:function(a){return a in m?m[a]:null;},setItem:function(a,b){m[a]=String(b);},removeItem:function(a){delete m[a];},clear:function(){m={};},key:function(i){return Object.keys(m)[i]||null;},get length(){return Object.keys(m).length;}}});}catch(_){}}});
+})();</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -369,14 +375,14 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
   position:fixed; inset:0; z-index:105;
   display:flex; align-items:center; justify-content:center;
   background:rgba(0,0,0,.72);
-  
-  
+  backdrop-filter:blur(14px) saturate(160%);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
   padding:20px;
-  
+  animation: installFadeIn .35s ease-out;
 }
-
-#install-anim.out{  }
-
+@keyframes installFadeIn{ from{opacity:0} to{opacity:1} }
+#install-anim.out{ animation: installFadeOut .35s ease-in forwards; }
+@keyframes installFadeOut{ to{opacity:0} }
 
 .install-card{
   position:relative;
@@ -391,16 +397,22 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
     inset 0 1px 0 rgba(255,255,255,.08);
   text-align:center; color:#F4F5F7;
   overflow:hidden;
-  
+  animation: installCardIn .55s cubic-bezier(.34,1.4,.64,1);
 }
-
+@keyframes installCardIn{
+  from{ transform:scale(.85) translateY(30px); opacity:0; }
+  to  { transform:scale(1) translateY(0); opacity:1; }
+}
 .install-card::before{
   content:""; position:absolute; top:0; left:0; right:0; height:3px;
   background:linear-gradient(90deg,#FFC61A,#FFA800,#33E0C1,#FFC61A);
   background-size:200% 100%;
-  
+  animation: installShimmerBar 2s linear infinite;
 }
-
+@keyframes installShimmerBar{
+  0%{ background-position:0% 0; }
+  100%{ background-position:200% 0; }
+}
 .install-card::after{
   content:""; position:absolute; inset:0; pointer-events:none;
   background: radial-gradient(circle at 100% 0%, rgba(255,198,26,.15), transparent 55%),
@@ -416,10 +428,18 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
     0 14px 34px rgba(255,168,0,.5),
     0 0 60px rgba(255,198,26,.35),
     inset 0 1px 0 rgba(255,255,255,.5);
-  
+  animation: installLogoPop .8s cubic-bezier(.34,1.56,.64,1),
+             installLogoPulse 2.5s ease-in-out 1s infinite;
 }
-
-
+@keyframes installLogoPop{
+  0%{ transform:scale(.4) rotate(-15deg); opacity:0; }
+  60%{ opacity:1; }
+  100%{ transform:scale(1) rotate(0); opacity:1; }
+}
+@keyframes installLogoPulse{
+  0%,100%{ transform:scale(1); }
+  50%    { transform:scale(1.05); }
+}
 .install-logo img{
   width:100%; height:100%; object-fit:cover; display:block;
   position:relative; z-index:2;
@@ -431,10 +451,13 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
     rgba(255,255,255,1) 50%, rgba(255,255,255,.7) 52%,
     transparent 65%);
   transform:translateX(-150%) skewX(-15deg);
-  
+  animation: installLogoShine 2.5s ease-in-out infinite;
   mix-blend-mode:screen;
 }
-
+@keyframes installLogoShine{
+  0%   { transform:translateX(-150%) skewX(-15deg); }
+  100% { transform:translateX(150%) skewX(-15deg); }
+}
 
 .install-title{
   position:relative; z-index:2;
@@ -460,10 +483,13 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
   background:linear-gradient(90deg,#FFC61A,#FFA800,#33E0C1);
   background-size:200% 100%;
   box-shadow:0 0 14px rgba(255,198,26,.7);
-  
-  
+  transition:width .3s cubic-bezier(.4,0,.2,1);
+  animation: installBarShimmer 1.5s linear infinite;
 }
-
+@keyframes installBarShimmer{
+  0%{ background-position:0% 0; }
+  100%{ background-position:200% 0; }
+}
 .install-pct{
   position:relative; z-index:2;
   font-size:11.5px; font-weight:700;
@@ -482,18 +508,24 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
   box-shadow:
     0 14px 34px rgba(51,224,193,.5),
     0 0 60px rgba(51,224,193,.35);
-  
+  animation: installSuccessPop .7s cubic-bezier(.34,1.56,.64,1);
 }
-
+@keyframes installSuccessPop{
+  0%   { transform:scale(0) rotate(-180deg); opacity:0; }
+  60%  { opacity:1; }
+  100% { transform:scale(1) rotate(0); opacity:1; }
+}
 .install-success-check svg{
   width:48px; height:48px;
   stroke:#fff; stroke-width:3.5;
   fill:none;
   stroke-dasharray:50;
   stroke-dashoffset:50;
-  
+  animation: installCheckDraw .6s ease-out .5s forwards;
 }
-
+@keyframes installCheckDraw{
+  to{ stroke-dashoffset:0; }
+}
 
 .install-ripple{
   position:absolute; top:50%; left:50%;
@@ -502,9 +534,12 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
   transform:translate(-50%,-50%) scale(0);
   background:radial-gradient(circle, rgba(255,198,26,.5), transparent 70%);
   pointer-events:none; z-index:1;
-  
+  animation: installRippleOut .9s cubic-bezier(.22,1,.36,1) forwards;
 }
-
+@keyframes installRippleOut{
+  0%   { transform:translate(-50%,-50%) scale(0); opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(40); opacity:0; }
+}
 
 /* ============ /INSTALLING ANIMATION ============ */
 
@@ -775,9 +810,9 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
   text-shadow: 0 0 8px rgba(255,215,0,.55);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-#ip-overlay{ position:fixed; inset:0; z-index:104; display:flex; justify-content:center; align-items:center; padding:20px; background:rgba(0,0,0,.4);    }
+#ip-overlay{ position:fixed; inset:0; z-index:104; display:flex; justify-content:center; align-items:center; padding:20px; background:rgba(0,0,0,.4); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); animation:ipFade .3s ease-out forwards; }
 #ip-overlay, #ip-overlay *{ box-sizing:border-box; font-family:'VIP',-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",sans-serif; -webkit-tap-highlight-color:transparent; }
-#ip-overlay .ip-card{ position:relative; width:100%; max-width:320px; background:rgba(255,255,255,.15); border-radius:28px; padding:24px 20px 20px;   border:1px solid rgba(255,255,255,.25); box-shadow:0 20px 40px rgba(0,0,0,.4), inset 0 1px 1px rgba(255,255,255,.4); display:flex; flex-direction:column; align-items:center; text-align:center; color:#fff; transform:scale(.9);  }
+#ip-overlay .ip-card{ position:relative; width:100%; max-width:320px; background:rgba(255,255,255,.15); border-radius:28px; padding:24px 20px 20px; backdrop-filter:blur(25px) saturate(190%); -webkit-backdrop-filter:blur(25px) saturate(190%); border:1px solid rgba(255,255,255,.25); box-shadow:0 20px 40px rgba(0,0,0,.4), inset 0 1px 1px rgba(255,255,255,.4); display:flex; flex-direction:column; align-items:center; text-align:center; color:#fff; transform:scale(.9); animation:ipSpring .4s cubic-bezier(.175,.885,.32,1.275) forwards; }
 #ip-overlay .ip-icon{ width:72px; height:72px; margin-bottom:14px; border-radius:18px; background:linear-gradient(135deg,#ffc107,#ff9800); display:flex; justify-content:center; align-items:center; box-shadow:0 8px 16px rgba(0,0,0,.3), 0 0 20px rgba(255,193,7,.3); border:1px solid rgba(255,255,255,.3); overflow:hidden; }
 #ip-overlay .ip-icon img{ width:100%; height:100%; object-fit:cover; display:block; }
 #ip-overlay .ip-icon span{ font-size:38px; font-weight:800; color:#111; text-shadow:0 1px 2px rgba(255,255,255,.4); }
@@ -785,13 +820,13 @@ html[data-theme="light"] .theme-toggle .i-moon{ opacity:0; transform:rotate(90de
 #ip-overlay .ip-domain{ font-size:13px; color:rgba(255,255,255,.65); margin:0 0 18px; }
 #ip-overlay .ip-desc{ font-size:13px; color:rgba(255,255,255,.85); line-height:1.4; margin:0 0 22px; padding:0 4px; }
 #ip-overlay .ip-btns{ display:flex; gap:12px; width:100%; }
-#ip-overlay .ip-btn{ flex:1; padding:12px 16px; border-radius:14px; font-size:15px; font-weight:600; border:none; cursor:pointer; outline:none;  }
+#ip-overlay .ip-btn{ flex:1; padding:12px 16px; border-radius:14px; font-size:15px; font-weight:600; border:none; cursor:pointer; outline:none; transition:all .2s cubic-bezier(.4,0,.2,1); }
 #ip-overlay .ip-cancel{ background:rgba(255,255,255,.12); color:rgba(255,255,255,.9); border:1px solid rgba(255,255,255,.15); }
 #ip-overlay .ip-cancel:active{ background:rgba(255,255,255,.25); transform:scale(.96); }
 #ip-overlay .ip-install{ background:linear-gradient(135deg,#007aff,#0056b3); color:#fff; box-shadow:0 4px 12px rgba(0,122,255,.4); }
 #ip-overlay .ip-install:active{ transform:scale(.96); filter:brightness(.9); }
-
-
+@keyframes ipFade{ from{opacity:0} to{opacity:1} }
+@keyframes ipSpring{ from{opacity:0; transform:scale(.8) translateY(20px)} to{opacity:1; transform:scale(1) translateY(0)} }
 
 /* =====================================================================
    TELEGRAM-STYLE CHANNEL UI
@@ -1959,6 +1994,7 @@ button.av3d{ -webkit-mask-image:none; mask-image:none; }   /* global button{mask
 #pet.drag{transform:scale(1.08)}
 
 /* ===== lightweight overrides ===== */
+html:has(#movie-chooser),body:has(#movie-chooser){overflow:hidden!important}
 /* ===== private channel preview blur (restored) ===== */
 .pktg-msg.pktg-preview{filter:blur(6px);pointer-events:none;user-select:none;opacity:.9}
 .pktg-preview-media img{filter:blur(14px) saturate(1.4);transform:scale(1.06)}
@@ -2149,7 +2185,10 @@ html[data-theme="light"] .bottom-nav{background:#fff}
   var splashEl = document.getElementById('pks2-splash');
   var fill = document.getElementById('pks2-loader-fill');
   var label = document.getElementById('pks2-loader-label');
-  var cur = 0, ceil = 30, exited = false;
+  var cur = 0, ceil = 30, exited = false, slow = 0;
+  function stamp(){ if(!window.__pksBootOk) return; try{ sessionStorage.setItem('pika_booted', String(Date.now())); }catch(e){} }
+  document.addEventListener('visibilitychange', function(){ if (document.hidden) stamp(); });
+  window.addEventListener('pagehide', stamp);
   function setP(p){
     p = Math.min(100, Math.round(p));
     if (p <= cur) return;
@@ -2170,9 +2209,22 @@ html[data-theme="light"] .bottom-nav{background:#fff}
       setTimeout(function(){ if (s.parentNode) s.remove(); }, 800);
     }, 250);
   }
-  splashEl.classList.add('run');
-  setP(1);
-  setInterval(function(){ if (!exited && cur < ceil - 1) setP(cur + 1); }, 150);
+  var skipSplash = false;
+  try{ skipSplash = (Date.now() - (+sessionStorage.getItem('pika_booted') || 0)) < 120000; }catch(e){}
+  if (skipSplash){ exited = true; window.__pks2Exited = true; splashEl.remove(); }
+  else { splashEl.classList.add('run'); setP(1); }
+  setInterval(function(){
+    if (exited) return;
+    if (cur < ceil - 1) setP(cur + 1);
+    else if (cur < 94 && (++slow % 8 === 0)) setP(cur + 1);
+  }, 150);
+  setTimeout(function(){
+    if (exited || window.__pksModuleOk) return;
+    var reloaded = false;
+    try{ reloaded = sessionStorage.getItem('pks_reloaded') === '1'; sessionStorage.setItem('pks_reloaded', '1'); }catch(e){}
+    if (!reloaded) location.reload();
+    else label.textContent = 'Slow connection… check internet';
+  }, 12000);
   window.addEventListener('load', function(){ window.__pksStage(35, 58); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ window.__pksStage(45, 58); });
   setTimeout(doExit, 15000);
@@ -2440,7 +2492,7 @@ html[data-theme="light"] .bottom-nav{background:#fff}
     <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-size:22px">🎁</div>
     <div style="flex:1;min-width:0">
       <b style="font-size:14.5px;display:block">Invite 3 Friends → Get Blue Tick</b>
-      <small style="font-size:11.5px;color:var(--text-dim)">Real join hona zaroori hai (link click nahi)</small>
+      <small style="font-size:11.5px;color:var(--text-dim)">A real join is required (clicking the link is not enough)</small>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--text-dim)">
@@ -2695,6 +2747,7 @@ html[data-theme="light"] .bottom-nav{background:#fff}
    PIKA STORE — APPLICATION LOGIC
    ===================================================================== */
 
+window.__pksModuleOk = true; if(window.__pksStage) window.__pksStage(50, 60);
 const CONFIG = {
   firebase: {
   apiKey: "AIzaSyD7wQqO__8gx7mPtfoBXw9AX5I8Tt2yf9s",
@@ -2757,7 +2810,7 @@ async function ghGetSecrets(force){
     return GH_CACHE.secrets;
   }
   const snap = await getDoc(doc(db, "secrets", "github"));
-  if(!snap.exists()) throw new Error("Firestore mein secrets/github doc missing hai");
+  if(!snap.exists()) throw new Error("The secrets/github document is missing in Firestore");
   const raw = snap.data();
   const d = {
     workerUrl:    String(raw.workerUrl    || "").trim(),
@@ -2765,7 +2818,7 @@ async function ghGetSecrets(force){
     release:      String(raw.release      || "Pika-Data").trim()
   };
   if(!d.workerUrl){
-    throw new Error("secrets/github mein workerUrl missing hai");
+    throw new Error("workerUrl is missing in secrets/github");
   }
   GH_CACHE.secrets = d;
   GH_CACHE.secretsAt = Date.now();
@@ -2790,8 +2843,8 @@ async function ghGetReleaseByTag(secrets, tag){
   const url = `https://api.github.com/repos/${secrets.owner}/${secrets.repo}/releases/tags/${encodeURIComponent(tag)}`;
   const res = await fetch(url, { headers: ghApiHeaders(secrets.token) });
   if(res.status === 404) return null;
-  if(res.status === 401) throw new Error("GitHub token invalid / expired (401). Naya token Firestore mein daalo.");
-  if(res.status === 403) throw new Error("GitHub refused (403). Token scope ya rate limit check karo.");
+  if(res.status === 401) throw new Error("GitHub token invalid / expired (401). Add a new token in Firestore.");
+  if(res.status === 403) throw new Error("GitHub refused (403). Check the token scope or rate limit.");
   if(!res.ok) throw new Error("GitHub release lookup failed: HTTP " + res.status);
   const data = await res.json();
   const rel = { id: data.id, tag: data.tag_name, assets: data.assets || [] };
@@ -2817,8 +2870,8 @@ async function ghCreateRelease(secrets, tag){
     if(existing) return existing;
     throw new Error("GitHub release create conflict (422)");
   }
-  if(res.status === 401) throw new Error("GitHub token invalid / expired (401). Naya token Firestore mein daalo.");
-  if(res.status === 403) throw new Error("GitHub refused (403). Token scope ya rate limit check karo.");
+  if(res.status === 401) throw new Error("GitHub token invalid / expired (401). Add a new token in Firestore.");
+  if(res.status === 403) throw new Error("GitHub refused (403). Check the token scope or rate limit.");
   if(!res.ok){
     const t = await res.text().catch(()=> "");
     throw new Error("GitHub release create failed: HTTP " + res.status + " " + t.slice(0, 120));
@@ -2945,8 +2998,8 @@ async function ghUploadWithRotation(secrets, file, baseAssetName, onProgress){
         lastErr = new Error("Asset limit reached on " + tag);
         break;
       }
-      if(r.status === 401) throw new Error("GitHub token invalid / expired (401). Naya token Firestore mein daalo.");
-      if(r.status === 403) throw new Error("GitHub refused (403). Token scope ya rate limit check karo.");
+      if(r.status === 401) throw new Error("GitHub token invalid / expired (401). Add a new token in Firestore.");
+      if(r.status === 403) throw new Error("GitHub refused (403). Check the token scope or rate limit.");
       lastErr = new Error("GitHub upload failed: HTTP " + r.status + " " + (r.raw || "").slice(0, 140));
       gotResponse = true;
       break;
@@ -2956,7 +3009,7 @@ async function ghUploadWithRotation(secrets, file, baseAssetName, onProgress){
     if(gotResponse && !limitHit) break;
     // If all strategies had network errors, don't create another release — retry same one
     if(!gotResponse){
-      lastErr = new Error("Network error — upload could not reach GitHub. WiFi/VPN try karo.");
+      lastErr = new Error("Network error — upload could not reach GitHub. Try a different Wi-Fi/VPN.");
       break;
     }
     // Otherwise limitHit = true, continue outer loop to next release
@@ -3936,7 +3989,7 @@ function renderInviteCard(){
 async function shareInviteLink(){
   if(!state.uid){ toast("Please log in first", "ic-close"); return; }
   const url = `${location.origin}${location.pathname}?invite=${encodeURIComponent(state.uid)}`;
-  const text = `🎁 Join Pika Store with my link!\n${url}\n\n(Google se sign in karo — tabhi mera invite count hoga 😉)`;
+  const text = `🎁 Join Pika Store with my link!\n${url}\n\n(Sign in with Google — only then will my invite be counted 😉)`;
   if(navigator.share){
     try{ await navigator.share({ title: "Join Pika Store", text, url }); return; }
     catch(e){ if(e && e.name === "AbortError") return; }
@@ -3971,6 +4024,8 @@ function showLoading(msg){ hideLoading(); const d = document.createElement("div"
 function hideLoading(){ const d = document.getElementById("loading-overlay"); if(d) d.remove(); }
 function enterStore(){
   hideLoading();
+  try{ sessionStorage.setItem('pika_booted', String(Date.now())); }catch(e){}
+  window.__pksBootOk = true;
   if(window.__pksStage) window.__pksStage(88, 97);
   window.__pksWantHide = true;
   if(window.__pksAppsReady) hideSplash(); else setTimeout(hideSplash, 4000);
@@ -3999,7 +4054,7 @@ var __autoGuestTries = 0;
 async function autoGuest(notice){
   __autoGuestTries++;
   try{
-    const cred = await signInAnonymously(auth);
+    const cred = await withTimeout(signInAnonymously(auth), 10000);
     await applyIdentity(cred.user);
     if(await maintenanceBlocksUser()){ redirectToMaintenance(); return; }
     await guestBoot();
@@ -4109,7 +4164,7 @@ const ownerBypass = new URLSearchParams(location.search).get("owner") === "1";
 if(firebaseReady){
   await loadMaintenanceStatus();
   if(MAINTENANCE_MODE && !ownerBypass){
-    try{ await auth.authStateReady(); }catch(e){}
+    try{ await withTimeout(auth.authStateReady(), 6000); }catch(e){}
     const cu = auth.currentUser;
     // ⚡ Only redirect if someone is already logged in AND is not the owner.
     if(cu){
@@ -4137,10 +4192,10 @@ if(firebaseReady){
 }catch(e){}
   if(!firebaseReady){ showGate(notice); return; }
   try{
-    const rr = await getRedirectResult(auth);
+    const rr = await withTimeout(getRedirectResult(auth), 5000);
     if(rr && rr.user){ showLoading("Signing you in…"); try{ await completeLogin(rr.user); } finally { hideLoading(); } return; }
   }catch(e){ authError(e); }
-  try{ await auth.authStateReady(); }catch(e){}
+  try{ await withTimeout(auth.authStateReady(), 6000); }catch(e){}
   if(window.__pksStage) window.__pksStage(62, 82);
   const user = auth.currentUser;
   if(!user){ showGate(notice); return; }
@@ -4483,13 +4538,13 @@ async function ensureGuestProfile(){
   const u = auth.currentUser; if(!u) return null;
   const ref = doc(db,"users",u.uid);
   let ex = null;
-  try{ const sn = await getDoc(ref); if(sn.exists()) ex = sn.data(); }catch(e){}
+  try{ const sn = await withTimeout(getDoc(ref), 5000); if(sn && sn.exists()) ex = sn.data(); }catch(e){}
   const rp = randomGuestProfile();
   const name = (ex && ex.name) || rp.name;
   const photoURL = (ex && ex.photoURL) || rp.photoURL;
   const exp = guestExpiryMs();
   const base = { name, nameLower: lowerName(name), photoURL, verified:false, owner:false, guest:true, ...presenceFields(), updatedAt: serverTimestamp(), expireAt: Timestamp.fromMillis(exp), expireAtMs: exp };
-  try{ await setDoc(ref, ex ? base : { ...base, joinedAt: serverTimestamp(), setupDone: false }, { merge:true }); }
+  try{ await withTimeout(setDoc(ref, ex ? base : { ...base, joinedAt: serverTimestamp(), setupDone: false }, { merge:true }), 5000); }
   catch(e){ console.warn("Guest profile not saved", e); }
   return { name, photoURL };
 }
@@ -4497,7 +4552,7 @@ async function guestBoot(){
   if(await guestExpired()){ showGate("guestExpired"); return; }
   const gp = await ensureGuestProfile();
   if(gp){ state.username = gp.name; state.photoURL = gp.photoURL; }
-  await saveGuestDevice();
+  await withTimeout(saveGuestDevice(), 4000);
   enterStore();
 }
 async function sweepExpiredGuests(){
@@ -4604,7 +4659,7 @@ async function initAuthWithRetry(){
         if(!document.getElementById("boot-stuck")){
           document.body.insertAdjacentHTML("beforeend", `
             <div id="boot-stuck" style="position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
-              <p style="margin:0;color:var(--text-dim);font-size:14px">Check Your Internet Connection.</p>
+              <p style="margin:0;color:var(--text-dim);font-size:14px">Connection is slow. Please retry once.</p><p style="margin:0;color:var(--text-faint);font-size:11px;max-width:300px;word-break:break-all">${String(window.__pksLastErr||"").replace(/</g,"&lt;")}</p>
               <button class="btn btn-primary" onclick="location.reload()">Retry</button>
             </div>`);
         }
@@ -4627,7 +4682,7 @@ setTimeout(()=>{
   if(!appVisible && !gateVisible && !document.getElementById("boot-stuck")){
     document.body.insertAdjacentHTML("beforeend", `
       <div id="boot-stuck" style="position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
-        <p style="margin:0;color:var(--text-dim);font-size:14px">Check Your Internet Connection.</p>
+        <p style="margin:0;color:var(--text-dim);font-size:14px">Connection is slow. Please retry once.</p><p style="margin:0;color:var(--text-faint);font-size:11px;max-width:300px;word-break:break-all">${String(window.__pksLastErr||"").replace(/</g,"&lt;")}</p>
         <button class="btn btn-primary" onclick="location.reload()">Retry</button>
       </div>`);
   }
@@ -5032,11 +5087,12 @@ async function migrateChannelMessageMedia(){
 /* ================= MAINTENANCE MODE ================= */
 let MAINTENANCE_MODE = false;
 
+function raceTimeout(p, ms){ return Promise.race([p, new Promise(r=>setTimeout(r, ms))]); }
 async function loadMaintenanceStatus(){
   if(!firebaseReady){ MAINTENANCE_MODE = false; return false; }
   try{
-    const s = await getDoc(doc(db, "config", "maintenance"));
-    MAINTENANCE_MODE = s.exists() ? !!s.data().enabled : false;
+    const s = await raceTimeout(getDoc(doc(db, "config", "maintenance")), 5000);
+    MAINTENANCE_MODE = (s && s.exists()) ? !!s.data().enabled : false;
   }catch(e){
     console.warn("maintenance read failed", e);
     MAINTENANCE_MODE = false;
@@ -5135,7 +5191,7 @@ async function openSendMessagesSheet(type = 'speak'){
       <div class="sheet-handle"></div>
       <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       <h3 style="padding:22px 18px 6px;margin:0;font-size:17px">${title}</h3>
-      <p class="hint-p" style="margin-bottom:12px">Yeh message Maria AI ke through har user ko app open karne par 1 din mein max 5 baar dikhega.</p>
+      <p class="hint-p" style="margin-bottom:12px">This message is shown to every user through Maria AI each time they open the app.</p>
 
       <div style="padding:0 18px 14px;">
         <textarea id="smsg-input" rows="4" placeholder="${placeholder}"
@@ -5210,7 +5266,7 @@ async function openSendMessagesSheet(type = 'speak'){
     }
 
     if(e.target.closest("#smsg-clear")){
-      confirmSheet("Clear all messages?", "Poori history delete ho jayegi.", "Clear all").then(async ok=>{
+      confirmSheet("Clear all messages?", "The entire history will be deleted.", "Clear all").then(async ok=>{
         if(!ok) return;
         try{
           const snap = await getDocs(collection(db, "ownerMessages"));
@@ -5309,7 +5365,7 @@ function initTheme(){
   if(helpBtn){
     helpBtn.addEventListener("click", e=>{
       e.preventDefault();
-      const msg = encodeURIComponent(`Hi Pika Store support,\n\nMujhe madad chahiye:\n\n(Problem likho)\n\n— User: ${state.username || "Guest"}\n— UID: ${state.uid || "unknown"}`);
+      const msg = encodeURIComponent(`Hi Pika Store support,\n\nI need help:\n\n(Describe your problem)\n\n— User: ${state.username || "Guest"}\n— UID: ${state.uid || "unknown"}`);
       window.open(`https://wa.me/${CONFIG.supportWhatsApp}?text=${msg}`, "_blank", "noopener");
     });
   }
@@ -5347,6 +5403,16 @@ async function preloadSpoofAvatars(members){
   }
 }
 
+function openInApp(url){
+  if(document.getElementById("inapp-overlay")) return;
+  document.body.insertAdjacentHTML("beforeend", `<div id="inapp-overlay" style="position:fixed;inset:0;z-index:2147483000;background:var(--bg)"><iframe src="${url}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe><button id="inapp-back" type="button" aria-label="Back" style="position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:10px;width:38px;height:38px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:20px;line-height:1">←</button></div>`);
+  const ov = document.getElementById("inapp-overlay");
+  const close = ()=> ov.remove();
+  ov.querySelector("#inapp-back").addEventListener("click", close);
+  ov.querySelector("iframe").addEventListener("load", e=>{
+    try{ const p = e.target.contentWindow.location.pathname; if(p === "/" || /\/index\.html$/i.test(p)) close(); }catch(_){}
+  });
+}
 function showWebPage(which){
   $$(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.page === "__pika-movie"));
   $$(".page").forEach(p=>p.hidden = true);
@@ -5355,19 +5421,42 @@ function showWebPage(which){
   ["movie","iwatch"].forEach(k=>{
     const f = $("#web-frame-" + k);
     f.hidden = k !== which;
-    if(k === which && !f.getAttribute("src")) f.setAttribute("src", urls[k]);
+    if(!f.__ld){ f.__ld = true; f.addEventListener("load", ()=>{
+      try{ const p = f.contentWindow.location.pathname; if(p === "/" || /\/index\.html$/i.test(p)){ f.setAttribute("src", "about:blank"); const hb = document.querySelector('.nav-btn[data-page="home-page"]'); if(hb) hb.click(); } }catch(_){}
+    }); }
+    if(k === which && f.getAttribute("src") !== urls[k]) f.setAttribute("src", urls[k]);
   });
 }
+function closeMovieChooser(restore){
+  const ov = document.getElementById("movie-chooser");
+  if(!ov) return;
+  ov.remove();
+  if(restore !== false && window.__prevNavPage){
+    const pb = document.querySelector('.nav-btn[data-page="' + window.__prevNavPage + '"]');
+    if(pb) $$(".nav-btn").forEach(x=>x.classList.toggle("active", x === pb));
+  }
+}
+window.__closeMovieChooser = closeMovieChooser;
 function openMovieChooser(){
   if($("#movie-chooser")) return;
-  document.body.insertAdjacentHTML("beforeend", `<div class="sheet-backdrop" id="movie-chooser"><div class="sheet" style="padding:22px 18px calc(22px + var(--safe-bottom))"><h3 style="text-align:center;font-size:18px;margin:0 0 14px">Watch</h3><div style="display:flex;flex-direction:column;gap:10px"><button class="btn btn-primary btn-block" data-w="movie" type="button">Pika Movie</button><button class="btn btn-ghost btn-block" data-w="iwatch" type="button">iWatch</button></div></div></div>`);
+  const act = document.querySelector(".nav-btn.active");
+  window.__prevNavPage = act ? act.dataset.page : "home-page";
+  $$(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.page === "__pika-movie"));
+  document.body.insertAdjacentHTML("beforeend", `<div id="movie-chooser" style="position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);touch-action:none;overscroll-behavior:contain"><div style="width:100%;max-width:360px;background:var(--surface,#141a26);border:1px solid var(--border,rgba(128,128,128,.35));border-radius:24px;padding:20px 18px;box-shadow:0 18px 40px rgba(0,0,0,.45)"><h3 style="text-align:center;font-size:18px;margin:0 0 14px;color:var(--text)">Watch</h3><div style="display:flex;flex-direction:column;gap:10px"><button type="button" data-w="movie" style="border:0;border-radius:16px;padding:14px;font-size:16px;font-weight:800;width:100%;cursor:pointer;font-family:inherit; background:#FFC61A;color:#1a1200">Pika Movie</button><button type="button" data-w="iwatch" style="border:0;border-radius:16px;padding:14px;font-size:16px;font-weight:800;width:100%;cursor:pointer;font-family:inherit; background:#EC4899;color:#fff">iWatch</button><button type="button" data-cancel="1" style="border:0;border-radius:16px;padding:14px;font-size:16px;font-weight:800;width:100%;cursor:pointer;font-family:inherit; background:#6B7280;color:#fff">Cancel</button></div></div></div>`);
   const ov = $("#movie-chooser");
+  ov.addEventListener("touchmove", e=>e.preventDefault(), { passive:false });
   ov.addEventListener("click", e=>{
     const b = e.target.closest("[data-w]");
-    if(b){ ov.remove(); showWebPage(b.dataset.w); return; }
-    if(e.target === ov) ov.remove();
+    if(b){ closeMovieChooser(false); showWebPage(b.dataset.w); return; }
+    if(e.target === ov || e.target.closest("[data-cancel]")) closeMovieChooser(true);
   });
 }
+window.addEventListener("message", e=>{
+  if(e.origin !== location.origin || !e.data || e.data.pika !== "home") return;
+  const ov = document.getElementById("inapp-overlay"); if(ov) ov.remove();
+  $$("#web-page iframe").forEach(f=>f.setAttribute("src","about:blank"));
+  const hb = document.querySelector('.nav-btn[data-page="home-page"]'); if(hb) hb.click();
+});
 function initNav(){
   $$(".nav-btn").forEach(btn=>{
     btn.addEventListener("click", (e)=>{
@@ -5375,6 +5464,7 @@ function initNav(){
       e.stopPropagation();
       const target = btn.dataset.page;
       if(target === "__pika-movie"){ openMovieChooser(); return; }
+      closeMovieChooser(false);
       if(target === "__categories"){ openCategoriesSheet(); return; }
       $$(".nav-btn").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
@@ -5781,7 +5871,7 @@ function ghLatestMore(){
   box.insertAdjacentHTML('beforeend', next.map(ghLatestCard).join(''));
   __ghLatestShown += next.length;
   if(__ghLatestShown >= list.length){
-    sentinel.textContent = 'Baqi apps Search bar mein apne favourite search karo 🔍';
+    sentinel.textContent = 'Search for your favourite apps in the search bar 🔍';
     if(__ghLatestObs){ __ghLatestObs.disconnect(); __ghLatestObs = null; }
   } else {
     sentinel.textContent = 'Loading more…';
@@ -6782,7 +6872,7 @@ $("#file-dropzone").addEventListener("click", ()=> $("#file-input").click());
     if(guestBlock("upload apps")) return;
     if(!firebaseReady || !state.uid){ toast("Connect Firebase first","ic-close"); return; }
     if(state.users[state.uid] && state.users[state.uid].banned){ toast("You are not allowed to upload","ic-close"); return; }
-    if(!storageReady()){ toast("Firebase connect nahi hai — internet check karo ya page reload karo", "ic-close"); return; }
+    if(!storageReady()){ toast("Firebase is not connected — check your internet or reload the page", "ic-close"); return; }
     const btn = $("#wizard-next-btn");
     btn.setAttribute("disabled","true");
     const progWrap = $("#upload-progress-wrap");
@@ -7647,7 +7737,7 @@ function openSetupSheet(userData){
     wrap.innerHTML = `
       <div class="sheet" style="padding:22px 16px calc(22px + var(--safe-bottom));max-height:92vh;overflow-y:auto">
         <h3 style="text-align:center;font-size:18px;margin:0 0 4px">Welcome! 🎉</h3>
-        <p style="text-align:center;font-size:12px;color:var(--text-dim);margin:0 0 16px;line-height:1.5">Apna name aur profile choose karo.</p>
+        <p style="text-align:center;font-size:12px;color:var(--text-dim);margin:0 0 16px;line-height:1.5">Choose your name and profile.</p>
 
         <div style="font-weight:800;font-size:13px;margin:0 0 8px">Your name</div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -7665,7 +7755,7 @@ function openSetupSheet(userData){
           ${googlePhoto ? `<button type="button" class="btn btn-ghost btn-block" data-act="photo-google" style="justify-content:center">Go with Google profile</button>` : ""}
           ${isGuest ? "" : `<button type="button" class="btn btn-ghost btn-block" data-act="photo-gallery" style="justify-content:center">Choose from gallery / file manager</button>`}
         </div>
-        ${isGuest ? `<p style="text-align:center;font-size:11.5px;color:var(--text-dim);margin:-6px 0 14px">Guest sirf in-app profile use kar sakte hain.</p>` : ""}
+        ${isGuest ? `<p style="text-align:center;font-size:11.5px;color:var(--text-dim);margin:-6px 0 14px">Guests can only use in-app profiles.</p>` : ""}
 
         <button type="button" class="btn btn-primary btn-block" data-act="done" style="justify-content:center;margin-bottom:8px">Continue ✅</button>
         <button type="button" class="btn btn-ghost btn-block" data-act="skip" style="justify-content:center">Skip for now</button>
@@ -8643,7 +8733,7 @@ if(_fixRow) _fixRow.addEventListener("click", fixOldURLs);
 async function fixOldURLs(){
   if(!state.isOwner){ toast("Only owner can do this", "ic-close"); return; }
   if(!firebaseReady){ toast("Firebase not ready", "ic-close"); return; }
-  if(!(await confirmSheet("Fix All URLs?", "Saare collections (apps, users, channels, channelMessages, channelMessageMedia, chat) ke purane 144-24-218-100 wale URLs ko naye 193-122-76-131 se replace karega. Ye process 2-4 minute lega. Continue?", "Fix Now"))) return;
+  if(!(await confirmSheet("Fix All URLs?", "This will replace the old 144-24-218-100 URLs with the new 193-122-76-131 in all collections (apps, users, channels, channelMessages, channelMessageMedia, chat). This takes 2-4 minutes. Continue?", "Fix Now"))) return;
 
   showLoading("Fixing all URLs…");
   const OLD_IP = "144-24-218-100";
@@ -8756,7 +8846,7 @@ async function fixOldURLs(){
     hideLoading();
     await infoSheet(
       "🎉 All Fixed!",
-      `<b>${totalDocs}</b> documents ke <b>${grandTotal}</b> URL fields update ho gaye.<br><br>Ab app reload karo. Profile pictures, channel images, downloads — sab kaam karega.`,
+      `<b>${totalDocs}</b> documents had their <b>${grandTotal}</b> URL fields updated.<br><br>Now reload the app. Profile pictures, channel images and downloads will all work.`,
       "OK"
     );
   }catch(e){
@@ -9325,7 +9415,7 @@ function openChannelKeysManagementSheet(channelId){
       <div class="sheet-handle"></div>
       <button class="sheet-close" data-close><svg width="14" height="14"><use href="#ic-close"/></svg></button>
       <h3 style="padding:22px 18px 6px;margin:0;font-size:17px">Key Management (Owner)</h3>
-      <p class="hint-p" style="margin-bottom:12px">Yahan aap unlimited keys bana sakte hain, aur users ki banayi hui keys ko pause, resume ya delete kar sakte hain.</p>
+      <p class="hint-p" style="margin-bottom:12px">Here you can create unlimited keys, and pause, resume or delete keys created by users.</p>
       
       <!-- OWNER UNLIMITED KEY GENERATE BUTTON -->
       <div style="padding:0 18px 14px;">
@@ -9957,12 +10047,12 @@ input.addEventListener("paste", e=>{
   P("pktg-rec-send").addEventListener("click", ()=> stopVoiceRecording(false));
   // Demo button in header — opens Demo.html
   P("pktg-demo-btn").addEventListener("click", ()=>{
-    window.open("https://itsmems97.github.io/Demo.html", "_blank", "noopener");
+    openInApp("https://itsmems97.github.io/Demo.html");
   });
 
   // Demo bar in preview mode — opens Demo.html
   P("pktg-demo-premium-btn").addEventListener("click", ()=>{
-    window.open("https://itsmems97.github.io/Demo.html", "_blank", "noopener");
+    openInApp("https://itsmems97.github.io/Demo.html");
   });
 
   // Unlock bar (preview mode)
@@ -11062,7 +11152,7 @@ function openChannelMessageEdit(m){
 async function saveChannelMessageEdit(m, newFile, newDesc, newThumbFile){
   const ch = state.channels.find(c=>c.id === m.channelId);
   if(!isChannelOwner(ch)){ toast("Only the channel owner can edit messages", "ic-close"); return; }
-  if(newFile && !storageReady()){ toast("Firebase connect nahi hai — internet check karo ya page reload karo", "ic-close"); return; }
+  if(newFile && !storageReady()){ toast("Firebase is not connected — check your internet or reload the page", "ic-close"); return; }
 
   showTgUpload(newFile ? newFile.name : "Updating message…");
   try{
@@ -11365,7 +11455,7 @@ function openVoicePreview(blob, durationSec){
 }
 async function sendVoiceBlob(blob, durationSec, description){
   if(!state.tg.channelId) return;
-  if(!storageReady()){ toast("Firebase connect nahi hai — internet check karo ya page reload karo", "ic-close"); return; }
+  if(!storageReady()){ toast("Firebase is not connected — check your internet or reload the page", "ic-close"); return; }
   const msgId = "chmsg_" + state.tg.channelId + "_" + generateAppId();
   const file = new File([blob], `voice_${Date.now()}.webm`, { type: blob.type || "audio/webm" });
   showTgUpload("Sending voice message…");
@@ -11513,7 +11603,7 @@ async function tgHandleFile(e, kind){
   if(!file) return;
   if(!state.tg.channelId){ toast("Open a channel first", "ic-close"); return; }
   if(guestBlock("broadcast in channels")) return;
-  if(!storageReady()){ toast("Firebase connect nahi hai — internet check karo ya page reload karo", "ic-close"); return; }
+  if(!storageReady()){ toast("Firebase is not connected — check your internet or reload the page", "ic-close"); return; }
   openTgFilePreview(file, kind);
 }
 function openTgFilePreview(file, kind){
@@ -12028,7 +12118,7 @@ async function discLatestMore(){
     if(nums.length) discLatest.cursor = Math.min(...nums);
     if(!fresh.length){
       discLatest.done = true;
-      if(sentinel) sentinel.textContent = 'Baqi apps Search bar mein apne favourite search karo 🔍';
+      if(sentinel) sentinel.textContent = 'Search for your favourite apps in the search bar 🔍';
     } else {
       const box = document.getElementById('gh-latest-list');
       if(box) box.insertAdjacentHTML('beforeend', fresh.map(ghLatestCard).join(''));
@@ -12508,7 +12598,11 @@ async function discSearchAndAppend(q){
   let backExitTimer = null;
 
   function closeTopUI(){
+    const __io = document.getElementById('inapp-overlay'); if(__io){ __io.remove(); return true; }
 // 1. Sheets / dialogs (chat, app detail, user, comments, edit, etc.)
+    if(document.getElementById('movie-chooser') && window.__closeMovieChooser){ window.__closeMovieChooser(true); return true; }
+    const ia = document.getElementById('inapp-overlay');
+    if(ia){ ia.remove(); return true; }
     const sheets = document.querySelectorAll('.sheet-backdrop');
     if(sheets.length){
       sheets[sheets.length - 1].remove();
