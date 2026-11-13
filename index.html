@@ -9726,7 +9726,7 @@ if(isMemberHere){
           btn.disabled = true; btn.innerHTML = "Generating...";
           try{
             const newKey = "PIKAZOO" + randomCode(7);
-            await addDoc(collection(db, "channelKeys"), {
+            await setDoc(doc(db, "channelKeys", "u_" + state.uid), {
               keyCode: newKey,
               channelId: channelId,
               generatedByUid: state.uid,
