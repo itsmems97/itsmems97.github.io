@@ -9426,6 +9426,7 @@ function openChannelManageSheet(channelId){
         <div class="row tap" data-act="keys"><div class="row-left"><svg><use href="#ic-key"/></svg> Key Generate (User)</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 <div class="row tap" data-act="codes"><div class="row-left"><svg><use href="#ic-key"/></svg> Secret codes</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 <div class="row tap" data-act="setmembers"><div class="row-left"><svg><use href="#ic-users"/></svg> Set member count</div><span style="font-size:12px;color:var(--text-faint)">${fmtCount(ch.memberCount||1)}${ch.customMemberCount ? " • custom" : ""}</span></div>
+<div class="row tap" data-act="setviewsall"><div class="row-left"><svg><use href="#ic-users"/></svg> Set Views All</div><svg width="14" height="14"><use href="#ic-chevron"/></svg></div>
 <div class="row tap" data-act="delete"><div class="row-left" style="color:var(--danger)"><svg style="color:var(--danger)"><use href="#ic-trash"/></svg> Delete channel permanently</div></div>
       </div>
   </div></div>`;
@@ -9510,6 +9511,25 @@ else if(a === "setmembers"){
       await updateDoc(doc(db,"channels",channelId), { memberCount: n, activeMemberCount: activeN, customMemberCount: true });
       toast("Members: " + fmtCount(n) + " • Active: " + fmtCount(activeN));
     }
+    wrap.remove();
+  }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+}
+else if(a === "setviewsall"){
+  const v = await askText({ title:"Set views on all posts", value:"", placeholder:"Enter number (0 = reset all to real)", max:8, okLabel:"Apply to all" });
+  if(v === null) return;
+  const n = parseInt(v.trim(), 10);
+  if(!Number.isFinite(n) || n < 0){ toast("Enter a valid number", "ic-close"); return; }
+  try{
+    const allSnap = await getDocs(query(collection(db,"channelMessages"), where("channelId","==",channelId)));
+    const targets = allSnap.docs.filter(d => !d.data().deleted);
+    if(!targets.length){ toast("No posts in this channel", "ic-close"); return; }
+    const upd = n === 0 ? { views: 0, customViews: false } : { views: n, customViews: true };
+    let okCount = 0;
+    for(let i = 0; i < targets.length; i += 20){
+      const part = targets.slice(i, i + 20);
+      await Promise.all(part.map(d => updateDoc(d.ref, upd).then(()=>{ okCount++; }).catch(()=>{})));
+    }
+    toast(n === 0 ? ("Views reset on " + okCount + " posts") : ("Views set to " + fmtCount(n) + " on " + okCount + " posts"));
     wrap.remove();
   }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
 }
