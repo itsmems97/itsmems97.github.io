@@ -3021,6 +3021,133 @@ async function ghUploadWithRotation(secrets, file, baseAssetName, onProgress){
   throw lastErr || new Error("GitHub upload failed");
 }
 
+/* ===== PIKA CHUNKED UPLOAD (resume + auto retry) ===== */
+const PIKA_CHUNK_SIZE = 8 * 1024 * 1024;
+const PIKA_UP_BASE = "https://193-122-76-131.nip.io";
+
+function pikaSleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+function pikaWaitOnline(){
+  if(navigator.onLine !== false) return Promise.resolve();
+  return new Promise(resolve => {
+    const done = () => { window.removeEventListener("online", done); resolve(); };
+    window.addEventListener("online", done);
+    setTimeout(done, 30000);
+  });
+}
+
+function pikaUploadId(file, kind){
+  let salt = "";
+  try{
+    salt = localStorage.getItem("pika_up_salt") || "";
+    if(!salt){
+      salt = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+      localStorage.setItem("pika_up_salt", salt);
+    }
+  }catch(_){ salt = "nosalt"; }
+  const str = [salt, kind, file.name, file.size, file.lastModified, PIKA_CHUNK_SIZE].join("|");
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for(let i = 0; i < str.length; i++){
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return "pk" + (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0") + file.size.toString(36);
+}
+
+function pikaSendChunk(url, blob, onLoaded){
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.timeout = 5 * 60 * 1000;
+    xhr.upload.onprogress = e => { if(e.lengthComputable) onLoaded(e.loaded); };
+    xhr.onload = () => {
+      let data = null;
+      try { data = JSON.parse(xhr.responseText); } catch(_) {}
+      if(xhr.status >= 200 && xhr.status < 300 && data && data.ok){
+        resolve(data);
+      } else {
+        const err = new Error((data && data.error) || ("HTTP " + xhr.status));
+        err.fatal = xhr.status >= 400 && xhr.status < 500;
+        reject(err);
+      }
+    };
+    xhr.onerror = () => reject(new Error("Network error reaching upload server"));
+    xhr.ontimeout = () => reject(new Error("Chunk timed out"));
+    xhr.onabort = () => reject(new Error("Upload aborted"));
+    xhr.send(blob);
+  });
+}
+
+async function pikaChunkedUpload(file, uploadName, kind, onProgress){
+  const id = pikaUploadId(file, kind);
+  const total = Math.ceil(file.size / PIKA_CHUNK_SIZE);
+
+  let received = new Set();
+  try{
+    const r = await fetch(PIKA_UP_BASE + "/upload/status?id=" + id);
+    const j = await r.json();
+    if(j && j.ok && Array.isArray(j.received)) received = new Set(j.received);
+  }catch(_){}
+
+  let doneBytes = 0;
+  for(let i = 0; i < total; i++){
+    if(received.has(i)) doneBytes += Math.min(PIKA_CHUNK_SIZE, file.size - i * PIKA_CHUNK_SIZE);
+  }
+  const report = extra => {
+    if(!onProgress) return;
+    onProgress(Math.min(99, Math.round(((doneBytes + (extra || 0)) / file.size) * 100)));
+  };
+  report(0);
+
+  for(let i = 0; i < total; i++){
+    if(received.has(i)) continue;
+    const start = i * PIKA_CHUNK_SIZE;
+    const end = Math.min(start + PIKA_CHUNK_SIZE, file.size);
+    const blob = file.slice(start, end);
+    const url = PIKA_UP_BASE + "/upload/chunk?id=" + id + "&index=" + i + "&total=" + total;
+    let attempt = 0;
+    while(true){
+      try{
+        await pikaWaitOnline();
+        await pikaSendChunk(url, blob, loaded => report(loaded));
+        break;
+      }catch(e){
+        attempt++;
+        if((e && e.fatal) || attempt >= 10) throw e;
+        await pikaSleep(Math.min(1000 * attempt, 8000));
+      }
+    }
+    doneBytes += (end - start);
+    report(0);
+  }
+
+  let data = null;
+  let lastErr = null;
+  for(let attempt = 0; attempt < 5; attempt++){
+    try{
+      await pikaWaitOnline();
+      const r = await fetch(PIKA_UP_BASE + "/upload/finish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: id, total: total, fileName: uploadName })
+      });
+      const j = await r.json().catch(() => null);
+      if(r.ok && j && j.ok){ data = j; break; }
+      lastErr = new Error((j && j.error) || ("HTTP " + r.status));
+      if(r.status >= 400 && r.status < 500) break;
+    }catch(e){
+      lastErr = new Error("Network error reaching upload server");
+    }
+    await pikaSleep(2000 * (attempt + 1));
+  }
+  if(!data) throw new Error("Upload failed: " + (lastErr ? lastErr.message : "could not finish"));
+  return data;
+}
+/* ===== /PIKA CHUNKED UPLOAD ===== */
+
 async function uploadFileToServer(file, appId, kind, onProgress){
   if(!githubReady()){
     onProgress && onProgress(100);
@@ -3031,6 +3158,16 @@ async function uploadFileToServer(file, appId, kind, onProgress){
   const safeApp  = ghSafeName(appId || "app");
   const safeFile = ghSafeName(file.name || "file.bin");
   const uploadName = `${safeApp}_${safeKind}_${safeFile}`.slice(0, 200);
+    if(file.size > PIKA_CHUNK_SIZE){
+    const cd = await pikaChunkedUpload(file, uploadName, safeKind, onProgress);
+    onProgress && onProgress(100);
+    return {
+      path: cd.path || cd.fileName,
+      fileName: cd.fileName,
+      fileSize: cd.fileSize || file.size,
+      url: cd.url
+    };
+  }
 
   const form = new FormData();
   form.append("file", file, uploadName);
@@ -6789,9 +6926,41 @@ updList.addEventListener("click", e=>{
   if(app){
     updChosen.hidden = false;
     updName.textContent = app.name;
-    if(!state.upload.name){ state.upload.name = app.name; $("#app-name-input").value = app.name; }
-    if(!state.upload.desc){ state.upload.desc = app.description || ""; $("#app-desc-input").value = app.description || ""; }
-    if(!state.upload.category){ state.upload.category = app.category || ""; renderCategoryChips(); }
+    state.upload.name = app.name || state.upload.name; $("#app-name-input").value = state.upload.name;
+    state.upload.desc = app.description || ""; $("#app-desc-input").value = state.upload.desc;
+    state.upload.category = app.category || ""; renderCategoryChips();
+    const urlToFile = async (u, base) => {
+      const rr = await fetch(u);
+      if(!rr.ok) throw new Error("HTTP " + rr.status);
+      const bb = await rr.blob();
+      let fn = (String(u).split("?")[0].split("/").pop() || "");
+      if(!/\.[a-z0-9]{2,5}$/i.test(fn)){ fn = base + "." + ((bb.type.split("/")[1] || "png").replace("jpeg","jpg")); }
+      return new File([bb], fn, { type: bb.type || "image/png" });
+    };
+    (async ()=>{
+      try{
+        if(app.thumbUrl){
+          const tf = await urlToFile(app.thumbUrl, "icon");
+          if(state.upload.replaceAppId === appId){
+            state.upload.thumb = tf;
+            const dz = $("#thumb-dropzone");
+            dz.classList.add("filled");
+            dz.innerHTML = `<img class="file-thumb" src="${URL.createObjectURL(tf)}" alt=""/><div><b>Existing icon</b><small style="display:block;font-size:11px;color:var(--text-faint);margin-top:2px;">Tap to change</small></div>`;
+          }
+        }
+      }catch(err){ console.warn("Existing icon load failed", err); }
+      try{
+        const shotUrls = (app.screenshots || []).slice(0, 3);
+        const shotFiles = [];
+        for(let i = 0; i < shotUrls.length; i++){
+          try{ shotFiles.push(await urlToFile(shotUrls[i], "shot" + (i + 1))); }catch(_){}
+        }
+        if(shotFiles.length && state.upload.replaceAppId === appId){
+          state.upload.screenshots = shotFiles;
+          renderScreenshotStrip();
+        }
+      }catch(err){ console.warn("Existing screenshots load failed", err); }
+    })();
   }
   renderReplaceList();
 });
