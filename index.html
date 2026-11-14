@@ -21,6 +21,37 @@ window.addEventListener('unhandledrejection',function(e){var r=e.reason;window._
 <!-- Eruda removed — using custom Owner Console Detector instead -->
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
 <link rel="manifest" href="pika-manifest.json" />
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+<script>
+(function(){
+  if(!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+  var t0 = Date.now(), lastCheck = Date.now(), swReg = null;
+  function askCheck(){
+    lastCheck = Date.now();
+    try{ if(swReg) swReg.update(); }catch(e){}
+    try{ if(navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'CHECK_UPDATE' }); }catch(e){}
+  }
+  function showUpdateBar(){
+    if(document.getElementById('pika-update-bar')) return;
+    var b = document.createElement('div');
+    b.id = 'pika-update-bar';
+    b.style.cssText = 'position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99998;background:#16161c;color:#fff;padding:11px 18px;border-radius:999px;font:600 13px system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35);cursor:pointer;max-width:90vw;text-align:center';
+    b.textContent = 'New update ready \u2014 tap to refresh';
+    b.onclick = function(){ location.reload(); };
+    (document.body || document.documentElement).appendChild(b);
+  }
+  navigator.serviceWorker.addEventListener('message', function(ev){
+    if(!ev.data || ev.data.type !== 'PIKA_UPDATED') return;
+    if(document.getElementById('pks2-splash') && Date.now() - t0 < 25000){ location.reload(); return; }
+    showUpdateBar();
+  });
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js', { scope: './' }).then(function(reg){ swReg = reg; askCheck(); }).catch(function(){});
+  });
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden && Date.now() - lastCheck > 120000) askCheck(); });
+  setInterval(function(){ if(!document.hidden) askCheck(); }, 600000);
+})();
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
 
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
@@ -1450,17 +1481,14 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 }
 .pks2-logo{
   position:relative; width:100%; height:100%;
-  border-radius:36px; background:#fff;
+  border-radius:36px; background:linear-gradient(160deg,#0b6bf5 0%,#0a2a9c 100%);
   display:grid; place-items:center; overflow:hidden;
-  box-shadow:0 28px 54px -22px rgba(255,152,0,.58), 0 14px 26px -14px rgba(255,152,0,.36), 0 2px 4px -2px rgba(20,20,50,.06), inset 0 1px 0 rgba(255,255,255,.9);
+  box-shadow:0 28px 54px -22px rgba(255,152,0,.58), 0 14px 26px -14px rgba(255,152,0,.36), 0 2px 4px -2px rgba(20,20,50,.06);
 }
-.pks2-logo::before{
-  content:''; position:absolute; left:12%; top:7%; width:58%; height:34%;
-  border-radius:50%; background:rgba(255,255,255,.95); filter:blur(9px); pointer-events:none;
-}
+.pks2-logo::before{ content:none; }
 .pks2-logo img{
-  position:relative; display:block; width:72%; height:72%;
-  object-fit:contain; filter:drop-shadow(0 6px 12px rgba(255,152,0,.35));
+  position:absolute; inset:0; display:block; width:100%; height:100%;
+  object-fit:cover; transform:scale(1.05); filter:none;
   user-select:none; pointer-events:none;
 }
 .pks2-brand{
@@ -1513,6 +1541,25 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
   letter-spacing:2px; text-transform:uppercase;
   color:#8b8b96;
 }
+.pks2-toast{
+  margin-top:22px; min-height:38px; padding:9px 18px; border-radius:999px;
+  display:inline-flex; align-items:center; gap:9px;
+  font-size:13px; font-weight:600; letter-spacing:.2px; color:#2a2a35;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 10px 26px -10px rgba(40,30,90,.28), 0 2px 6px -2px rgba(40,30,90,.1);
+  opacity:0; transform:translateY(14px) scale(.94);
+  transition:opacity .35s ease, transform .4s cubic-bezier(.22,1,.36,1);
+  pointer-events:none;
+}
+.pks2-toast.in{ opacity:1; transform:translateY(0) scale(1); }
+.pks2-toast.out{ opacity:0; transform:translateY(-12px) scale(.96); }
+.pks2-t-ic{ position:relative; flex:none; width:16px; height:16px; border-radius:50%; }
+.pks2-t-spin{ border:2px solid rgba(255,152,0,.28); border-top-color:#FF9800; animation:pks2Spin .7s linear infinite; }
+.pks2-t-ok{ background:#22c55e; }
+.pks2-t-ok::after{ content:''; position:absolute; left:5px; top:2px; width:4px; height:8px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
+.pks2-t-warn{ background:#ef4444; }
+.pks2-t-info{ background:#FFB300; }
+@keyframes pks2Spin{ to{ transform:rotate(360deg); } }
 @media (prefers-reduced-motion: reduce){
   .pks2-blob, .pks2-splash.run .pks2-logo-halo, .pks2-splash.run .pks2-obj-inner { animation:none !important; }
   .pks2-splash.run .pks2-logo-wrap, .pks2-splash.run .pks2-ltr,
@@ -2093,6 +2140,7 @@ html[data-theme="light"] .bottom-nav{background:#fff}
       <div class="pks2-loader-track"><div class="pks2-loader-fill" id="pks2-loader-fill"></div></div>
       <div class="pks2-loader-label" id="pks2-loader-label">Loading 0%</div>
     </div>
+    <div class="pks2-toast" id="pks2-toast" aria-live="polite"></div>
   </div>
 </div>
 
@@ -2185,26 +2233,31 @@ html[data-theme="light"] .bottom-nav{background:#fff}
   var splashEl = document.getElementById('pks2-splash');
   var fill = document.getElementById('pks2-loader-fill');
   var label = document.getElementById('pks2-loader-label');
-  var splashEl = document.getElementById('pks2-splash');
-  var fill = document.getElementById('pks2-loader-fill');
-  var label = document.getElementById('pks2-loader-label');
-  var cur = 0, ceil = 30, exited = false, slow = 0;
+  var toastEl = document.getElementById('pks2-toast');
+  var cur = 0, floorT = 0, stepCap = 14, exited = false, appReady = false, finishing = false, t0 = Date.now();
+
+  /* ===== SETTINGS: yahan se time badal sakte ho (milliseconds) ===== */
+  var STEP_SLOW_MS = 2000;  /* har message itni der dikhega (jab app abhi load ho rahi ho) */
+  var STEP_FAST_MS = 600;   /* app ready ho chuki ho to message jaldi jaldi niklenge */
+
   function stamp(){ if(!window.__pksBootOk) return; try{ sessionStorage.setItem('pika_booted', String(Date.now())); }catch(e){} }
   document.addEventListener('visibilitychange', function(){ if (document.hidden) stamp(); });
   window.addEventListener('pagehide', stamp);
-  function setP(p){
-    p = Math.min(100, Math.round(p));
-    if (p <= cur) return;
-    cur = p;
+
+  /* ===== Progress bar: 1% se 100% tak smooth ===== */
+  function paint(){
+    var p = Math.min(100, Math.floor(cur));
+    if (p < 1) p = 1;
     fill.style.width = p + '%';
     label.textContent = 'Loading ' + (p < 10 ? '0' : '') + p + '%';
   }
-  window.__pksStage = function(floor, top){ setP(floor); if (top) ceil = top; };
+  function timeTarget(){ return 94 * (1 - Math.exp(-((Date.now() - t0) / 1000) / 7)); }
+  window.__pksStage = function(floor, top){ if (floor > floorT) floorT = floor; };
   window.__pks2Exited = false;
   function doExit(){
     if (exited) return;
     exited = true; window.__pks2Exited = true;
-    setP(100);
+    cur = 100; paint(); hideToast();
     var s = document.getElementById('pks2-splash');
     if (!s) return;
     setTimeout(function(){
@@ -2212,26 +2265,128 @@ html[data-theme="light"] .bottom-nav{background:#fff}
       setTimeout(function(){ if (s.parentNode) s.remove(); }, 800);
     }, 250);
   }
+  setInterval(function(){
+    if (exited) return;
+    var tg = finishing ? 100 : Math.min(stepCap, 96, Math.max(timeTarget(), floorT));
+    if (cur < tg){
+      cur += finishing ? Math.max((tg - cur) * 0.25, 1.5) : Math.max((tg - cur) * 0.07, 0.12);
+      if (cur > tg) cur = tg;
+    }
+    paint();
+    if (finishing && cur >= 99.9) doExit();
+  }, 50);
+
+  /* ===== Toast messages (animation ke saath aate aur jaate hain) ===== */
+  function showToast(text, kind){
+    if (!toastEl) return;
+    toastEl.className = 'pks2-toast';
+    toastEl.innerHTML = '<span class="pks2-t-ic pks2-t-' + kind + '"></span><span>' + text + '</span>';
+    void toastEl.offsetWidth;
+    toastEl.className = 'pks2-toast in';
+  }
+  function hideToast(){ if (toastEl) toastEl.className = 'pks2-toast out'; }
+
+  /* ===== Real network speed test (chhoti si file, max 1.8 second) ===== */
+  var netInfo = null;
+  function fmtSpeed(m){ return m < 1 ? Math.round(m * 1000) + ' kbps' : m.toFixed(1) + ' Mbps'; }
+  function speedTest(){
+    if (navigator.onLine === false){ netInfo = { offline: true, mbps: 0 }; return; }
+    var url = 'https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png?pks=' + Date.now();
+    var ctl = window.AbortController ? new AbortController() : null;
+    var tStart = performance.now(), tFirst = 0, bytes = 0, done = false;
+    function finish(ended){
+      if (done) return; done = true;
+      try{ if (ctl) ctl.abort(); }catch(e){}
+      var t = tFirst ? (performance.now() - tFirst) / 1000 : 0;
+      var mbps = (bytes && t) ? (bytes * 8 / 1e6) / Math.max(t, 0.05) : 0;
+      var c = navigator.connection;
+      if (ended && (t < 0.2 || bytes < 40000) && c && c.downlink) mbps = c.downlink;
+      if (!bytes && navigator.onLine === false) netInfo = { offline: true, mbps: 0 };
+      else netInfo = { offline: false, mbps: mbps };
+    }
+    setTimeout(function(){ finish(false); }, 1800);
+    try{
+      fetch(url, { cache: 'no-store', mode: 'cors', signal: ctl ? ctl.signal : undefined }).then(function(r){
+        if (!r.body || !r.body.getReader){
+          return r.blob().then(function(b){ tFirst = tFirst || tStart; bytes = b.size; finish(true); });
+        }
+        var rd = r.body.getReader();
+        (function pump(){
+          rd.read().then(function(x){
+            if (done) return;
+            if (x.done){ finish(true); return; }
+            if (!tFirst) tFirst = performance.now();
+            bytes += x.value.length;
+            pump();
+          }).catch(function(){ finish(false); });
+        })();
+      }).catch(function(){ finish(false); });
+    }catch(e){ finish(false); }
+  }
+  function netToast(){
+    var n = netInfo;
+    if (!n) return ['Network Checking...', 'spin'];
+    if (n.offline) return ['No Internet', 'warn'];
+    var m = n.mbps, lv = 'Excellent', k = 'ok';
+    if (m < 0.5){ lv = 'Slow'; k = 'warn'; }
+    else if (m < 2){ lv = 'Good'; k = 'info'; }
+    else if (m < 6){ lv = 'Strong'; k = 'ok'; }
+    return ['Network ' + lv + (m >= 0.05 ? ' &bull; ' + fmtSpeed(m) : ''), k];
+  }
+
+  /* ===== Messages ka sequence ===== */
+  var STEPS = [
+    function(){ return ['Welcome', 'info']; },
+    function(){ return ['Network Checking...', 'spin']; },
+    netToast,
+    function(){ return ['Security Check...', 'spin']; },
+    function(){ return ['Security Check Pass', 'ok']; },
+    function(){ return ['Integrity Check...', 'spin']; },
+    function(){ return ['Integrity Pass', 'ok']; }
+  ];
+  var WAIT_MSGS = ['Loading Apps...', 'Almost Ready...', 'Please Wait...'];
+  var seqIdx = 0, seqStart = 0, seqShow = true, waitIdx = 0;
+  function startStep(){
+    var s;
+    if (seqIdx < STEPS.length) s = STEPS[seqIdx]();
+    else { s = [WAIT_MSGS[waitIdx % WAIT_MSGS.length], 'spin']; waitIdx++; }
+    stepCap = Math.min(96, 14 * (seqIdx + 1));
+    showToast(s[0], s[1]);
+    seqStart = Date.now(); seqShow = true;
+  }
+  function startSeq(){
+    startStep();
+    setInterval(function(){
+      if (exited || finishing) return;
+      if (appReady && seqIdx >= STEPS.length){ finishing = true; return; }
+      var now = Date.now();
+      if (seqShow){
+        var dwell = appReady ? STEP_FAST_MS : (seqIdx < STEPS.length ? STEP_SLOW_MS : 2500);
+        if (now - seqStart >= dwell){ hideToast(); seqShow = false; seqStart = now; }
+      } else if (now - seqStart >= 300){
+        seqIdx++;
+        if (seqIdx >= STEPS.length && appReady){ finishing = true; return; }
+        startStep();
+      }
+    }, 100);
+  }
+
   var skipSplash = false;
   try{ skipSplash = (Date.now() - (+sessionStorage.getItem('pika_booted') || 0)) < 120000; }catch(e){}
   if (skipSplash){ exited = true; window.__pks2Exited = true; splashEl.remove(); }
-  else { splashEl.classList.add('run'); setP(1); }
-  setInterval(function(){
-    if (exited) return;
-    if (cur < ceil - 1) setP(cur + 1);
-    else if (cur < 94 && (++slow % 8 === 0)) setP(cur + 1);
-  }, 150);
+  else { splashEl.classList.add('run'); paint(); startSeq(); speedTest(); }
+
   setTimeout(function(){
     if (exited || window.__pksModuleOk) return;
     var reloaded = false;
     try{ reloaded = sessionStorage.getItem('pks_reloaded') === '1'; sessionStorage.setItem('pks_reloaded', '1'); }catch(e){}
     if (!reloaded) location.reload();
     else label.textContent = 'Slow connection… check internet';
-  }, 12000);
+  }, 90000);
   window.addEventListener('load', function(){ window.__pksStage(35, 58); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ window.__pksStage(45, 58); });
-  setTimeout(doExit, 15000);
-  window.__pksHide = doExit;
+  setTimeout(doExit, 60000);
+  window.__pksHide = function(){ appReady = true; };
 })();
 </script>
   <div id="username-gate" hidden>
@@ -4799,7 +4954,7 @@ async function initAuthWithRetry(){
       } else {
         if(!document.getElementById("boot-stuck")){
           document.body.insertAdjacentHTML("beforeend", `
-            <div id="boot-stuck" style="position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
+            <div id="boot-stuck" style="position:fixed;inset:0;z-index:99990;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
               <p style="margin:0;color:var(--text-dim);font-size:14px">${/^https?:$/.test(location.protocol) ? "Connection is slow. Please retry once." : "Local file mode: your browser blocks sign-in and the database for local files. Open the online version of Pika Store."}</p><p style="margin:0;color:var(--text-faint);font-size:11px;max-width:300px;word-break:break-all">${String(window.__pksLastErr||"").replace(/</g,"&lt;")}</p>
               ${/^https?:$/.test(location.protocol) ? "" : `<button class="btn btn-primary" onclick="__pksOpenOnline()">Open online version</button>`}<button class="btn btn-primary" onclick="location.reload()">Retry</button>
             </div>`);
@@ -4822,12 +4977,19 @@ setTimeout(()=>{
   const gateVisible = !$("#username-gate").hidden;
   if(!appVisible && !gateVisible && !document.getElementById("boot-stuck")){
     document.body.insertAdjacentHTML("beforeend", `
-      <div id="boot-stuck" style="position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
+      <div id="boot-stuck" style="position:fixed;inset:0;z-index:99990;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
         <p style="margin:0;color:var(--text-dim);font-size:14px">${/^https?:$/.test(location.protocol) ? "Connection is slow. Please retry once." : "Local file mode: your browser blocks sign-in and the database for local files. Open the online version of Pika Store."}</p><p style="margin:0;color:var(--text-faint);font-size:11px;max-width:300px;word-break:break-all">${String(window.__pksLastErr||"").replace(/</g,"&lt;")}</p>
         ${/^https?:$/.test(location.protocol) ? "" : `<button class="btn btn-primary" onclick="__pksOpenOnline()">Open online version</button>`}<button class="btn btn-primary" onclick="location.reload()">Retry</button>
       </div>`);
   }
-}, 15000);
+}, 45000);
+setInterval(()=>{
+  const st = document.getElementById("boot-stuck");
+  if(!st) return;
+  const appVisible = !$("#app").hidden;
+  const gateVisible = !$("#username-gate").hidden;
+  if(appVisible || gateVisible) st.remove();
+}, 1000);
 initAuthWithRetry();
 }
 /* ⚡ Backfill VIP badges for users who joined channels before VIP feature existed */
@@ -7623,7 +7785,7 @@ async function initOneSignal(){
     if(CONFIG.oneSignalAppId.startsWith("PASTE_")) return;
     try{
       const base = location.pathname.replace(/[^/]*$/, "");
-      await OneSignal.init({ appId: CONFIG.oneSignalAppId, notifyButton: { enable:false }, serviceWorkerPath: base.replace(/^\//, "") + "OneSignalSDKWorker.js", serviceWorkerParam: { scope: base } });
+      await OneSignal.init({ appId: CONFIG.oneSignalAppId, notifyButton: { enable:false }, serviceWorkerPath: base.replace(/^\//, "") + "sw.js", serviceWorkerParam: { scope: base } });
       window.__pikaOneSignal = OneSignal;
       try{ await OneSignal.login(state.uid || state.deviceId); }catch(e){}
       try{ if(notifSupported() && Notification.permission === "granted") await OneSignal.User.PushSubscription.optIn(); }catch(e){}
