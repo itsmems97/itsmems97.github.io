@@ -6891,7 +6891,7 @@ function startDownloadJob(app){
   if(dlActive.has(app.id)){ toast("Already downloading"); return; }
   dlActive.add(app.id);
 
-  const filename = `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`;
+  const filename = app.originalFileName || `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`;
   toast(`Downloading "${app.name}"…`);
 
   if(DL_MODE === "native" && isNativeFile(filename)){
@@ -6916,7 +6916,7 @@ function startDownloadJob(app){
       else {
         try{
           const a = document.createElement("a");
-          a.href = url;
+          a.href = (String(url).indexOf("193-122-76-131.nip.io") > -1) ? url + (String(url).indexOf("?") > -1 ? "&" : "?") + "name=" + encodeURIComponent(filename) : url;
           a.download = filename;
           a.rel = "noopener";
           a.style.display = "none";
@@ -7263,7 +7263,7 @@ if(state.upload.replaceAppId){
     description: state.upload.desc.trim(),
     format: state.upload.format,
     category: state.upload.category || "Uncategorized",
-    fileUrl: fileRes.url, filePath: fileRes.path,
+    fileUrl: fileRes.url, filePath: fileRes.path, originalFileName: state.upload.file.name,
     contactPhone, hasPassword: !!state.upload.hasPassword, passwordHash,
     sizeLabel: (state.upload.file.size/1024/1024).toFixed(1)+" MB",
     updatedAt: serverTimestamp(), updatedAtMs: Date.now(), edited: true,
@@ -7278,7 +7278,7 @@ if(state.upload.replaceAppId){
   await withTimeout(setDoc(doc(db,"apps",appId), {
     name: state.upload.name.trim(), description: state.upload.desc.trim(), format: state.upload.format,
     category: state.upload.category || "Uncategorized",
-    fileUrl: fileRes.url, filePath: fileRes.path, thumbUrl, screenshots: screenshotUrls,
+    fileUrl: fileRes.url, filePath: fileRes.path, thumbUrl, screenshots: screenshotUrls, originalFileName: state.upload.file.name,
     downloadUrl: null, contactPhone, hasPassword: !!state.upload.hasPassword, passwordHash,
     uploaderName: state.username, uploaderUid: state.uid, isOwner: state.isOwner, uploaderDevice: state.deviceId,
     downloadCount: 0, rating: 4.5, sizeLabel: (state.upload.file.size/1024/1024).toFixed(1)+" MB",
@@ -11368,7 +11368,7 @@ async function tgDownloadMessage(m){
 
   // Clean filename: strip "file-1790860588975-" style prefixes
   let filename = m.filename || "download";
-  filename = filename.replace(/^file-\d+-/, "").replace(/^[a-zA-Z]+-\d+-/, "");
+  filename = filename.replace(/^[a-zA-Z]+-\d{12,}-/, "");
   if(!filename || filename.length < 2) filename = "download.zip";
 
   toast(`Downloading "${filename}"…`);
@@ -11404,7 +11404,7 @@ async function tgDownloadMessage(m){
       // Trigger native download
       try{
         const a = document.createElement("a");
-        a.href = url;
+        a.href = (String(url).indexOf("193-122-76-131.nip.io") > -1) ? url + (String(url).indexOf("?") > -1 ? "&" : "?") + "name=" + encodeURIComponent(filename) : url;
         a.download = filename;
         a.rel = "noopener";
         a.style.display = "none";
@@ -11586,7 +11586,9 @@ async function saveChannelMessageEdit(m, newFile, newDesc, newThumbFile){
 }
 function nativeDownload(url, filename){
   const a = document.createElement("a");
-  a.href = url;
+  a.href = (String(url).indexOf("193-122-76-131.nip.io") > -1)
+    ? url + (String(url).indexOf("?") > -1 ? "&" : "?") + "name=" + encodeURIComponent(filename)
+    : url;
   a.download = filename;
   a.rel = "noopener";
   // NOTE: no target="_blank" — this avoids the black screen transition
