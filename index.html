@@ -5627,9 +5627,11 @@ function showOwnerMessagePopup(msg){
 function canShowMariaMessage() { return true; }
 
 async function loadOwnerMessagesForMaria(){
-  if(!firebaseReady) return;
-  if(state.isOwner) return;
-  if(!state.uid) return;
+  if(!firebaseReady || !state.uid){
+    window.__omWait = (window.__omWait||0) + 1;
+    if(window.__omWait < 8) setTimeout(loadOwnerMessagesForMaria, 1500);
+    return;
+  }
   try{
     const snap = await getDocs(collection(db, "ownerMessages"));
     const items = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
@@ -13107,6 +13109,7 @@ var EDGE=30;
 var pet=document.getElementById('pet'),V={},A={},cur=0,state='routine',ri=-1,edge=null,touched=false,idleT=null,sleptOnce=false,lastTouch=Date.now();
 var down=false,held=false,moved=false,timer=null,sx,sy,ox,oy;
 var messageQueue = [];
+var LOOPMSG = { speak: null, gift: null };
 var msgActive = false;
 pet.style.width=SIZE+'px';pet.style.height=SIZE+'px';
 for(var i=1;i<=15;i++){(function(n){
@@ -13240,10 +13243,21 @@ function playNextMessage(){
   return true;
 }
 
+function refillLoopMsgs(){
+  var added = false;
+  if(LOOPMSG.speak){ messageQueue.push({ text: LOOPMSG.speak, type: 'speak' }); added = true; }
+  if(LOOPMSG.gift){ messageQueue.push({ text: LOOPMSG.gift, type: 'gift' }); added = true; }
+  return added;
+}
+
 function nextRoutine(){
   if(playNextMessage()) return;
-  var g=0;
+  var prev = ri, g = 0;
   do{ri=(ri+1)%ROUTINE.length;g++;}while(!allowed(ROUTINE[ri])&&g<20);
+  if(prev >= 0 && ri <= prev && refillLoopMsgs()){
+    ri = -1;
+    if(playNextMessage()) return;
+  }
   state='routine';show(ROUTINE[ri]);
 }
 
@@ -13353,7 +13367,11 @@ window.MariaPet = {
   gift: function(on){ CFG.gift = !!on; },
   queueMessage: function(text, type){
     if(!text) return;
-    messageQueue.push({ text: String(text).trim(), type: type || 'speak' });
+    var t = String(text).trim(), ty = (type === 'gift') ? 'gift' : 'speak';
+    LOOPMSG[ty] = t;
+    messageQueue = messageQueue.filter(function(m){ return m.type !== ty; });
+    messageQueue.push({ text: t, type: ty });
+    messageQueue.sort(function(a,b){ return (a.type === 'speak' ? 0 : 1) - (b.type === 'speak' ? 0 : 1); });
     setTimeout(tryFlush, 600);
     setTimeout(function(){ helloShowing = false; tryFlush(); }, 9000);
   }
