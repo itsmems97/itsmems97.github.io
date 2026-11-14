@@ -3487,15 +3487,18 @@ async function downloadInsideStore(url, filename, onProgress, signal){
 
   if(res.body && res.body.getReader){
     const reader = res.body.getReader();
+    let lastPct = -1, lastSaved = received;
+    const canSaveResume = total > 0 && total <= 150 * 1024 * 1024;   // badi files mein IndexedDB save bahut slow karta tha
     while(true){
       const { done, value } = await reader.read();
       if(done) break;
       chunks.push(value);
       received += value.length;
       const pct = total > 0 ? Math.min(99, Math.round((received / total) * 100)) : null;
-      onProgress && onProgress(pct);
+      if(pct !== lastPct){ lastPct = pct; onProgress && onProgress(pct); }
 
-      if(chunks.length % 20 === 0){
+      if(canSaveResume && received - lastSaved >= 16 * 1024 * 1024){
+        lastSaved = received;
         await idbSet(key, { url, total, downloaded: received, chunks, filename, savedAt: Date.now() }).catch(()=>{});
       }
     }
@@ -6815,6 +6818,13 @@ function renderStars(rating){
   for(let i=1;i<=5;i++) out += `<svg><use href="${i<=Math.round(rating) ? "#ic-star-full" : "#ic-star-empty"}"/></svg>`;
   return out;
 }
+/* DOWNLOAD MODE
+   "native" = seedha phone/Chrome ka download manager (sabse fast, resume support, RAM use nahi)
+   "inside" = purana tareeqa (Store ke andar, bubble ke saath, par slow) */
+const DL_MODE = "native";
+function isNativeFile(filename){
+  return /\.(apk|apks|xapk|apkm|zip|rar|7z|tar|gz|obb|bin|iso|ipa|exe|dmg|jar|dex)$/i.test(filename || "");
+}
 const dlActive = new Set();
 let dlBubbleCount = 0;
 function dismissTarget(){
@@ -6883,6 +6893,14 @@ function startDownloadJob(app){
 
   const filename = `${app.name}.${(app.format||"apk").toLowerCase().replace("+","")}`;
   toast(`Downloading "${app.name}"…`);
+
+  if(DL_MODE === "native" && isNativeFile(filename)){
+    try{ nativeDownload(url, filename); }
+    catch(e){ try{ window.location.href = url; }catch(_){} }
+    bumpDownloadCount(app);
+    setTimeout(()=> dlActive.delete(app.id), 3000);
+    return;
+  }
 
   const controller = new AbortController();
   const bubble = createDlBubble({ name: app.name }, ()=> controller.abort());
@@ -11354,6 +11372,13 @@ async function tgDownloadMessage(m){
   if(!filename || filename.length < 2) filename = "download.zip";
 
   toast(`Downloading "${filename}"…`);
+
+  if(DL_MODE === "native" && isNativeFile(filename)){
+    try{ nativeDownload(url, filename); }
+    catch(e){ try{ window.location.href = url; }catch(_){} }
+    setTimeout(()=> dlActive.delete(m.id), 3000);
+    return;
+  }
 
   const controller = new AbortController();
   const bubble = createDlBubble({ name: filename }, ()=> controller.abort());
