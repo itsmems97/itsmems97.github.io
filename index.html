@@ -5595,7 +5595,8 @@ async function openSendMessagesSheet(type = 'speak'){
     sendBtn.disabled = true; sendBtn.textContent = "Sending…";
     try{
       const snap = await getDocs(collection(db, "ownerMessages"));
-      await Promise.all(snap.docs.filter(d => (d.data().type || 'speak') === type).map(d => deleteDoc(d.ref).catch(()=>{})));
+      const sameType = snap.docs.filter(d => (d.data().type || 'speak') === type);
+      if(sameType.length >= 10){ toast("Max 10 messages allowed. Delete an old one first.", "ic-close"); return; }
 
       await addDoc(collection(db, "ownerMessages"), {
         type: type,
@@ -5637,18 +5638,11 @@ async function loadOwnerMessagesForMaria(){
     const items = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
     if(!items.length) return;
     
-    const speakMsg = items.find(i => !i.type || i.type === 'speak');
-    const giftMsg = items.find(i => i.type === 'gift');
+    const speakList = items.filter(i => !i.type || i.type === 'speak').sort((a,b)=>(a.createdAtMs||0)-(b.createdAtMs||0)).map(i => i.text);
+    const giftList = items.filter(i => i.type === 'gift').sort((a,b)=>(a.createdAtMs||0)-(b.createdAtMs||0)).map(i => i.text);
 
-    if(speakMsg && canShowMariaMessage()){
-      if(window.MariaPet && window.MariaPet.queueMessage){
-        window.MariaPet.queueMessage(speakMsg.text, 'speak');
-      }
-    }
-    if(giftMsg && canShowMariaMessage()){
-      if(window.MariaPet && window.MariaPet.queueMessage){
-        window.MariaPet.queueMessage(giftMsg.text, 'gift');
-      }
+    if(canShowMariaMessage() && window.MariaPet && window.MariaPet.setMessages){
+      window.MariaPet.setMessages(speakList, giftList);
     }
   }catch(e){ console.warn("ownerMessages load failed", e); window.__omRetry = (window.__omRetry||0) + 1; if(window.__omRetry < 3) setTimeout(loadOwnerMessagesForMaria, 3000); }
 }
@@ -13109,7 +13103,8 @@ var EDGE=30;
 var pet=document.getElementById('pet'),V={},A={},cur=0,state='routine',ri=-1,edge=null,touched=false,idleT=null,sleptOnce=false,lastTouch=Date.now();
 var down=false,held=false,moved=false,timer=null,sx,sy,ox,oy;
 var messageQueue = [];
-var LOOPMSG = { speak: null, gift: null };
+var LOOPMSG = { speak: [], gift: [] };
+var LOOPIDX = { speak: 0, gift: 0 };
 var msgActive = false;
 pet.style.width=SIZE+'px';pet.style.height=SIZE+'px';
 for(var i=1;i<=15;i++){(function(n){
@@ -13245,8 +13240,14 @@ function playNextMessage(){
 
 function refillLoopMsgs(){
   var added = false;
-  if(LOOPMSG.speak){ messageQueue.push({ text: LOOPMSG.speak, type: 'speak' }); added = true; }
-  if(LOOPMSG.gift){ messageQueue.push({ text: LOOPMSG.gift, type: 'gift' }); added = true; }
+  ['speak','gift'].forEach(function(ty){
+    var arr = LOOPMSG[ty];
+    if(!arr || !arr.length) return;
+    var txt = arr[LOOPIDX[ty] % arr.length];
+    LOOPIDX[ty] = (LOOPIDX[ty] + 1) % arr.length;
+    messageQueue.push({ text: txt, type: ty });
+    added = true;
+  });
   return added;
 }
 
@@ -13365,13 +13366,14 @@ window.addEventListener('resize',fit);
 window.MariaPet = {
   speaking: function(on){ CFG.speaking = !!on; },
   gift: function(on){ CFG.gift = !!on; },
-  queueMessage: function(text, type){
-    if(!text) return;
-    var t = String(text).trim(), ty = (type === 'gift') ? 'gift' : 'speak';
-    LOOPMSG[ty] = t;
-    messageQueue = messageQueue.filter(function(m){ return m.type !== ty; });
-    messageQueue.push({ text: t, type: ty });
-    messageQueue.sort(function(a,b){ return (a.type === 'speak' ? 0 : 1) - (b.type === 'speak' ? 0 : 1); });
+  setMessages: function(sp, gf){
+    function clean(a){ return (a || []).map(function(x){ return String(x || '').trim(); }).filter(function(x){ return x; }); }
+    LOOPMSG.speak = clean(sp);
+    LOOPMSG.gift = clean(gf);
+    LOOPIDX.speak = 0;
+    LOOPIDX.gift = 0;
+    messageQueue = [];
+    refillLoopMsgs();
     setTimeout(tryFlush, 600);
     setTimeout(function(){ helloShowing = false; tryFlush(); }, 9000);
   }
