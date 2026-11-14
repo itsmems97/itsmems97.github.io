@@ -2288,23 +2288,23 @@ html[data-theme="light"] .bottom-nav{background:#fff}
 
   /* ===== Real network speed test (chhoti si file, max 1.8 second) ===== */
   var netInfo = null;
-  function fmtSpeed(m){ return m < 1 ? Math.round(m * 1000) + ' kbps' : m.toFixed(1) + ' Mbps'; }
+  function fmtSpeed(m){ var mb = m / 8; return mb < 1 ? Math.round(mb * 1000) + ' KB/s' : mb.toFixed(1) + ' MB/s'; }
   function speedTest(){
     if (navigator.onLine === false){ netInfo = { offline: true, mbps: 0 }; return; }
-    var url = 'https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png?pks=' + Date.now();
+    var url = 'https://193-122-76-131.nip.io/files/pika-speedtest.bin?pks=' + Date.now();
     var ctl = window.AbortController ? new AbortController() : null;
     var tStart = performance.now(), tFirst = 0, bytes = 0, done = false;
     function finish(ended){
       if (done) return; done = true;
       try{ if (ctl) ctl.abort(); }catch(e){}
       var t = tFirst ? (performance.now() - tFirst) / 1000 : 0;
-      var mbps = (bytes && t) ? (bytes * 8 / 1e6) / Math.max(t, 0.05) : 0;
+      var mbps = (bytes && t) ? (bytes * 8 / 1e6) / Math.max(t, 0.25) : 0;
       var c = navigator.connection;
-      if (ended && (t < 0.2 || bytes < 40000) && c && c.downlink) mbps = c.downlink;
+      if (bytes < 100000 && c && c.downlink) mbps = c.downlink;
       if (!bytes && navigator.onLine === false) netInfo = { offline: true, mbps: 0 };
       else netInfo = { offline: false, mbps: mbps };
     }
-    setTimeout(function(){ finish(false); }, 1800);
+    setTimeout(function(){ finish(false); }, 2000);
     try{
       fetch(url, { cache: 'no-store', mode: 'cors', signal: ctl ? ctl.signal : undefined }).then(function(r){
         if (!r.body || !r.body.getReader){
@@ -2327,11 +2327,14 @@ html[data-theme="light"] .bottom-nav{background:#fff}
     var n = netInfo;
     if (!n) return ['Network Checking...', 'spin'];
     if (n.offline) return ['No Internet', 'warn'];
-    var m = n.mbps, lv = 'Excellent', k = 'ok';
-    if (m < 0.5){ lv = 'Slow'; k = 'warn'; }
-    else if (m < 2){ lv = 'Good'; k = 'info'; }
-    else if (m < 6){ lv = 'Strong'; k = 'ok'; }
-    return ['Network ' + lv + (m >= 0.05 ? ' &bull; ' + fmtSpeed(m) : ''), k];
+    var mb = n.mbps / 8, lv = 'Super Fast 5G', k = 'ok';
+    if (mb < 0.1){ lv = 'Very Poor'; k = 'warn'; }
+    else if (mb < 1){ lv = 'Poor'; k = 'warn'; }
+    else if (mb < 2){ lv = 'Good'; k = 'info'; }
+    else if (mb < 4){ lv = 'Strong'; k = 'ok'; }
+    else if (mb < 8){ lv = 'Excellent'; k = 'ok'; }
+    else if (mb < 16){ lv = 'Very Excellent'; k = 'ok'; }
+    return ['Network ' + lv + (n.mbps >= 0.05 ? ' &bull; ' + fmtSpeed(n.mbps) : ''), k];
   }
 
   /* ===== Messages ka sequence ===== */
