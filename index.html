@@ -9798,6 +9798,9 @@ function openChannelKeysManagementSheet(channelId){
   </div></div>`);
 
   const wrap = document.getElementById("chkeys-backdrop");
+  const VPS = "http://193.122.76.131:8000";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
+  const ownerEmail = auth.currentUser ? auth.currentUser.email : "";
   let keys = [];
 
   const renderKeys = () => {
@@ -9828,17 +9831,17 @@ function openChannelKeysManagementSheet(channelId){
           </button>
 
           <!-- PAUSE / RESUME BUTTON -->
-          <button class="icon-del" type="button" data-key-action="${k.isActive ? 'pause' : 'resume'}" data-key-id="${k.id}" title="${k.isActive ? 'Pause' : 'Resume'}" style="color:${k.isActive ? 'var(--accent)' : 'var(--accent-2)'}">
+          <button class="icon-del" type="button" data-key-action="${k.isActive ? 'pause' : 'resume'}" data-key-code="${escapeHtml(k.keyCode)}" title="${k.isActive ? 'Pause' : 'Resume'}" style="color:${k.isActive ? 'var(--accent)' : 'var(--accent-2)'}">
             <svg style="color:inherit !important"><use href="${k.isActive ? '#ic-pause' : '#ic-play'}"/></svg>
           </button>
 
           <!-- REVOKE BUTTON (Sirf tab dikhe jab activate ho chuki ho) -->
-          ${isActivated ? `<button class="icon-del" type="button" data-key-action="revoke" data-key-id="${k.id}" title="Revoke (allow re-use on any device)" style="color:var(--accent-2)">
+          ${isActivated ? `<button class="icon-del" type="button" data-key-action="revoke" data-key-code="${escapeHtml(k.keyCode)}" title="Revoke (allow re-use on any device)" style="color:var(--accent-2)">
             <svg style="color:var(--accent-2) !important"><use href="#ic-refresh"/></svg>
           </button>` : ''}
 
           <!-- DELETE BUTTON -->
-          <button class="icon-del" type="button" data-key-action="delete" data-key-id="${k.id}" title="Delete" style="color:var(--danger)">
+          <button class="icon-del" type="button" data-key-action="delete" data-key-code="${escapeHtml(k.keyCode)}" title="Delete" style="color:var(--danger)">
             <svg style="color:var(--danger) !important"><use href="#ic-trash"/></svg>
           </button>
         </div>
@@ -9855,8 +9858,26 @@ function openChannelKeysManagementSheet(channelId){
 
   const loadKeys = async () => {
     try{
-      const snap = await getDocs(query(collection(db, "channelKeys"), where("channelId", "==", channelId)));
-      keys = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const r = await fetch(VPS + "/manage_key.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "list", userEmail: ownerEmail })
+      });
+      const data = await r.json();
+      if(!data.status) throw new Error(data.message);
+      keys = (data.keys || [])
+        .filter(k => k.channelId === channelId)
+        .map(k => ({
+          keyCode: k.keyCode,
+          channelId: k.channelId,
+          generatedByName: k.byName || "—",
+          isActive: !!k.isActive,
+          hwid: k.hwid || "",
+          deviceModel: k.model || "",
+          deviceBrand: k.brand || "",
+          createdAtMs: k.createdAt ? k.createdAt * 1000 : 0,
+          activatedAtMs: k.activatedAt ? k.activatedAt * 1000 : 0
+        }));
       renderKeys();
     }catch(e){ 
       console.warn(e);
@@ -9873,29 +9894,22 @@ function openChannelKeysManagementSheet(channelId){
       const btn = document.getElementById("gen-owner-key");
       btn.disabled = true; btn.innerHTML = "Generating...";
       try{
-        const newKey = "PIKAZOO" + randomCode(7); // Owner key: PIKAZOO + 7 random chars
-        await addDoc(collection(db, "channelKeys"), {
-          keyCode: newKey,
-          channelId: channelId,
-          generatedByUid: state.authUid || state.uid,
-          generatedByName: state.username || "Owner",
-          isActive: true,
-          createdAt: serverTimestamp(),
-          createdAtMs: Date.now()
-        });
-        fetch("https://193-122-76-131.nip.io/register_key.php", {
+        const newKey = "PIKAZOO" + randomCode(7);
+        const r = await fetch(VPS + "/register_key.php", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({
-            secret: "PIKAZOO_VPS_SECRET_2026",
+            secret: SECRET,
             key: newKey,
             channelId: channelId,
             byName: state.username || "Owner",
-            isOwner: true
+            userEmail: ownerEmail
           })
-        }).catch(()=>{});
+        });
+        const data = await r.json();
+        if(!data.status) throw new Error(data.message);
         toast("Key generated successfully!");
-        loadKeys(); // Refresh the list
+        loadKeys();
       }catch(err){
         console.error(err);
         toast("Failed to generate key", "ic-close");
@@ -9909,12 +9923,11 @@ function openChannelKeysManagementSheet(channelId){
     const keyBtn = e.target.closest("[data-key-action]");
     if(!keyBtn) return;
     const act = keyBtn.dataset.keyAction;
-    const keyId = keyBtn.dataset.keyId;
+    const keyCode = keyBtn.dataset.keyCode;
 
     // COPY BUTTON
     if(act === "copy"){
-      const keyCodeToCopy = keyBtn.dataset.keyCode;
-      const ok = await copyText(keyCodeToCopy);
+      const ok = await copyText(keyCode);
       toast(ok ? "Key copied!" : "Copy failed", ok ? "ic-check" : "ic-close");
       return;
     }
@@ -9922,31 +9935,59 @@ function openChannelKeysManagementSheet(channelId){
     // DELETE BUTTON
     if(act === "delete"){
       if(!(await confirmSheet("Delete key?", "This key will stop working immediately.", "Delete"))) return;
-      try{ await deleteDoc(doc(db, "channelKeys", keyId)); toast("Key deleted"); loadKeys(); }
+      try{
+        const r = await fetch(VPS + "/manage_key.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ secret: SECRET, action: "delete", key: keyCode, userEmail: ownerEmail })
+        });
+        const data = await r.json();
+        if(!data.status) throw new Error(data.message);
+        toast("Key deleted"); loadKeys();
+      }
       catch(err){ toast("Delete failed", "ic-close"); }
     } 
     // PAUSE BUTTON
     else if(act === "pause"){
-      try{ await updateDoc(doc(db, "channelKeys", keyId), { isActive: false }); toast("Key paused"); setTimeout(()=> loadKeys(), 800); }
+      try{
+        const r = await fetch(VPS + "/manage_key.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ secret: SECRET, action: "toggle", key: keyCode, userEmail: ownerEmail })
+        });
+        const data = await r.json();
+        if(!data.status) throw new Error(data.message);
+        toast("Key paused"); setTimeout(()=> loadKeys(), 400);
+      }
       catch(err){ toast("Failed", "ic-close"); }
     } 
     // RESUME BUTTON
     else if(act === "resume"){
-      try{ await updateDoc(doc(db, "channelKeys", keyId), { isActive: true }); toast("Key resumed"); setTimeout(()=> loadKeys(), 800); }
+      try{
+        const r = await fetch(VPS + "/manage_key.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ secret: SECRET, action: "toggle", key: keyCode, userEmail: ownerEmail })
+        });
+        const data = await r.json();
+        if(!data.status) throw new Error(data.message);
+        toast("Key resumed"); setTimeout(()=> loadKeys(), 400);
+      }
       catch(err){ toast("Failed", "ic-close"); }
     } 
     // REVOKE BUTTON
     else if(act === "revoke"){
       if(!(await confirmSheet("Revoke this key?", "This will unbind the key from its device. User can use it again on the same or any device. (Useful after factory reset)", "Revoke"))) return;
       try{ 
-        await updateDoc(doc(db, "channelKeys", keyId), { 
-          hwid: deleteField(),
-          activatedAtMs: deleteField(),
-          deviceModel: deleteField(),
-          deviceBrand: deleteField()
-        }); 
+        const r = await fetch(VPS + "/manage_key.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ secret: SECRET, action: "revoke", key: keyCode, userEmail: ownerEmail })
+        });
+        const data = await r.json();
+        if(!data.status) throw new Error(data.message);
         toast("Key revoked — user can use again"); 
-        setTimeout(()=> loadKeys(), 800); 
+        setTimeout(()=> loadKeys(), 400); 
       }
       catch(err){ toast("Revoke failed", "ic-close"); }
     }
@@ -10097,34 +10138,37 @@ function openChannelInfoSheet(channelId){
 if(isMemberHere){
   const section = document.getElementById("user-key-section");
   if(section){
-    getDocs(query(collection(db, "channelKeys"), where("channelId", "==", channelId), where("generatedByUid", "==", state.uid))).then(snap => {
-      if(snap.empty){
+    const userEmail = auth.currentUser ? auth.currentUser.email : '';
+    const VPS = "http://193.122.76.131:8000";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
+    
+    fetch(VPS + "/manage_key.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ secret: SECRET, action: "list", userEmail: userEmail })
+    }).then(r => r.json()).then(data => {
+      const myKey = data.status ? (data.keys || []).find(k => k.channelId === channelId) : null;
+      
+      if(!myKey){
         section.innerHTML = `<button class="btn btn-primary btn-block" id="chinfo-genkey" type="button"><svg><use href="#ic-key"/></svg> Generate My WallHack Key</button>`;
         document.getElementById("chinfo-genkey").addEventListener("click", async () => {
           const btn = document.getElementById("chinfo-genkey");
           btn.disabled = true; btn.innerHTML = "Generating...";
           try{
             const newKey = "PIKAZOO" + randomCode(7);
-            await setDoc(doc(db, "channelKeys", "u_" + state.uid), {
-              keyCode: newKey,
-              channelId: channelId,
-              generatedByUid: state.uid,
-              generatedByName: state.username || "Member",
-              isActive: true,
-              createdAt: serverTimestamp(),
-              createdAtMs: Date.now()
-            });
-            fetch("https://193-122-76-131.nip.io/register_key.php", {
+            const r = await fetch(VPS + "/register_key.php", {
               method: "POST",
               headers: {"Content-Type":"application/json"},
               body: JSON.stringify({
-                secret: "PIKAZOO_VPS_SECRET_2026",
+                secret: SECRET,
                 key: newKey,
                 channelId: channelId,
                 byName: state.username || "user",
-                isOwner: false
+                userEmail: userEmail
               })
-            }).catch(()=>{});
+            });
+            const res = await r.json();
+            if(!res.status) throw new Error(res.message);
             toast("Key generated successfully!");
             section.innerHTML = `<div style="background:var(--surface-2);padding:12px;border-radius:14px;text-align:center;margin-bottom:8px;">
               <div style="font-size:11px;color:var(--text-faint);margin-bottom:4px;">Your WallHack Key</div>
@@ -10138,23 +10182,26 @@ if(isMemberHere){
           }catch(e){
             console.error(e);
             btn.disabled = false; btn.innerHTML = "<svg><use href='#ic-key'/></svg> Generate My WallHack Key";
-            toast("Failed to generate key", "ic-close");
+            toast(e.message || "Failed to generate key", "ic-close");
           }
         });
       } else {
-        const k = snap.docs[0].data();
+        const isActive = !!myKey.isActive;
         section.innerHTML = `<div style="background:var(--surface-2);padding:12px;border-radius:14px;text-align:center;margin-bottom:8px;">
               <div style="font-size:11px;color:var(--text-faint);margin-bottom:4px;">Your Key</div>
-              <div style="font-family:ui-monospace,monospace;font-size:15px;font-weight:800;letter-spacing:1px;color:${k.isActive ? 'var(--accent)' : 'var(--danger)'};" id="my-key-text">${escapeHtml(k.keyCode)}</div>
-              <div style="font-size:10px;color:var(--text-faint);margin-top:2px;">Status: ${k.isActive ? 'Active' : 'Paused by Admin'}</div>
+              <div style="font-family:ui-monospace,monospace;font-size:15px;font-weight:800;letter-spacing:1px;color:${isActive ? 'var(--accent)' : 'var(--danger)'};" id="my-key-text">${escapeHtml(myKey.keyCode)}</div>
+              <div style="font-size:10px;color:var(--text-faint);margin-top:2px;">Status: ${isActive ? 'Active' : 'Paused by Admin'}</div>
               <button class="btn btn-ghost btn-block" id="copy-my-key" style="margin-top:8px;padding:8px;font-size:12px;"><svg><use href="#ic-copy"/></svg> Copy Key</button>
             </div>`;
         document.getElementById("copy-my-key").addEventListener("click", async () => {
-          const ok = await copyText(k.keyCode);
+          const ok = await copyText(myKey.keyCode);
           toast(ok ? "Key copied!" : "Copy failed", ok ? "ic-check" : "ic-close");
         });
       }
-    }).catch(e => console.warn("key check failed", e));
+    }).catch(e => {
+      console.warn("key check failed", e);
+      section.innerHTML = `<div style="font-size:12px;color:var(--danger);padding:8px;">Could not load key info.</div>`;
+    });
   }
 }
   wrap.addEventListener("click", async e=>{
