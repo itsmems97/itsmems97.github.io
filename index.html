@@ -16,7 +16,16 @@ window.addEventListener('unhandledrejection',function(e){var r=e.reason;window._
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Pika Store" />
-<meta name="theme-color" content="#fdf7dd" />
+<meta name="theme-color" content="#19151A" />
+<script>
+(function(){try{
+  var s=localStorage.getItem("pika_theme");
+  var t=s||((window.matchMedia&&!window.matchMedia("(prefers-color-scheme: dark)").matches)?"light":"dark");
+  document.documentElement.setAttribute("data-theme",t);
+  var m=document.querySelector('meta[name="theme-color"]');
+  if(m)m.setAttribute("content",t==="dark"?"#19151A":"#FBE4EC");
+}catch(e){}})();
+</script>
 <title>Pika Store</title>
 <!-- Eruda removed — using custom Owner Console Detector instead -->
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
@@ -82,28 +91,28 @@ window.addEventListener('unhandledrejection',function(e){var r=e.reason;window._
   --font: 'VIP', -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 html[data-theme="dark"]{
-  --bg:#0B0E14; --bg-elevated:#12161F; --surface:#171C26; --surface-2:#1E2430;
-  --border:rgba(255,255,255,0.08); --text:#F4F5F7; --text-dim:#9AA2B1; --text-faint:#5C6577;
-  --glass:rgba(23,28,38,0.72); --shadow: 0 18px 40px rgba(0,0,0,0.45);
-  --lg-bg: rgba(255,255,255,0.08); --lg-border: rgba(255,255,255,0.16);
-  --lg-shadow: 0 8px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
-  --lg-text: #F4F5F7; --lg-text-dim: #9AA2B1;
+  --bg:#19151A; --bg-elevated:#211B22; --surface:#282129; --surface-2:#32282F;
+  --border:rgba(255,200,225,0.10); --text:#F6EEF2; --text-dim:#B8A3AE; --text-faint:#7E6C77;
+  --glass:rgba(36,29,37,0.74); --shadow: 0 18px 40px rgba(0,0,0,0.50);
+  --lg-bg: rgba(255,210,230,0.08); --lg-border: rgba(255,210,230,0.18);
+  --lg-shadow: 0 8px 24px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,210,230,.10);
+  --lg-text: #F6EEF2; --lg-text-dim: #B8A3AE;
   --bubble-me-bg: linear-gradient(135deg, rgba(255,198,26,.85), rgba(255,168,0,.85));
   --bubble-me-text: #171200;
-  --bubble-other-bg: rgba(30,36,48,.72);
-  --bubble-other-text: #F4F5F7;
+  --bubble-other-bg: rgba(50,40,47,.75);
+  --bubble-other-text: #F6EEF2;
 }
 html[data-theme="light"]{
-  --bg:#F5F6F8; --bg-elevated:#FFFFFF; --surface:#FFFFFF; --surface-2:#EEF0F4;
-  --border:rgba(10,15,25,0.08); --text:#12161F; --text-dim:#5B6472; --text-faint:#8A93A3;
-  --glass:rgba(255,255,255,0.78); --shadow: 0 16px 34px rgba(20,25,40,0.12);
-  --lg-bg: rgba(255,255,255,0.6); --lg-border: rgba(255,255,255,0.9);
-  --lg-shadow: 0 8px 24px rgba(20,25,40,.12), inset 0 1px 0 rgba(255,255,255,.9);
-  --lg-text: #12161F; --lg-text-dim: #5B6472;
+  --bg:#FBE4EC; --bg-elevated:#FFF2F6; --surface:#FFF5F8; --surface-2:#F8D9E4;
+  --border:rgba(120,40,75,0.12); --text:#3A1B28; --text-dim:#7D5566; --text-faint:#A5808F;
+  --glass:rgba(255,242,246,0.80); --shadow: 0 16px 34px rgba(150,60,100,0.18);
+  --lg-bg: rgba(255,255,255,0.55); --lg-border: rgba(255,255,255,0.9);
+  --lg-shadow: 0 8px 24px rgba(150,60,100,.16), inset 0 1px 0 rgba(255,255,255,.9);
+  --lg-text: #3A1B28; --lg-text-dim: #7D5566;
   --bubble-me-bg: linear-gradient(135deg, rgba(255,198,26,.92), rgba(255,168,0,.92));
   --bubble-me-text: #171200;
-  --bubble-other-bg: rgba(255,255,255,0.75);
-  --bubble-other-text: #12161F;
+  --bubble-other-bg: rgba(255,245,248,0.85);
+  --bubble-other-text: #3A1B28;
 }
 *,*::before,*::after{ box-sizing:border-box; }
 html,body{ height:100%; width:100%; overflow-x:hidden; }
@@ -2061,6 +2070,123 @@ html[data-theme="light"] .bottom-nav{background:#fff}
 #pbub .glass{position:relative;width:max-content;max-width:min(260px,calc(100vw - 28px));padding:11px 16px 12px;border-radius:20px;color:#fff;font:600 14px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;text-shadow:0 1px 2px rgba(0,0,0,.5);white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;background:rgba(20,24,34,.5);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.22);overflow:visible}
 #pbub .glass::before,#pbub .glass::after,#pbub .dot{display:none}
 #pbub .l1,#pbub .l2{display:block}
+/* ============ PINK NOISE THEME ============ */
+body::after{
+  content:""; position:fixed; inset:0; z-index:2147483000; pointer-events:none;
+  background-size:200px 200px;
+}
+html[data-theme="light"] body::after{
+  opacity:.35;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .78  0 0 0 0 .25  0 0 0 0 .45  1.6 0 0 0 -.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+html[data-theme="dark"] body::after{
+  opacity:.10;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 .55  0 0 0 0 .75  1.6 0 0 0 -.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+html[data-theme] #home-page{ background:var(--bg); }
+html[data-theme] .gh-hero{ background:var(--surface); }
+html[data-theme] .gh-chip:not(.on){ background:var(--surface); color:var(--text); }
+html[data-theme] .gh-aitem{ background:var(--surface); }
+html[data-theme] .gh-lcard{ background:var(--surface); }
+html[data-theme] .gh-lcover{ background:var(--surface-2); }
+html[data-theme] .gh-sec-title{ color:var(--text); }
+html[data-theme] .gh-gname{ color:var(--text); }
+html[data-theme] .gh-aname{ color:var(--text); }
+html[data-theme] .gh-lname{ color:var(--text); }
+html[data-theme] .gh-empty{ color:var(--text); }
+html[data-theme] .gh-gmeta{ color:var(--text-dim); }
+html[data-theme] .gh-ameta{ color:var(--text-dim); }
+html[data-theme] .gh-lmeta{ color:var(--text-dim); }
+html[data-theme] .gh-lend{ color:var(--text-dim); }
+html[data-theme="light"] .gh-adl{ background:#F9D6E3; }
+html[data-theme="light"] .gh-ldl{ background:#F9D6E3; }
+html[data-theme="dark"] .gh-adl{ background:rgba(255,120,170,.18); }
+html[data-theme="dark"] .gh-ldl{ background:rgba(255,120,170,.20); }
+/* ============ GLASS BOTTOM NAV ============ */
+html[data-theme] .bottom-nav{
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+}
+html[data-theme="dark"] .bottom-nav{
+  background: rgba(40,33,41,.55);
+  border: 1px solid rgba(255,210,230,.18);
+  box-shadow: 0 12px 32px rgba(0,0,0,.40), inset 0 1px 0 rgba(255,210,230,.16);
+}
+html[data-theme="light"] .bottom-nav{
+  background: rgba(255,242,246,.55);
+  border: 1px solid rgba(255,255,255,.85);
+  box-shadow: 0 10px 28px rgba(150,60,100,.18), inset 0 1px 0 rgba(255,255,255,.9);
+}
+/* ============ FLOATING STORE HEADER ============ */
+html[data-theme] .topbar{
+  background:transparent;
+  border-bottom:none;
+  box-shadow:none;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+html[data-theme] .topbar .brand{
+  padding:4px 12px 4px 4px;
+  border-radius:22px;
+  background:var(--glass);
+  border:1px solid var(--border);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  backdrop-filter:blur(14px) saturate(160%);
+}
+html[data-theme] .topbar .search-box,
+html[data-theme] .topbar .theme-toggle,
+html[data-theme] .topbar .help-btn{
+  background:var(--glass);
+  border:1px solid var(--border);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  backdrop-filter:blur(14px) saturate(160%);
+}
+
+/* ============ FLOATING CHANNEL HEADER ============ */
+html[data-theme] .pktg-header{
+  position:absolute;
+  top:0; left:0; right:0;
+  background:transparent;
+  border-bottom:none;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+html[data-theme] .pktg-header > .pktg-header-btn,
+html[data-theme] .pktg-info,
+html[data-theme] .pktg-actions{
+  background:var(--glass);
+  border:1px solid var(--border);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  backdrop-filter:blur(14px) saturate(160%);
+}
+html[data-theme] .pktg-actions{ border-radius:22px; padding:0 2px; }
+html[data-theme] .pktg-feed{ padding-top:calc(70px + var(--safe-top)); }
+
+/* ============ POPUP (Pika Movie / iWatch / Cancel) ANIMATION ============ */
+@keyframes mcFade{ from{opacity:0} to{opacity:1} }
+@keyframes mcPop{ from{opacity:0; transform:scale(.9) translateY(12px)} to{opacity:1; transform:none} }
+@keyframes mcTap{
+  0%{ transform:scale(1); filter:brightness(1); box-shadow:inset 0 0 0 0 rgba(255,255,255,0); }
+  40%{ transform:scale(.86); filter:brightness(1.4); box-shadow:inset 0 0 0 4px rgba(255,255,255,.75); }
+  100%{ transform:scale(.94); filter:brightness(1.2); box-shadow:inset 0 0 0 4px rgba(255,255,255,.5); }
+}
+#movie-chooser{ animation:mcFade .18s ease-out; }
+#movie-chooser > div{ animation:mcPop .28s cubic-bezier(.22,1,.36,1); }
+#movie-chooser.mc-out{ opacity:0; transition:opacity .22s ease; }
+#movie-chooser.mc-out > div{ transform:scale(.94); transition:transform .22s ease; }
+#movie-chooser button{ transition:transform .15s cubic-bezier(.22,1,.36,1), filter .15s ease, opacity .25s ease; }
+#movie-chooser button:active{ transform:scale(.92); filter:brightness(1.2); }
+#movie-chooser button.mc-pressed{ animation:mcTap .35s ease-out forwards; }
+#movie-chooser.mc-busy button:not(.mc-pressed){ opacity:.35; }
+
+/* ============ PIKA MOVIE / IWATCH: NAV BILKUL HIDE ============ */
+body:has(#web-page:not([hidden])) .bottom-nav{ display:none !important; }
+body:has(#web-page:not([hidden])) .topbar{ display:none; }
+body:has(#web-page:not([hidden])) #web-page iframe{
+  top:0 !important;
+  height:100% !important;
+}
 </style>
 </head>
 <body>
@@ -5649,12 +5775,14 @@ async function loadOwnerMessagesForMaria(){
 /* ================= /OWNER BROADCAST MESSAGES ================= */
 
 function initTheme(){
-  const saved = localStorage.getItem("pika_theme") || "dark";
+  const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  const sysTheme = () => (mq && !mq.matches) ? "light" : "dark";
+  const saved = localStorage.getItem("pika_theme") || sysTheme();
   document.documentElement.setAttribute("data-theme", saved);
   $("#theme-label").textContent = saved === "dark" ? "Dark" : "Light";
   
   const metaTheme = document.querySelector('meta[name="theme-color"]');
-  if(metaTheme) metaTheme.setAttribute('content', saved === "dark" ? "#0B0E14" : "#F5F6F8");
+  if(metaTheme) metaTheme.setAttribute('content', saved === "dark" ? "#19151A" : "#FBE4EC");
   
   $("#theme-toggle-btn").addEventListener("click", ()=>{
     const cur = document.documentElement.getAttribute("data-theme");
@@ -5664,9 +5792,21 @@ function initTheme(){
     $("#theme-label").textContent = next === "dark" ? "Dark" : "Light";
     
     const metaT = document.querySelector('meta[name="theme-color"]');
-    if(metaT) metaT.setAttribute('content', next === "dark" ? "#0B0E14" : "#F5F6F8");
+    if(metaT) metaT.setAttribute('content', next === "dark" ? "#19151A" : "#FBE4EC");
   });
-  const helpBtn = document.getElementById("help-support-btn");
+  if(mq){
+    const onSysChange = ()=>{
+      if(localStorage.getItem("pika_theme")) return;
+      const t = sysTheme();
+      document.documentElement.setAttribute("data-theme", t);
+      $("#theme-label").textContent = t === "dark" ? "Dark" : "Light";
+      const mt = document.querySelector('meta[name="theme-color"]');
+      if(mt) mt.setAttribute('content', t === "dark" ? "#19151A" : "#FBE4EC");
+    };
+    if(mq.addEventListener) mq.addEventListener("change", onSysChange);
+    else if(mq.addListener) mq.addListener(onSysChange);
+  }
+    const helpBtn = document.getElementById("help-support-btn");
   if(helpBtn){
     helpBtn.addEventListener("click", e=>{
       e.preventDefault();
@@ -5751,9 +5891,20 @@ function openMovieChooser(){
   const ov = $("#movie-chooser");
   ov.addEventListener("touchmove", e=>e.preventDefault(), { passive:false });
   ov.addEventListener("click", e=>{
+    if(ov.__busy) return;
     const b = e.target.closest("[data-w]");
-    if(b){ closeMovieChooser(false); showWebPage(b.dataset.w); return; }
-    if(e.target === ov || e.target.closest("[data-cancel]")) closeMovieChooser(true);
+    const cb = e.target.closest("[data-cancel]");
+    if(b || cb || e.target === ov){
+      ov.__busy = true;
+      ov.classList.add("mc-busy");
+      const pressed = b || cb;
+      if(pressed) pressed.classList.add("mc-pressed");
+      setTimeout(()=>ov.classList.add("mc-out"), 280);
+      setTimeout(()=>{
+        if(b){ closeMovieChooser(false); showWebPage(b.dataset.w); }
+        else closeMovieChooser(true);
+      }, 520);
+    }
   });
 }
 window.addEventListener("message", e=>{
