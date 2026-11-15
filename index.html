@@ -9375,6 +9375,7 @@ function randomChannelCode(len = 12){
   const arr = crypto.getRandomValues(new Uint32Array(len));
   return Array.from(arr, n => CHANNEL_CODE_CHARS[n % CHANNEL_CODE_CHARS.length]).join("");
 }
+function randomCode(len = 12){
   const arr = crypto.getRandomValues(new Uint32Array(len));
   return Array.from(arr, n => CODE_CHARS[n % CODE_CHARS.length]).join("");
 }
