@@ -2187,6 +2187,12 @@ body:has(#web-page:not([hidden])) #web-page iframe{
   top:0 !important;
   height:100% !important;
 }
+/* ============ MOVIE LANDSCAPE: NOISE BAND ============ */
+@media (orientation: landscape){
+  body:has(#web-page:not([hidden]))::after{
+    display:none !important;
+  }
+}
 </style>
 </head>
 <body>
