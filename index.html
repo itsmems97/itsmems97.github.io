@@ -9798,7 +9798,7 @@ function openChannelKeysManagementSheet(channelId){
   </div></div>`);
 
   const wrap = document.getElementById("chkeys-backdrop");
-  const VPS = "http://193.122.76.131:8000";
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   const ownerEmail = auth.currentUser ? auth.currentUser.email : "";
   let keys = [];
@@ -10139,7 +10139,7 @@ if(isMemberHere){
   const section = document.getElementById("user-key-section");
   if(section){
     const userEmail = auth.currentUser ? auth.currentUser.email : '';
-    const VPS = "http://193.122.76.131:8000";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
     
     fetch(VPS + "/manage_key.php", {
