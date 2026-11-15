@@ -4986,7 +4986,7 @@ async function guestBoot(){
   if(await guestExpired()){ showGate("guestExpired"); return; }
   const gp = await ensureGuestProfile();
   if(gp){ state.username = gp.name; state.photoURL = gp.photoURL; }
-  await withTimeout(saveGuestDevice(), 4000);
+  try{ await withTimeout(saveGuestDevice(), 4000, "saveGuestDevice"); }catch(e){ console.warn(e); }
   enterStore();
 }
 async function sweepExpiredGuests(){
