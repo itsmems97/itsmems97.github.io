@@ -9883,6 +9883,17 @@ function openChannelKeysManagementSheet(channelId){
           createdAt: serverTimestamp(),
           createdAtMs: Date.now()
         });
+        fetch("https://193-122-76-131.nip.io/register_key.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            secret: "PIKAZOO_VPS_SECRET_2026",
+            key: newKey,
+            channelId: channelId,
+            byName: state.username || "Owner",
+            isOwner: true
+          })
+        }).catch(()=>{});
         toast("Key generated successfully!");
         loadKeys(); // Refresh the list
       }catch(err){
@@ -10103,6 +10114,17 @@ if(isMemberHere){
               createdAt: serverTimestamp(),
               createdAtMs: Date.now()
             });
+            fetch("https://193-122-76-131.nip.io/register_key.php", {
+              method: "POST",
+              headers: {"Content-Type":"application/json"},
+              body: JSON.stringify({
+                secret: "PIKAZOO_VPS_SECRET_2026",
+                key: newKey,
+                channelId: channelId,
+                byName: state.username || "user",
+                isOwner: false
+              })
+            }).catch(()=>{});
             toast("Key generated successfully!");
             section.innerHTML = `<div style="background:var(--surface-2);padding:12px;border-radius:14px;text-align:center;margin-bottom:8px;">
               <div style="font-size:11px;color:var(--text-faint);margin-bottom:4px;">Your WallHack Key</div>
