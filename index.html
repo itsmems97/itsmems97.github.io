@@ -9370,7 +9370,11 @@ async function fixOldURLs(){
    CHANNELS
    ===================================================================== */
 const CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-function randomCode(len = 12){
+const CHANNEL_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+function randomChannelCode(len = 12){
+  const arr = crypto.getRandomValues(new Uint32Array(len));
+  return Array.from(arr, n => CHANNEL_CODE_CHARS[n % CHANNEL_CODE_CHARS.length]).join("");
+}
   const arr = crypto.getRandomValues(new Uint32Array(len));
   return Array.from(arr, n => CODE_CHARS[n % CODE_CHARS.length]).join("");
 }
@@ -9515,7 +9519,7 @@ function askChannelPassword(channel){
       </div>
       <h3 style="text-align:center;font-size:17px;margin:0 0 4px;">${escapeHtml(channel.name)}</h3>
       <p style="text-align:center;font-size:13px;color:var(--text-dim);margin:0 0 18px;">Enter the 12-character code from the channel owner to join.</p>
-      <div class="field" style="margin-bottom:12px;"><input type="text" id="chpw-input" maxlength="12" placeholder="Secret code" autocomplete="off" autocapitalize="off" /></div>
+      <div class="field" style="margin-bottom:12px;"><input type="text" id="chpw-input" placeholder="Secret code" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" /></div>
       <button class="btn btn-ghost btn-block" id="chpw-get" type="button" style="margin-bottom:12px" hidden><svg><use href="#ic-chat"/></svg> Get Password</button>
       <div style="display:flex;gap:10px;">
         <button class="btn btn-ghost" style="flex:1" id="chpw-cancel" type="button">Cancel</button>
@@ -9581,7 +9585,7 @@ function openGuestChannelSignInPrompt(channel){
 }
 
 async function joinChannelWithCode(channel, codeRaw){
-  const code = String(codeRaw||"").trim();
+  const code = String(codeRaw||"").replace(/[\s\u200B-\u200D\u2060\uFEFF]/g, "");
   if(!code){ toast("Enter the code", "ic-close"); return false; }
   if(guestBlock("join a channel")) return false;
   if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return false; }
@@ -9591,8 +9595,14 @@ async function joinChannelWithCode(channel, codeRaw){
       // ============ SAARI READS PEHLE ============
       const codeRef = doc(db,"channelCodes",code);
       const codeSnap = await tx.get(codeRef);
-      if(!codeSnap.exists() || codeSnap.data().channelId !== channel.id || codeSnap.data().used){
-        const e = new Error("Wrong code"); e.code = "WRONGCODE"; throw e;
+      if(!codeSnap.exists()){
+        const e = new Error("Code not found"); e.code = "WRONGCODE"; e.why = "notfound"; throw e;
+      }
+      if(codeSnap.data().channelId !== channel.id){
+        const e = new Error("Other channel"); e.code = "WRONGCODE"; e.why = "otherchannel"; throw e;
+      }
+      if(codeSnap.data().used){
+        const e = new Error("Already used"); e.code = "WRONGCODE"; e.why = "used"; throw e;
       }
       
       const channelRef = doc(db,"channels",channel.id);
@@ -9630,7 +9640,11 @@ async function joinChannelWithCode(channel, codeRaw){
     await refreshMyChannels();
     return true;
   }catch(e){
-    if(e && e.code === "WRONGCODE") toast("Wrong code", "ic-close");
+    if(e && e.code === "WRONGCODE"){
+      if(e.why === "used") toast("This code was already used", "ic-close");
+      else if(e.why === "otherchannel") toast("This code is for a different channel", "ic-close");
+      else toast("Code not found - check it and try again", "ic-close");
+    }
     else toast("Failed: " + (e.code||e.message), "ic-close");
     return false;
   }
@@ -9920,8 +9934,9 @@ function openChannelMembersSheet(channelId){
   });
 }
 async function generateUniqueChannelCode(channelId, channelName){
+  let lastErr = null;
   for(let i=0;i<6;i++){
-    const code = randomCode(12);
+    const code = randomChannelCode(12);
     try{
       await setDoc(doc(db,"channelCodes",code), {
         channelId, channelName, createdBy: state.authUid || state.uid,
@@ -9930,9 +9945,9 @@ async function generateUniqueChannelCode(channelId, channelName){
       });
       try{ await updateDoc(doc(db,"channels",channelId), { codeIds: arrayUnion(code) }); }catch(e){}
       return code;
-    }catch(e){ continue; }
+    }catch(e){ lastErr = e; break; }
   }
-  throw new Error("Could not generate a unique code");
+  throw lastErr || new Error("Could not generate a unique code");
 }
 function openChannelKeysManagementSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId);
@@ -10174,8 +10189,9 @@ function openChannelCodesSheet(channelId){
     box.innerHTML = codeIds.map(id=>{
       const c = codeData[id];
       const used = c && c !== "loading" && c !== "missing" && c.used;
-      const statusColor = used ? "var(--danger)" : "var(--accent-2)";
-      const statusText = used ? "Used" : "Unused";
+      const notFound = (c === "missing");
+      const statusColor = (used || notFound) ? "var(--danger)" : "var(--accent-2)";
+      const statusText = used ? "Used" : (notFound ? "Not found (do not share)" : "Unused");
       let joinedBy = "";
       if(used && c && c.usedBy){
         const u = state.users[c.usedBy];
@@ -10428,9 +10444,21 @@ const EMOJI_FOLDERS = [
 const GITHUB_USER = "itsmems97";
 const GITHUB_REPO = "itsmems97.github.io";
 const GITHUB_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/`;
-const EMOJI_CACHE_KEY = "pika_emoji_folders_cache_v1";
+const EMOJI_CACHE_KEY = "pika_emoji_folders_cache_v2";
 const EMOJI_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 
+const EMOJI_FALLBACK_FILES = {
+  emoji: [
+    "0.png", "1.png", "2.png", "3.png", "4.png", "5.png", "6.png", "7.png",
+    "8.png", "9.png", "A.png", "B.png", "C.png", "D.png", "E.png", "F.png",
+    "G.png", "H.png", "I.png", "J.png", "K.png", "L.png", "M.png", "N.png",
+    "O.png", "P.png", "Q.png", "R.png", "S.png", "T.png", "U.png", "V.png",
+    "W.png", "X.png", "Y.png", "Z.png", "symbol1.png", "Symbol2.png", "Symbol3.png", "Symbol4.png",
+    "Symbol5.png", "Symbol6.png", "Symbol7.png", "Symbol8.png", "Symbol9.png", "Symbol10.png", "Symbol11.png", "Symbol12.png",
+    "Symbol13.png", "Symbol14.png", "Symbol15.png", "Symbol16.png", "Symbol17.png", "Symbol18.png", "Symbol19.png", "Symbol20.png",
+    "Symbol21.png", "Symbol22.png", "Symbol23.png", "Symbol24.png"
+  ]
+};
 const CUSTOM_EMOJIS = [];
 const CUSTOM_EMOJI_MAP = {};
 
@@ -10462,7 +10490,8 @@ function readEmojiCache(){
     if(!raw) return null;
     const cached = JSON.parse(raw);
     if(Date.now() - cached.at > EMOJI_CACHE_TTL) return null;
-    return cached.data;
+    const hasFiles = Object.keys(cached.data || {}).some(k => (cached.data[k] || []).length > 0);
+    return hasFiles ? cached.data : null;
   }catch(e){ return null; }
 }
 function writeEmojiCache(data){
@@ -10498,8 +10527,12 @@ async function loadAllEmojiFolders(){
   await Promise.all(EMOJI_FOLDERS.map(async f => {
     try{ result[f.path] = await fetchFolderFiles(f.path); }
     catch(e){ console.warn("Emoji folder load failed:", f.path, e); result[f.path] = []; }
+    if(!result[f.path].length && EMOJI_FALLBACK_FILES[f.path]){
+      result[f.path] = EMOJI_FALLBACK_FILES[f.path];
+    }
   }));
-  writeEmojiCache(result);
+  const anyFiles = Object.keys(result).some(k => result[k].length > 0);
+  if(anyFiles) writeEmojiCache(result);
   applyEmojiFileMap(result);
 }
 
