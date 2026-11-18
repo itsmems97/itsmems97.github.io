@@ -3728,6 +3728,11 @@ const state = {
   }
 };
 
+const discover = { apps: [], loading: false };
+const DISC_WORKER = 'https://pika-discover.itsme16241897.workers.dev/api/1';
+const discLatest = { apps: [], ids: new Set(), cursor: 0, loading: false, done: false, lastRefresh: 0, fails: 0, timer: false };
+let __ghLiveObs = null;
+
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
@@ -12832,7 +12837,6 @@ initOnboarding();
    PIKA DISCOVER — AppTeka integration (ISOLATED MODULE)
    ===================================================================== */
 const DISCOVER_API = "https://193-122-76-131.nip.io/discover/api/1";
-const discover = { apps: [], loading: false };
 window.discover = discover;
 
 // AppTeka raw entry → Pika Store format
@@ -12921,9 +12925,6 @@ async function discoverFetch(path){
 }
 
 /* ================= LIVE LATEST FEED (AppTeka newest uploads, straight from AppTeka) ================= */
-const DISC_WORKER = 'https://pika-discover.itsme16241897.workers.dev/api/1';
-const discLatest = { apps: [], ids: new Set(), cursor: 0, loading: false, done: false, lastRefresh: 0, fails: 0, timer: false };
-let __ghLiveObs = null;
 
 function _discNumId(appId){
   const m = /r(\d+)$/.exec(String(appId || ''));
