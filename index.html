@@ -5093,6 +5093,7 @@ setInterval(()=>{
   const gateVisible = !$("#username-gate").hidden;
   if(appVisible || gateVisible) st.remove();
 }, 1000);
+loadCachedApps();   // ⚡ Login check ka wait kiye bina, turant saved apps dikhao
 initAuthWithRetry();
 }
 /* ⚡ Backfill VIP badges for users who joined channels before VIP feature existed */
