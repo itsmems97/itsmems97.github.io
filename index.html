@@ -9,6 +9,29 @@ window.addEventListener('error',function(e){window.__pksLastErr=(e.message||'err
 window.addEventListener('unhandledrejection',function(e){var r=e.reason;window.__pksLastErr='promise: '+((r&&r.message)||r);});
 ['localStorage','sessionStorage'].forEach(function(k){try{window[k].getItem('x');}catch(e){var m={};try{Object.defineProperty(window,k,{configurable:true,value:{getItem:function(a){return a in m?m[a]:null;},setItem:function(a,b){m[a]=String(b);},removeItem:function(a){delete m[a];},clear:function(){m={};},key:function(i){return Object.keys(m)[i]||null;},get length(){return Object.keys(m).length;}}});}catch(_){}}});
 })();</script>
+<script>
+(function(){
+  /* ===== DEEP LINK WHILE APP ALREADY RUNNING (no splash, no reload) =====
+     "focus-existing" launch_handler (pika-manifest.json) ensures the browser
+     reuses this exact window instead of opening a new one. window.launchQueue
+     is how that same window receives the clicked link's URL. */
+  if(!('launchQueue' in window) || !window.launchQueue || !window.launchQueue.setConsumer) return;
+  window.launchQueue.setConsumer(function(launchParams){
+    if(!launchParams || !launchParams.targetURL) return;
+    var targetUrl;
+    try{ targetUrl = new URL(launchParams.targetURL); }catch(e){ return; }
+    if(!window.__pksAppFullyBooted){
+      /* This is the very first (cold) launch — normal boot flow + splash already handles it. */
+      return;
+    }
+    /* App was already open in the background — route straight to the content. */
+    try{
+      if(typeof applyDeepLink === 'function') applyDeepLink(targetUrl.search, true);
+      if(typeof applyChannelDeepLink === 'function') applyChannelDeepLink(targetUrl.search, true);
+    }catch(e){}
+  });
+})();
+</script>
 <script nomodule>document.addEventListener("DOMContentLoaded",function(){var s=document.getElementById("pks2-splash");if(s)s.parentNode.removeChild(s);document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:#0d0f14;color:#cfd3dc;font:16px/1.5 -apple-system,Roboto,sans-serif">Your browser is too old for Pika Store.<br>Please update Chrome / Safari and try again.</div>';});</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
@@ -6083,6 +6106,7 @@ function listenApps(){
   onSnapshot(q, snap=>{
     state.apps = snap.docs.map(d=>({ id:d.id, ...d.data() }));
     window.__pksAppsReady = true; if(window.__pksWantHide) hideSplash();
+    window.__pksAppFullyBooted = true;
     renderHome(); renderProfile(); renderUsersPage(); applyDeepLink(); checkAutoVerification();
   }, err=>{ console.warn(err); toast(`Firestore error: ${err.code || ""}`, "ic-close"); renderEmptyState(); });
 }
@@ -6692,10 +6716,11 @@ function initHomeCategories(){
   });
 }
 let deepLinkDone = false;
-function applyDeepLink(){
-  if(deepLinkDone) return;
+function applyDeepLink(searchOverride, force){
+  if(deepLinkDone && !force) return;
   deepLinkDone = true;
-  const qs = new URLSearchParams(location.search);
+  const isLive = searchOverride !== undefined;
+  const qs = new URLSearchParams(isLive ? searchOverride : location.search);
   const cat = qs.get("cat"), appId = qs.get("app"), dm = qs.get("dm"), disc = qs.get("disc");
   if(cat){ state.activeCategory = cat; renderHome(); $$(".nav-btn")[0].click(); }
   if(appId){
@@ -6704,7 +6729,7 @@ function applyDeepLink(){
   }
   if(dm && state.uid) openDmPanel(dm);
   if(disc){ setTimeout(()=> resolveDiscoverShareCode(disc), 800); }
-  if(cat || appId || dm || disc){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
+  if((cat || appId || dm || disc) && !isLive){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
 }
 function renderAppRow(selector, apps, showRank){
   const row = $(selector);
@@ -9632,15 +9657,16 @@ function initChannelsPage(){
     if(r) openChannelEntry(r.dataset.channelOpen);
   });
 }
-function applyChannelDeepLink(){
-  if(channelDeepLinkDone) return;
-  const qs = new URLSearchParams(location.search);
+function applyChannelDeepLink(searchOverride, force){
+  if(channelDeepLinkDone && !force) return;
+  const isLive = searchOverride !== undefined;
+  const qs = new URLSearchParams(isLive ? searchOverride : location.search);
   const cid = qs.get("channel");
-  if(!cid){ channelDeepLinkDone = true; return; }
+  if(!cid){ if(!force) channelDeepLinkDone = true; return; }
   if(!state.channelsLoaded) return;
   if(!state.isGuest && !state.myChannelsLoaded) return;
   channelDeepLinkDone = true;
-  try{ history.replaceState(null, "", location.pathname); }catch(e){}
+  if(!isLive){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
   const ch = state.channels.find(c=>c.id===cid);
   if(!ch){ toast("This channel is no longer available.", "ic-close"); return; }
   const nav = document.querySelector('.nav-btn[data-page="channels-page"]');
