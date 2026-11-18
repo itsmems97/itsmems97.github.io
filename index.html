@@ -2408,14 +2408,9 @@ body:has(#web-page:not([hidden])) #web-page iframe{
   var STEP_SLOW_MS = 2000;  /* har message itni der dikhega (jab app abhi load ho rahi ho) */
   var STEP_FAST_MS = 600;   /* app ready ho chuki ho to message jaldi jaldi niklenge */
 
-  function stamp(){
-    if(!window.__pksBootOk) return;
-    try{ sessionStorage.setItem('pika_booted', String(Date.now())); }catch(e){}
-    try{ localStorage.setItem('pika_last_active', String(Date.now())); }catch(e){}
-  }
-  document.addEventListener('visibilitychange', function(){ stamp(); });
+  function stamp(){ if(!window.__pksBootOk) return; try{ sessionStorage.setItem('pika_booted', String(Date.now())); }catch(e){} }
+  document.addEventListener('visibilitychange', function(){ if (document.hidden) stamp(); });
   window.addEventListener('pagehide', stamp);
-  setInterval(stamp, 3000);
 
   /* ===== Progress bar: 1% se 100% tak smooth ===== */
   function paint(){
@@ -2548,13 +2543,7 @@ body:has(#web-page:not([hidden])) #web-page iframe{
   }
 
   var skipSplash = false;
-  try{
-    var sameTabRecent = (Date.now() - (+sessionStorage.getItem('pika_booted') || 0)) < 120000;
-    /* localStorage is shared across ALL tabs/windows — catches the case where WhatsApp
-       opened a fresh document/instance while the app was already active elsewhere. */
-    var anyTabRecent = (Date.now() - (+localStorage.getItem('pika_last_active') || 0)) < 12000;
-    skipSplash = sameTabRecent || anyTabRecent;
-  }catch(e){}
+  try{ skipSplash = (Date.now() - (+sessionStorage.getItem('pika_booted') || 0)) < 120000; }catch(e){}
   if (skipSplash){ exited = true; window.__pks2Exited = true; splashEl.remove(); }
   else { splashEl.classList.add('run'); paint(); startSeq(); speedTest(); }
 
@@ -4625,7 +4614,6 @@ function hideLoading(){ const d = document.getElementById("loading-overlay"); if
 function enterStore(){
   hideLoading();
   try{ sessionStorage.setItem('pika_booted', String(Date.now())); }catch(e){}
-  try{ localStorage.setItem('pika_last_active', String(Date.now())); }catch(e){}
   window.__pksBootOk = true;
   if(window.__pksStage) window.__pksStage(88, 97);
   window.__pksWantHide = true;
