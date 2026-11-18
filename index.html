@@ -2626,9 +2626,13 @@ body:has(#web-page:not([hidden])) #web-page iframe{
     <input type="file" id="file-input" accept="*/*" hidden />
     <div class="format-grid">
       <div class="format-opt active" data-format="APK">APK<small>Android</small></div>
-      <div class="format-opt" data-format="APK+">APK+<small>Split bundle</small></div>
+      <div class="format-opt" data-format="APK+">APK+<small>Split APK</small></div>
       <div class="format-opt" data-format="ZIP">ZIP<small>Archive</small></div>
       <div class="format-opt" data-format="RAR">RAR<small>Archive</small></div>
+      <div class="format-opt" data-format="PDF">PDF<small>Document</small></div>
+      <div class="format-opt" data-format="PAK">PAK<small>Game data</small></div>
+      <div class="format-opt" data-format="SAV">SAV<small>Save file</small></div>
+      <div class="format-opt" data-format="FILE">FILE<small>Other</small></div>
     </div>
   </div>
   <div class="card" id="update-existing-card" hidden>
@@ -6603,8 +6607,14 @@ function getFileTypeIcon(filename){
     rar:   { color: '#A855F7', text: 'RAR' },
     '7z':  { color: '#F59E0B', text: '7Z' },
     pak:   { color: '#10B981', text: 'PAK' },
+    vpk:   { color: '#10B981', text: 'VPK' },
+    sav:   { color: '#14B8A6', text: 'SAV' },
+    dat:   { color: '#14B8A6', text: 'DAT' },
+    save:  { color: '#14B8A6', text: 'SAV' },
     json:  { color: '#3B82F6', text: 'JSON' },
+    xml:   { color: '#3B82F6', text: 'XML' },
     txt:   { color: '#6B7280', text: 'TXT' },
+    csv:   { color: '#059669', text: 'CSV' },
     pdf:   { color: '#EF4444', text: 'PDF' },
     obb:   { color: '#F97316', text: 'OBB' },
     mp4:   { color: '#EC4899', text: 'MP4' },
@@ -6614,7 +6624,21 @@ function getFileTypeIcon(filename){
     xls:   { color: '#059669', text: 'XLS' },
     xlsx:  { color: '#059669', text: 'XLS' },
     ppt:   { color: '#EA580C', text: 'PPT' },
-    pptx:  { color: '#EA580C', text: 'PPT' }
+    pptx:  { color: '#EA580C', text: 'PPT' },
+    apks:  { color: '#22C55E', text: 'APKS' },
+    apkm:  { color: '#22C55E', text: 'APKM' },
+    xapk:  { color: '#22C55E', text: 'XAPK' },
+    aab:   { color: '#16A34A', text: 'AAB' },
+    exe:   { color: '#6366F1', text: 'EXE' },
+    iso:   { color: '#8B5CF6', text: 'ISO' },
+    bin:   { color: '#6B7280', text: 'BIN' },
+    lua:   { color: '#2563EB', text: 'LUA' },
+    js:    { color: '#F59E0B', text: 'JS' },
+    py:    { color: '#3B82F6', text: 'PY' },
+    sh:    { color: '#10B981', text: 'SH' },
+    sql:   { color: '#6366F1', text: 'SQL' },
+    ini:   { color: '#6B7280', text: 'INI' },
+    cfg:   { color: '#6B7280', text: 'CFG' }
   };
   const info = map[ext] || { color: '#6B7280', text: (ext || 'FILE').toUpperCase().slice(0, 4) };
   const fontSize = info.text.length >= 4 ? 18 : 24;
@@ -7309,8 +7333,20 @@ $("#file-dropzone").addEventListener("click", ()=> $("#file-input").click());
     dz.classList.add("filled");
     dz.innerHTML = `<div class="file-thumb" style="display:flex;align-items:center;justify-content:center;"><svg width="22" height="22"><use href="#ic-cube"/></svg></div><div><b style="display:block">${escapeHtml(f.name)}</b><span style="font-size:11px;color:var(--text-faint)">${(f.size/1024/1024).toFixed(1)} MB</span></div>`;
     const ext = (f.name.match(/\.([a-z0-9]+)$/i) || [,""])[1].toLowerCase();
-    const extToFormat = { apk:"APK", apks:"APK+", xapk:"APK+", zip:"ZIP", rar:"RAR" };
-    const detected = extToFormat[ext];
+    const extToFormat = {
+      apk:"APK", apks:"APK+", xapk:"APK+", apkm:"APK+", aab:"APK",
+      zip:"ZIP", "7z":"ZIP", tar:"ZIP", gz:"ZIP", obb:"ZIP",
+      rar:"RAR",
+      pdf:"PDF",
+      pak:"PAK", vpk:"PAK",
+      sav:"SAV", dat:"SAV", save:"SAV",
+      js:"FILE", ts:"FILE", py:"FILE", html:"FILE", css:"FILE",
+      json:"FILE", xml:"FILE", sql:"FILE", txt:"FILE", csv:"FILE",
+      xlsx:"FILE", docx:"FILE", iso:"FILE", bin:"FILE", exe:"FILE",
+      lua:"FILE", sh:"FILE", bat:"FILE", cpp:"FILE", cs:"FILE",
+      ini:"FILE", cfg:"FILE", config:"FILE", yaml:"FILE", toml:"FILE"
+    };
+    const detected = extToFormat[ext] || (ext ? "FILE" : null);
     if(detected){ state.upload.format = detected; $$(".format-opt").forEach(o=> o.classList.toggle("active", o.dataset.format === detected)); }
     if(!state.upload.name){ state.upload.name = f.name.replace(/\.[a-z0-9]+$/i,""); $("#app-name-input").value = state.upload.name; }
     if(['apk','apks','xapk','apkm','apkx'].includes(ext)){
