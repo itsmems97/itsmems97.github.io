@@ -1107,6 +1107,19 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 .pktg-upload-track{ height:5px; border-radius:6px; background:var(--surface-2); overflow:hidden; }
 .pktg-upload-fill{ height:100%; width:0; background:linear-gradient(90deg,var(--accent),var(--accent-2));  }
 .pktg-upload-cancel{ float:right; border:0; background:none; color:var(--danger); font-size:11px; margin-top:6px; font-family:inherit; }
+.pktg-batchrow{ display:flex; align-items:center; gap:10px; padding:8px; border-radius:12px; background:var(--surface-2); border:1px solid var(--border); }
+.pktg-batchrow-icon{ width:40px; height:40px; border-radius:10px; overflow:hidden; background:var(--surface); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid var(--border); }
+.pktg-batchrow-info{ min-width:0; flex:1; }
+.pktg-batchrow-name{ font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pktg-batchrow-size{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+.pktg-batchrow-icon-btn, .pktg-batchrow-remove{ width:30px; height:30px; border-radius:50%; background:var(--surface); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text-dim); border:1px solid var(--border); }
+.pktg-batchrow-remove{ font-size:18px; font-weight:700; color:var(--danger); }
+.pktg-bqrow{ padding:8px; border-radius:12px; background:var(--surface-2); border:1px solid var(--border); }
+.pktg-bqrow-top{ display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; gap:8px; }
+.pktg-bqrow-name{ font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%; }
+.pktg-bqrow-pct{ color:var(--text-dim); flex-shrink:0; }
+.pktg-batch-card{ display:flex; flex-direction:column; gap:8px; }
+.pktg-batch-files{ display:flex; flex-direction:column; gap:8px; }
 .pktg-empty{ align-self:center; margin:auto 0; color:var(--text-faint); display:flex; flex-direction:column; align-items:center; gap:6px; font-size:13px; text-align:center; padding:0 20px; }
 .pktg-empty-icon{ width:52px; height:52px; border-radius:50%; display:grid; place-items:center; background:rgba(255,198,26,.14); color:var(--accent); font-size:26px; }
 .pktg-search{ display:none; position:absolute; inset:0; z-index:22; background:var(--bg); padding:calc(10px + var(--safe-top)) 12px 10px; align-items:center; gap:8px; }
@@ -2960,7 +2973,7 @@ body:has(#web-page:not([hidden])) #web-page iframe{
 </div>
   <input type="file" id="pktg-input-gallery" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.heic,.heif,*/*" style="display:none">
 <input type="file" id="pktg-input-video" accept="video/*,*/*" style="display:none">
-<input type="file" id="pktg-input-file" accept="*/*" style="display:none">
+<input type="file" id="pktg-input-file" accept="*/*" multiple style="display:none">
 <input type="file" id="pktg-input-camera" accept="image/*" capture="environment" style="display:none">
 
   <div class="pktg-viewer" id="pktg-viewer">
@@ -3319,6 +3332,22 @@ async function ghUploadWithRotation(secrets, file, baseAssetName, onProgress){
 const PIKA_CHUNK_SIZE = 8 * 1024 * 1024;
 const PIKA_UP_BASE = "https://193-122-76-131.nip.io";
 
+const EXT_BADGE = {
+  apk:{bg:'#3DDC84',label:'APK'}, apks:{bg:'#3DDC84',label:'APK'}, apkm:{bg:'#3DDC84',label:'APK'}, xapk:{bg:'#3DDC84',label:'APK'},
+  zip:{bg:'#FFC61A',label:'ZIP'}, rar:{bg:'#FF9A3D',label:'RAR'}, '7z':{bg:'#FF9A3D',label:'7Z'}, pak:{bg:'#FF9A3D',label:'PAK'},
+  pdf:{bg:'#FF5C6C',label:'PDF'}, txt:{bg:'#9AA5B1',label:'TXT'}, md:{bg:'#9AA5B1',label:'MD'},
+  mp4:{bg:'#7C6CFF',label:'MP4'}, mp3:{bg:'#33E0C1',label:'MP3'}, sav:{bg:'#9AA5B1',label:'SAV'}, jph:{bg:'#9AA5B1',label:'JPH'},
+  png:{bg:'#4FA3FF',label:'IMG'}, webp:{bg:'#4FA3FF',label:'IMG'}, jpg:{bg:'#4FA3FF',label:'IMG'}, jpeg:{bg:'#4FA3FF',label:'IMG'}
+};
+function fileExt(name){ const m = /\.([a-z0-9]+)$/i.exec(name || ""); return m ? m[1].toLowerCase() : ""; }
+function fileIconHTML(name, customUrl){
+  if(customUrl) return `<img src="${escapeHtml(customUrl)}" style="width:100%;height:100%;object-fit:cover;"/>`;
+  const ext = fileExt(name);
+  const b = EXT_BADGE[ext];
+  if(b) return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:${b.bg}22;color:${b.bg};font-size:10px;font-weight:800;letter-spacing:.3px;">${escapeHtml(b.label)}</div>`;
+  return `<svg width="22" height="22" style="color:var(--accent-2)"><use href="#ic-cube"/></svg>`;
+}
+
 function pikaSleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 function pikaWaitOnline(){
@@ -3502,6 +3531,106 @@ async function uploadFileToServer(file, appId, kind, onProgress){
     fileSize: res.data.fileSize || file.size,
     url: res.data.url
   };
+}
+
+function cancelOracleUpload(id){
+  if(!id) return Promise.resolve();
+  return fetch(PIKA_UP_BASE + "/upload/cancel", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id }) }).catch(()=>{});
+}
+function deleteOracleFile(path){
+  if(!path) return Promise.resolve();
+  return fetch(PIKA_UP_BASE + "/upload/delete", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ path }) }).catch(()=>{});
+}
+function pikaSendChunkCancelable(url, blob, onLoaded, ctrl){
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    ctrl.xhr = xhr;
+    xhr.open("POST", url, true);
+    xhr.timeout = 5 * 60 * 1000;
+    xhr.upload.onprogress = e => { if(e.lengthComputable) onLoaded(e.loaded); };
+    xhr.onload = () => {
+      let data = null;
+      try { data = JSON.parse(xhr.responseText); } catch(_) {}
+      if(xhr.status >= 200 && xhr.status < 300 && data && data.ok){ resolve(data); }
+      else { const err = new Error((data && data.error) || ("HTTP " + xhr.status)); err.fatal = xhr.status >= 400 && xhr.status < 500; reject(err); }
+    };
+    xhr.onerror = () => reject(new Error("Network error reaching upload server"));
+    xhr.ontimeout = () => reject(new Error("Chunk timed out"));
+    xhr.onabort = () => reject(Object.assign(new Error("Cancelled"), { cancelled:true }));
+    xhr.send(blob);
+  });
+}
+async function pikaChunkedUploadCancelable(file, uploadName, kind, onProgress, ctrl){
+  const id = pikaUploadId(file, kind);
+  ctrl.chunkId = id;
+  const total = Math.ceil(file.size / PIKA_CHUNK_SIZE);
+  let received = new Set();
+  try{ const r = await fetch(PIKA_UP_BASE + "/upload/status?id=" + id); const j = await r.json(); if(j && j.ok && Array.isArray(j.received)) received = new Set(j.received); }catch(_){}
+  let doneBytes = 0;
+  for(let i = 0; i < total; i++){ if(received.has(i)) doneBytes += Math.min(PIKA_CHUNK_SIZE, file.size - i * PIKA_CHUNK_SIZE); }
+  const report = extra => { if(!onProgress) return; onProgress(Math.min(99, Math.round(((doneBytes + (extra || 0)) / file.size) * 100))); };
+  report(0);
+  for(let i = 0; i < total; i++){
+    if(ctrl.aborted){ await cancelOracleUpload(id); throw Object.assign(new Error("Cancelled"), { cancelled:true }); }
+    if(received.has(i)) continue;
+    const start = i * PIKA_CHUNK_SIZE, end = Math.min(start + PIKA_CHUNK_SIZE, file.size);
+    const blob = file.slice(start, end);
+    const url = PIKA_UP_BASE + "/upload/chunk?id=" + id + "&index=" + i + "&total=" + total;
+    let attempt = 0;
+    while(true){
+      if(ctrl.aborted){ await cancelOracleUpload(id); throw Object.assign(new Error("Cancelled"), { cancelled:true }); }
+      try{ await pikaWaitOnline(); await pikaSendChunkCancelable(url, blob, loaded => report(loaded), ctrl); break; }
+      catch(e){ if(e.cancelled) throw e; attempt++; if((e && e.fatal) || attempt >= 10) throw e; await pikaSleep(Math.min(1000 * attempt, 8000)); }
+    }
+    doneBytes += (end - start); report(0);
+  }
+  if(ctrl.aborted){ await cancelOracleUpload(id); throw Object.assign(new Error("Cancelled"), { cancelled:true }); }
+  let data = null, lastErr = null;
+  for(let attempt = 0; attempt < 5; attempt++){
+    try{
+      await pikaWaitOnline();
+      const r = await fetch(PIKA_UP_BASE + "/upload/finish", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id, total, fileName: uploadName }) });
+      const j = await r.json().catch(() => null);
+      if(r.ok && j && j.ok){ data = j; break; }
+      lastErr = new Error((j && j.error) || ("HTTP " + r.status));
+      if(r.status >= 400 && r.status < 500) break;
+    }catch(e){ lastErr = new Error("Network error reaching upload server"); }
+    await pikaSleep(2000 * (attempt + 1));
+  }
+  if(!data) throw new Error("Upload failed: " + (lastErr ? lastErr.message : "could not finish"));
+  return data;
+}
+async function uploadFileCancelable(file, appId, kind, onProgress, ctrl){
+  if(!githubReady()){ onProgress && onProgress(100); return { url: URL.createObjectURL(file), demo:true }; }
+  const safeKind = ghSafeName(kind || "file");
+  const safeApp  = ghSafeName(appId || "app");
+  const safeFile = ghSafeName(file.name || "file.bin");
+  const uploadName = `${safeApp}_${safeKind}_${safeFile}`.slice(0, 200);
+  if(file.size > PIKA_CHUNK_SIZE){
+    const cd = await pikaChunkedUploadCancelable(file, uploadName, safeKind, onProgress, ctrl);
+    onProgress && onProgress(100);
+    return { path: cd.path || cd.fileName, fileName: cd.fileName, fileSize: cd.fileSize || file.size, url: cd.url };
+  }
+  const form = new FormData();
+  form.append("file", file, uploadName);
+  form.append("kind", safeKind);
+  const res = await new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    ctrl.xhr = xhr;
+    xhr.open("POST", "https://193-122-76-131.nip.io/upload", true);
+    xhr.timeout = 60 * 60 * 1000;
+    xhr.upload.onprogress = e => { if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    xhr.onload = () => { let data = null; try { data = JSON.parse(xhr.responseText); } catch(_) {} resolve({ status: xhr.status, data }); };
+    xhr.onerror = () => reject(new Error("Network error reaching upload server"));
+    xhr.ontimeout = () => reject(new Error("Upload timed out"));
+    xhr.onabort = () => reject(Object.assign(new Error("Cancelled"), { cancelled:true }));
+    try { xhr.send(form); } catch(e) { reject(e); }
+  });
+  if(res.status < 200 || res.status >= 300) throw new Error("Upload failed: " + ((res.data && res.data.error) || ('HTTP ' + res.status)));
+  if(!res.data || !res.data.ok) throw new Error("Upload failed: " + ((res.data && res.data.error) || "Server rejected upload"));
+  onProgress && onProgress(100);
+  if(ctrl.aborted){ deleteOracleFile(res.data.path); throw Object.assign(new Error("Cancelled"), { cancelled:true }); }
+  return { path: res.data.path || res.data.fileName, fileName: res.data.fileName, fileSize: res.data.fileSize || file.size, url: res.data.url };
 }
 /* ============ /GITHUB RELEASES STORAGE ============ */
 function withTimeout(promise, ms, label){
@@ -11353,6 +11482,7 @@ function tgMsgLabel(m){
   if(m.type === "video") return m.caption || m.filename || "Video";
   if(m.type === "audio") return m.caption || "Voice message";
   if(m.type === "file") return m.filename || m.caption || "Document";
+  if(m.type === "batch") return m.caption || ((m.files && m.files.length) ? (m.files.length + " files") : "Files");
   if(m.type === "store_app") return m.appName || m.caption || "Store App";
   return m.text || m.caption || "Message";
 }
@@ -11459,6 +11589,22 @@ function buildTelegramMsg(m){
         ? `<span class="pktg-dl-btn" style="background:var(--surface-2);color:var(--text-dim);box-shadow:none;"><svg><use href="#ic-lock"/></svg></span>`
         : `<span class="pktg-dl-btn" data-tg-dl="${m.id}" title="Download"><svg><use href="#ic-download"/></svg></span>`}
     </button>`;
+  } else if(m.type === "batch"){
+    const bFiles = Array.isArray(m.files) ? m.files : [];
+    const bRows = bFiles.map((f, idx)=>{
+      const bIcon = fileIconHTML(f.filename, f.iconUrl);
+      return `<button type="button" class="pktg-file-card" data-tg-batch-file="${idx}"${preview ? " disabled" : ""}>
+        <span class="pktg-file-icon">${bIcon}</span>
+        <span class="pktg-file-info">
+          <span class="pktg-file-name">${escapeHtml(f.filename || "File")}</span>
+          <span class="pktg-file-size">${escapeHtml(fmtBytes(f.size || 0))}</span>
+        </span>
+        ${preview
+          ? `<span class="pktg-dl-btn" style="background:var(--surface-2);color:var(--text-dim);box-shadow:none;"><svg><use href="#ic-lock"/></svg></span>`
+          : `<span class="pktg-dl-btn" data-tg-batch-dl="${idx}" title="Download"><svg><use href="#ic-download"/></svg></span>`}
+      </button>`;
+    }).join("");
+    html += `<div class="pktg-batch-card"><div class="pktg-batch-files">${bRows}</div></div>`;
   }
   const body = m.caption || m.text;
 let descBody = "";
@@ -11466,6 +11612,9 @@ let descBody = "";
   if(m.type === "file"){
     // For files: only show caption when it's different from the filename
     descBody = (m.caption && m.caption !== m.filename) ? m.caption : "";
+  } else if(m.type === "batch"){
+    // Shared batch description
+    descBody = m.caption || "";
   } else if(m.type === "audio"){
     // For voice: show the description that was typed in the preview sheet.
     // The old default "Voice message (Xs)" placeholder is now gone.
@@ -11492,6 +11641,9 @@ if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</
   if(fileBtn) fileBtn.addEventListener("click", e=>{ e.preventDefault(); e.stopPropagation(); if(e.target.closest("[data-tg-dl]")) return; });
   const dl = card.querySelector("[data-tg-dl]");
   if(dl) dl.addEventListener("click", e=>{ e.stopPropagation(); tgDownloadMessage(m); });
+  card.querySelectorAll("[data-tg-batch-dl]").forEach(bbtn=>{
+    bbtn.addEventListener("click", e=>{ e.stopPropagation(); tgDownloadBatchFile(m, parseInt(bbtn.dataset.tgBatchDl, 10)); });
+  });
   const storeBtn = card.querySelector("[data-tg-store]");
 if(storeBtn) storeBtn.addEventListener("click", e=>{
   e.stopPropagation();
@@ -11652,18 +11804,13 @@ function openTgViewer(url){
   $("#pktg-viewer-img").src = url;
   $("#pktg-viewer").classList.add("active");
 }
-async function tgDownloadMessage(m){
-  if(!m || m.deleted){ toast("Attached Item Deleted", "ic-close"); return; }
-  const media = state.tg.mediaMap[m.id] || {};
-  const url = media.mediaUrl;
+async function startTgFileDownload(dlKey, url, filename, channelId){
   if(!url){ toast("File data unavailable", "ic-close"); return; }
-  if(!isActiveMemberOfChannel(m.channelId)){ toast("Join this channel to download", "ic-lock"); return; }
-  if(dlActive.has(m.id)){ toast("Already downloading"); return; }
-  dlActive.add(m.id);
+  if(channelId && !isActiveMemberOfChannel(channelId)){ toast("Join this channel to download", "ic-lock"); return; }
+  if(dlActive.has(dlKey)){ toast("Already downloading"); return; }
+  dlActive.add(dlKey);
 
-  // Clean filename: strip "file-1790860588975-" style prefixes
-  let filename = m.filename || "download";
-  filename = filename.replace(/^[a-zA-Z]+-\d{12,}-/, "");
+  filename = (filename || "download").replace(/^[a-zA-Z]+-\d{12,}-/, "");
   if(!filename || filename.length < 2) filename = "download.zip";
 
   toast(`Downloading "${filename}"…`);
@@ -11671,32 +11818,23 @@ async function tgDownloadMessage(m){
   if(DL_MODE === "native" && isNativeFile(filename)){
     try{ nativeDownload(url, filename); }
     catch(e){ try{ window.location.href = url; }catch(_){} }
-    setTimeout(()=> dlActive.delete(m.id), 3000);
+    setTimeout(()=> dlActive.delete(dlKey), 3000);
     return;
   }
 
   const controller = new AbortController();
   const bubble = createDlBubble({ name: filename }, ()=> controller.abort());
-
-  // ⚡ Show spinner immediately
   bubble.set(null);
 
-  let usedStreaming = false;
   try{
-    await downloadInsideStore(url, filename, pct => {
-      usedStreaming = true;
-      bubble.set(pct);
-    }, controller.signal);
+    await downloadInsideStore(url, filename, pct => { bubble.set(pct); }, controller.signal);
     bubble.set(100);
     toast(`"${filename}" downloaded`);
   }catch(err){
     if(err && err.name === 'AbortError'){
       toast('Download cancelled');
     } else {
-      // 🚀 Streaming failed (CORS) → use native download but keep bubble visible
       console.warn("Streaming blocked, using native download:", err && err.message);
-
-      // Trigger native download
       try{
         const a = document.createElement("a");
         a.href = (String(url).indexOf("193-122-76-131.nip.io") > -1) ? url + (String(url).indexOf("?") > -1 ? "&" : "?") + "name=" + encodeURIComponent(filename) : url;
@@ -11710,31 +11848,34 @@ async function tgDownloadMessage(m){
         console.error("Native download failed:", e);
         try{ window.location.href = url; }catch(_){}
       }
-
-      // 🎯 Keep bubble visible for at least 2 seconds with a fake progress
       let fakePct = 0;
       const fakeInterval = setInterval(()=>{
         fakePct += 6;
-        if(fakePct >= 100){
-          fakePct = 100;
-          clearInterval(fakeInterval);
-          bubble.set(100);
-        } else {
-          bubble.set(fakePct);
-        }
+        if(fakePct >= 100){ fakePct = 100; clearInterval(fakeInterval); bubble.set(100); }
+        else { bubble.set(fakePct); }
       }, 100);
-
-      // Wait 2 seconds before removing bubble
       await new Promise(r => setTimeout(r, 2000));
       clearInterval(fakeInterval);
     }
   } finally {
-    // Small delay so user sees 100%
     setTimeout(()=>{
       bubble.remove();
-      setTimeout(()=> dlActive.delete(m.id), 1500);
+      setTimeout(()=> dlActive.delete(dlKey), 1500);
     }, 400);
   }
+}
+async function tgDownloadMessage(m){
+  if(!m || m.deleted){ toast("Attached Item Deleted", "ic-close"); return; }
+  const media = state.tg.mediaMap[m.id] || {};
+  await startTgFileDownload(m.id, media.mediaUrl, m.filename, m.channelId);
+}
+async function tgDownloadBatchFile(m, idx){
+  if(!m || m.deleted){ toast("Attached Item Deleted", "ic-close"); return; }
+  const media = state.tg.mediaMap[m.id] || {};
+  const f = media.files && media.files[idx];
+  const meta = m.files && m.files[idx];
+  if(!f || !meta){ toast("File data unavailable", "ic-close"); return; }
+  await startTgFileDownload(m.id + "_" + idx, f.mediaUrl, meta.filename, m.channelId);
 }
 
 // Helper: clean native download without black screen
@@ -12275,13 +12416,14 @@ async function sendStoreAppToChannel(){
 async function tgHandleFile(e, kind){
   const ch = state.channels.find(c=>c.id === state.tg.channelId);
   if(!isChannelOwner(ch)){ toast("Only the channel owner can upload here", "ic-close"); e.target.value=""; return; }
-  const file = e.target.files?.[0];
+  const files = Array.from(e.target.files || []);
   e.target.value = "";
-  if(!file) return;
+  if(!files.length) return;
   if(!state.tg.channelId){ toast("Open a channel first", "ic-close"); return; }
   if(guestBlock("broadcast in channels")) return;
   if(!storageReady()){ toast("Firebase is not connected — check your internet or reload the page", "ic-close"); return; }
-  openTgFilePreview(file, kind);
+  if(kind === "file"){ openTgBatchPreview(files); }
+  else { openTgFilePreview(files[0], kind); }
 }
 function openTgFilePreview(file, kind){
   state.tg.pendingAttachment = { file, kind };
@@ -12335,6 +12477,79 @@ function openTgFilePreview(file, kind){
     state.tg.pendingDescription = ($("#pv-desc").value || "").trim();
     wrap.remove();
     performTgUpload();
+  });
+}
+function openTgBatchPreview(files){
+  if(!files || !files.length) return;
+  state.tg.pendingBatch = files.map((file, i)=>({ key: "bf" + i + "_" + Date.now().toString(36), file, iconFile: null }));
+  const rowsHtml = state.tg.pendingBatch.map(it => `
+    <div class="pktg-batchrow" data-key="${it.key}">
+      <div class="pktg-batchrow-icon" id="bi-${it.key}">${fileIconHTML(it.file.name)}</div>
+      <div class="pktg-batchrow-info">
+        <div class="pktg-batchrow-name">${escapeHtml(it.file.name)}</div>
+        <div class="pktg-batchrow-size">${escapeHtml(fmtBytes(it.file.size))}</div>
+      </div>
+      <button type="button" class="pktg-batchrow-icon-btn" data-bicon="${it.key}" title="Custom icon"><svg width="16" height="16"><use href="#ic-image"/></svg></button>
+      <button type="button" class="pktg-batchrow-remove" data-bremove="${it.key}" title="Remove">&times;</button>
+    </div>`).join("");
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="batch-preview-backdrop">
+      <div class="sheet" style="padding:22px 20px calc(22px + var(--safe-bottom));max-height:90vh;overflow-y:auto;">
+        <h3 style="text-align:center;font-size:17px;margin:0 0 14px;">Send ${state.tg.pendingBatch.length} file(s)</h3>
+        <div id="batch-rows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:40vh;overflow-y:auto;">${rowsHtml}</div>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px;">Description (shared for all files)</label>
+          <textarea id="batch-desc" rows="3" placeholder="What's inside this batch?" style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:13.5px;font-family:inherit;resize:vertical;min-height:70px;max-height:180px;outline:none;-webkit-user-select:text;user-select:text;"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="batch-cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" id="batch-send" type="button">Send</button>
+        </div>
+      </div>
+    </div>`);
+  const wrap = $("#batch-preview-backdrop");
+  function refreshCount(){
+    const n = (state.tg.pendingBatch || []).length;
+    const h3 = wrap.querySelector("h3");
+    if(h3) h3.textContent = "Send " + n + " file(s)";
+    if(!n) wrap.remove();
+  }
+  wrap.querySelectorAll("[data-bremove]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.dataset.bremove;
+      state.tg.pendingBatch = (state.tg.pendingBatch || []).filter(it=> it.key !== key);
+      const row = wrap.querySelector(`.pktg-batchrow[data-key="${CSS.escape(key)}"]`);
+      if(row) row.remove();
+      refreshCount();
+    });
+  });
+  wrap.querySelectorAll("[data-bicon]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.dataset.bicon;
+      const input = $("#channel-icon-input");
+      input.onchange = (ev)=>{
+        const f = ev.target.files[0]; ev.target.value = "";
+        if(!f) return;
+        const it = (state.tg.pendingBatch || []).find(x=>x.key===key);
+        if(it){
+          it.iconFile = f;
+          const url = URL.createObjectURL(f);
+          const iconEl = $("#bi-" + key);
+          if(iconEl) iconEl.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;"/>`;
+          toast("Custom icon added");
+        }
+      };
+      input.click();
+    });
+  });
+  $("#batch-cancel").addEventListener("click", ()=>{ wrap.remove(); state.tg.pendingBatch = null; });
+  $("#batch-send").addEventListener("click", ()=>{
+    const description = ($("#batch-desc").value || "").trim();
+    const items = state.tg.pendingBatch || [];
+    state.tg.pendingBatch = null;
+    wrap.remove();
+    if(!items.length) return;
+    performTgBatchUpload(items, description);
   });
 }
 async function performTgUpload(){
@@ -12417,6 +12632,107 @@ function setTgUpload(p){
   $("#pktg-upload-pct").textContent = p + "%";
 }
 function hideTgUpload(){ $("#pktg-upload").classList.remove("active"); }
+function renderTgBatchQueue(queue){
+  state.tg.batchQueue = queue;
+  const rows = queue.map(it => `
+    <div class="pktg-bqrow" data-bqkey="${it.key}">
+      <div class="pktg-bqrow-top">
+        <span class="pktg-bqrow-name">${escapeHtml(it.file.name)}</span>
+        <span class="pktg-bqrow-pct" id="bq-pct-${it.key}">0%</span>
+      </div>
+      <div class="pktg-upload-track"><div class="pktg-upload-fill" id="bq-fill-${it.key}" style="width:0%"></div></div>
+      <button type="button" class="pktg-upload-cancel" data-bqcancel="${it.key}">Cancel</button>
+    </div>`).join("");
+  document.body.insertAdjacentHTML("beforeend", `<div class="sheet-backdrop dlg" id="batch-queue-backdrop" style="z-index:9999;">
+    <div class="sheet" style="padding:20px 18px calc(20px + var(--safe-bottom));max-height:80vh;overflow-y:auto;">
+      <h3 style="text-align:center;font-size:16px;margin:0 0 12px;">Uploading ${queue.length} file(s)</h3>
+      <div id="batch-queue-rows" style="display:flex;flex-direction:column;gap:12px;">${rows}</div>
+    </div>
+  </div>`);
+  $("#batch-queue-backdrop").querySelectorAll("[data-bqcancel]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.dataset.bqcancel;
+      const it = (state.tg.batchQueue || []).find(x=>x.key===key);
+      if(it) cancelTgBatchItem(it);
+    });
+  });
+}
+function updateTgBatchRow(it){
+  const fill = document.getElementById("bq-fill-" + it.key);
+  const pct = document.getElementById("bq-pct-" + it.key);
+  if(fill) fill.style.width = (it.pct || 0) + "%";
+  if(pct) pct.textContent = (it.status === 'cancelled' ? "Cancelled" : it.status === 'error' ? "Failed" : (it.pct || 0) + "%");
+  const row = document.querySelector(`.pktg-bqrow[data-bqkey="${CSS.escape(it.key)}"]`);
+  if(row && (it.status === 'cancelled' || it.status === 'done' || it.status === 'error')){
+    const btn = row.querySelector("[data-bqcancel]");
+    if(btn) btn.disabled = true;
+    row.style.opacity = it.status === 'cancelled' ? "0.45" : "1";
+  }
+}
+function closeTgBatchQueue(){
+  const el = $("#batch-queue-backdrop");
+  if(el) el.remove();
+  state.tg.batchQueue = null;
+}
+function cancelTgBatchItem(it){
+  it.status = 'cancelled';
+  if(it._ctrl){
+    it._ctrl.aborted = true;
+    if(it._ctrl.xhr){ try{ it._ctrl.xhr.abort(); }catch(e){} }
+    if(it._ctrl.chunkId){ cancelOracleUpload(it._ctrl.chunkId); }
+  }
+  if(it.result && it.result.path){ deleteOracleFile(it.result.path); it.result = null; }
+  updateTgBatchRow(it);
+}
+async function performTgBatchUpload(items, description){
+  if(!items.length) return;
+  const msgId = "chmsg_" + state.tg.channelId + "_" + generateAppId();
+  const queue = items.map(it => ({ key: it.key, file: it.file, iconFile: it.iconFile, status:'pending', pct:0, result:null, iconUrl:null }));
+  renderTgBatchQueue(queue);
+  for(let i = 0; i < queue.length; i++){
+    const it = queue[i];
+    if(it.status === 'cancelled') continue;
+    it.status = 'uploading';
+    updateTgBatchRow(it);
+    const ctrl = { xhr:null, chunkId:null, aborted:false };
+    it._ctrl = ctrl;
+    try{
+      const res = await uploadFileCancelable(it.file, msgId + "_" + i, "file", p=>{ it.pct = p; updateTgBatchRow(it); }, ctrl);
+      if(it.status === 'cancelled'){ if(res && res.path) deleteOracleFile(res.path); continue; }
+      it.result = res; it.pct = 100; it.status = 'done';
+      updateTgBatchRow(it);
+      if(it.iconFile){
+        try{ const ic = await uploadFileToServer(it.iconFile, msgId + "_" + i + "_icon", "icon", null); it.iconUrl = ic.url; }
+        catch(e){ console.warn("Icon upload failed", e); }
+      }
+    }catch(err){
+      if(it.status !== 'cancelled'){
+        it.status = 'error'; updateTgBatchRow(it);
+        toast("Upload failed: " + it.file.name, "ic-close");
+      }
+    }
+  }
+  const okItems = queue.filter(q => q.status === 'done' && q.result);
+  setTimeout(closeTgBatchQueue, 500);
+  if(!okItems.length){ toast("No files uploaded"); return; }
+  const publicFiles = okItems.map(q => ({ filename: q.file.name, mimeType: q.file.type || "", size: q.file.size, iconUrl: q.iconUrl || null }));
+  const privateFiles = okItems.map(q => ({ mediaUrl: q.result.url }));
+  try{
+    const pubRef = await addDoc(collection(db,"channelMessages"), {
+      channelId: state.tg.channelId, type: "batch", text: "",
+      caption: description || "",
+      files: publicFiles,
+      senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
+      createdAt: serverTimestamp(), createdAtMs: Date.now(), deleted: false, views: 0
+    });
+    await setDoc(doc(db,"channelMessageMedia", pubRef.id), { channelId: state.tg.channelId, files: privateFiles }, { merge: true });
+    toast("Uploaded " + okItems.length + " file(s) to channel");
+  }catch(e){
+    console.error(e);
+    if((e.code || "").includes("permission-denied")){ rulesBanner("Uploading files to this channel is blocked by your current Firestore rules."); toast("Firestore rules need updating — see banner", "ic-close"); }
+    else toast("Could not save batch: " + (e.message || e.code || ""), "ic-close");
+  }
+}
 function pingTyping(){
   if(!state.tg.channelId) return;
   const now = Date.now();
