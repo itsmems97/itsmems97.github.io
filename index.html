@@ -2229,9 +2229,85 @@ body:has(#web-page:not([hidden])) #web-page iframe{
     display:none !important;
   }
 }
+
+/* ============ OFFLINE MINI-GAME (Pika 2048) ============ */
+.pog-wrap{
+  position:fixed; inset:0; z-index:99999;
+  background:rgba(13,15,20,.97);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px; backdrop-filter:blur(6px);
+}
+.pog-wrap[hidden]{ display:none !important; }
+.pog-card{
+  width:100%; max-width:380px;
+  background:#15171f; border:1px solid #2a2d38; border-radius:20px;
+  padding:20px 18px calc(20px + var(--safe-bottom,0px));
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+  font:15px/1.4 -apple-system,Roboto,sans-serif; color:#e7e9f0;
+}
+.pog-top{ text-align:center; margin-bottom:14px; }
+.pog-title{ font-size:20px; font-weight:800; color:#FFC94A; }
+.pog-sub{ font-size:13px; color:#9aa0ae; margin-top:4px; }
+.pog-scorebar{ display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+.pog-score{ flex:1; background:#1d2029; border-radius:12px; padding:8px 10px; text-align:center; }
+.pog-score span{ display:block; font-size:11px; color:#9aa0ae; text-transform:uppercase; letter-spacing:.04em; }
+.pog-score b{ display:block; font-size:18px; font-weight:800; color:#fff; }
+.pog-btn{ background:#FF9F1A; color:#1a1300; border:none; border-radius:12px; padding:0 14px; height:52px; font-weight:800; font-size:13px; cursor:pointer; }
+.pog-board{
+  position:relative; display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
+  background:#1d2029; border-radius:14px; padding:8px; aspect-ratio:1/1; touch-action:none;
+}
+.pog-cell{ background:#262a36; border-radius:8px; }
+.pog-tile{
+  position:absolute; display:flex; align-items:center; justify-content:center;
+  border-radius:8px; font-weight:800; font-size:22px; color:#1a1300;
+  transition:transform .12s ease, opacity .12s ease;
+}
+.pog-tile[data-v="2"]{ background:#eee4da; }
+.pog-tile[data-v="4"]{ background:#ede0c8; }
+.pog-tile[data-v="8"]{ background:#f2b179; color:#fff; }
+.pog-tile[data-v="16"]{ background:#f59563; color:#fff; }
+.pog-tile[data-v="32"]{ background:#f67c5f; color:#fff; }
+.pog-tile[data-v="64"]{ background:#f65e3b; color:#fff; }
+.pog-tile[data-v="128"]{ background:#edcf72; color:#fff; font-size:19px; }
+.pog-tile[data-v="256"]{ background:#edcc61; color:#fff; font-size:19px; }
+.pog-tile[data-v="512"]{ background:#edc850; color:#fff; font-size:19px; }
+.pog-tile[data-v="1024"]{ background:#edc53f; color:#fff; font-size:16px; }
+.pog-tile[data-v="2048"]{ background:#FFD966; color:#1a1300; font-size:16px; box-shadow:0 0 20px rgba(255,217,102,.6); }
+.pog-msg{ margin-top:14px; text-align:center; font-weight:700; color:#FFC94A; font-size:14px; }
+.pog-hint{ text-align:center; font-size:12px; color:#6b7180; margin-top:12px; }
+
+/* ============ HOME SKELETON (pehli dafa load ke waqt) ============ */
+.gh-skeleton{ padding:10px 16px 20px; }
+.gh-skel-row{ display:flex; gap:10px; margin-bottom:14px; }
+.gh-skel-card{
+  flex:1; height:96px; border-radius:14px;
+  background:linear-gradient(90deg,#1d2029 25%,#262a36 37%,#1d2029 63%);
+  background-size:400% 100%;
+  animation:ghSkelShine 1.4s ease-in-out infinite;
+}
+@keyframes ghSkelShine{ 0%{ background-position:100% 0; } 100%{ background-position:0 0; } }
 </style>
 </head>
 <body>
+
+<!-- ============ OFFLINE MINI-GAME (Pika 2048) ============ -->
+<div id="pog-wrap" class="pog-wrap" hidden>
+  <div class="pog-card">
+    <div class="pog-top">
+      <div class="pog-title">No Internet</div>
+      <div class="pog-sub">Play Pika 2048 while you wait</div>
+    </div>
+    <div class="pog-scorebar">
+      <div class="pog-score"><span>Score</span><b id="pog-score">0</b></div>
+      <div class="pog-score"><span>Best</span><b id="pog-best">0</b></div>
+      <button id="pog-restart" class="pog-btn" type="button">New Game</button>
+    </div>
+    <div id="pog-board" class="pog-board"></div>
+    <div id="pog-msg" class="pog-msg" hidden></div>
+    <div class="pog-hint">Swipe or use arrow keys to combine tiles</div>
+  </div>
+</div>
 
 <svg style="display:none">
 <defs>
@@ -2288,278 +2364,6 @@ body:has(#web-page:not([hidden])) #web-page iframe{
 <symbol id="ic-eye-off" viewBox="0 0 24 24"><path d="M2 2l20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6.71 6.71A10.94 10.94 0 0 0 1 12s4 7 11 7a10.94 10.94 0 0 0 5.29-1.29M9.9 9.9a3 3 0 0 0 4.2 4.2M14.12 5.34A10.94 10.94 0 0 1 23 12a11 11 0 0 1-2.14 3.34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
 <symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M20 11A8 8 0 0 0 6.3 5.7L3 9m0 0V4m0 5h5m-4 4a8 8 0 0 0 13.7 5.3L21 15m0 0v5m0-5h-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
-
-<!-- ============ NEW PIKA SPLASH (v2) ============ -->
-<div id="pks2-splash" class="pks2-splash">
-  <div class="pks2-blob pks2-blob-a"></div>
-  <div class="pks2-blob pks2-blob-b"></div>
-  <div class="pks2-objects" id="pks2-objects"></div>
-  <div class="pks2-content">
-    <div class="pks2-logo-wrap">
-      <div class="pks2-logo-halo"></div>
-      <div class="pks2-logo">
-        <img src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png"
-             alt="PIKA STORE" crossorigin="anonymous" loading="eager" decoding="async" draggable="false">
-      </div>
-    </div>
-    <h1 class="pks2-brand" id="pks2-brand" aria-label="PIKA STORE"></h1>
-    <div class="pks2-tagline">Premium App Store</div>
-    <div class="pks2-loader">
-      <div class="pks2-loader-track"><div class="pks2-loader-fill" id="pks2-loader-fill"></div></div>
-      <div class="pks2-loader-label" id="pks2-loader-label">Loading 0%</div>
-    </div>
-    <div class="pks2-toast" id="pks2-toast" aria-live="polite"></div>
-  </div>
-</div>
-
-<script>
-(function(){
-  var uid = 0;
-  function nid(p){ return p + (++uid); }
-  function ballSVG(a, b, c, size){
-    var id = nid('b');
-    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 100 100">'
-      + '<defs><radialGradient id="'+id+'" cx="34%" cy="28%" r="84%">'
-      + '<stop offset="0" stop-color="'+a+'"/>'
-      + '<stop offset=".55" stop-color="'+b+'"/>'
-      + '<stop offset="1" stop-color="'+c+'"/>'
-      + '</radialGradient></defs>'
-      + '<circle cx="50" cy="50" r="46" fill="url(#'+id+')"/>'
-      + '<ellipse cx="34" cy="30" rx="13" ry="8.5" fill="#fff" opacity=".55" transform="rotate(-30 34 30)"/>'
-      + '</svg>';
-  }
-  function boltSVG(size){
-    var id = nid('bl');
-    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 100 100">'
-      + '<defs><linearGradient id="'+id+'" x1="0" y1="0" x2="1" y2="1">'
-      + '<stop offset="0" stop-color="#FFE066"/>'
-      + '<stop offset=".5" stop-color="#FFC107"/>'
-      + '<stop offset="1" stop-color="#FF9800"/>'
-      + '</linearGradient></defs>'
-      + '<path d="M58 6 L22 54 L46 54 L38 94 L78 44 L54 44 Z" fill="url(#'+id+')" stroke="#E8A800" stroke-width="2" stroke-linejoin="round"/>'
-      + '<path d="M50 18 L34 48 L46 48 L42 68" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".55"/>'
-      + '</svg>';
-  }
-  function starSVG(size){
-    var id = nid('st');
-    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 100 100">'
-      + '<defs><linearGradient id="'+id+'" x1="0" y1="0" x2="1" y2="1">'
-      + '<stop offset="0" stop-color="#FFE9A8"/>'
-      + '<stop offset="1" stop-color="#FFA800"/>'
-      + '</linearGradient></defs>'
-      + '<path d="M50 6 L62 38 L96 40 L70 61 L79 94 L50 75 L21 94 L30 61 L4 40 L38 38 Z" fill="url(#'+id+')" stroke="#E8A800" stroke-width="1.5" stroke-linejoin="round"/>'
-      + '<path d="M42 24 L48 40 L62 41 L51 50 L55 66 L42 57" fill="#fff" opacity=".5"/>'
-      + '</svg>';
-  }
-  function pebbleSVG(size){
-    var id = nid('pb');
-    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 88 90">'
-      + '<defs><radialGradient id="'+id+'" cx="34%" cy="28%" r="84%">'
-      + '<stop offset="0" stop-color="#ffffff"/>'
-      + '<stop offset=".62" stop-color="#fbfbff"/>'
-      + '<stop offset="1" stop-color="#d8dae4"/>'
-      + '</radialGradient></defs>'
-      + '<path d="M40 6 C62 2 82 18 84 40 C86 63 70 84 46 86 C22 88 4 70 3 47 C2 26 18 10 40 6 Z" fill="url(#'+id+')"/>'
-      + '<ellipse cx="31" cy="27" rx="14" ry="9" fill="#fff" opacity=".85" transform="rotate(-28 31 27)"/>'
-      + '</svg>';
-  }
-
-  (function buildLetters(){
-    var text = 'PIKA STORE';
-    var html = '';
-    for (var i = 0; i < text.length; i++){
-      var ch = text.charAt(i);
-      if (ch === ' '){ html += '<span class="pks2-space"></span>'; }
-      else {
-        var cls = i < 4 ? 'pks2-ltr pks2-ltr-pika' : 'pks2-ltr pks2-ltr-store';
-        html += '<span class="'+cls+'" style="--i:'+i+'">'+ch+'</span>';
-      }
-    }
-    document.getElementById('pks2-brand').innerHTML = html;
-  })();
-
-  var OBJECTS = [
-    { x:'8%',  y:'14%', tx:-70, ty:-60, d:'.25s', fd:'0s',   svg: ballSVG('#FFE9A8','#FFC107','#FF9800', 62) },
-    { x:'91%', y:'20%', tx: 80, ty:-50, d:'.45s', fd:'.7s',  svg: ballSVG('#FFD1DA','#FF5A67','#D9364A', 50) },
-    { x:'10%', y:'80%', tx:-80, ty: 60, d:'.65s', fd:'1.3s', svg: ballSVG('#DCCBFF','#8E6BFF','#6a4de6', 56) },
-    { x:'90%', y:'78%', tx: 80, ty: 60, d:'.85s', fd:'.4s',  svg: ballSVG('#FFF3B0','#FFD93D','#FFA800', 64) },
-    { x:'14%', y:'42%', tx:-60, ty:  0, d:'.55s', fd:'1s',   svg: boltSVG(46) },
-    { x:'86%', y:'46%', tx: 60, ty:  0, d:'.75s', fd:'.2s',  svg: starSVG(42) },
-    { x:'46%', y:'8%',  tx:  0, ty:-60, d:'1.05s',fd:'1.6s', svg: pebbleSVG(40) },
-    { x:'54%', y:'92%', tx:  0, ty: 60, d:'1.2s', fd:'.9s',  svg: ballSVG('#FFFFFF','#F2F3F8','#D8DAE4', 36) }
-  ];
-  (function buildObjects(){
-    var html = '';
-    for (var i = 0; i < OBJECTS.length; i++){
-      var o = OBJECTS[i];
-      html += '<div class="pks2-obj" style="--x:'+o.x+';--y:'+o.y+';--tx:'+o.tx+'px;--ty:'+o.ty+'px;--d:'+o.d+';--fd:'+o.fd+';">'
-        + '<div class="pks2-obj-inner">' + o.svg + '</div></div>';
-    }
-    document.getElementById('pks2-objects').innerHTML = html;
-  })();
-
-  var splashEl = document.getElementById('pks2-splash');
-  var fill = document.getElementById('pks2-loader-fill');
-  var label = document.getElementById('pks2-loader-label');
-  var toastEl = document.getElementById('pks2-toast');
-  var cur = 0, floorT = 0, stepCap = 14, exited = false, appReady = false, finishing = false, t0 = Date.now();
-
-  /* ===== SETTINGS: yahan se time badal sakte ho (milliseconds) ===== */
-  var STEP_SLOW_MS = 2000;  /* har message itni der dikhega (jab app abhi load ho rahi ho) */
-  var STEP_FAST_MS = 600;   /* app ready ho chuki ho to message jaldi jaldi niklenge */
-
-  function stamp(){ if(!window.__pksBootOk) return; try{ sessionStorage.setItem('pika_booted', String(Date.now())); }catch(e){} }
-  document.addEventListener('visibilitychange', function(){ if (document.hidden) stamp(); });
-  window.addEventListener('pagehide', stamp);
-
-  /* ===== Progress bar: 1% se 100% tak smooth ===== */
-  function paint(){
-    var p = Math.min(100, Math.floor(cur));
-    if (p < 1) p = 1;
-    fill.style.width = p + '%';
-    label.textContent = 'Loading ' + (p < 10 ? '0' : '') + p + '%';
-  }
-  function timeTarget(){ return 94 * (1 - Math.exp(-((Date.now() - t0) / 1000) / 7)); }
-  window.__pksStage = function(floor, top){ if (floor > floorT) floorT = floor; };
-  window.__pks2Exited = false;
-  function doExit(){
-    if (exited) return;
-    exited = true; window.__pks2Exited = true;
-    cur = 100; paint(); hideToast();
-    var s = document.getElementById('pks2-splash');
-    if (!s) return;
-    setTimeout(function(){
-      s.classList.add('out');
-      setTimeout(function(){ if (s.parentNode) s.remove(); }, 800);
-    }, 250);
-  }
-  setInterval(function(){
-    if (exited) return;
-    var tg = finishing ? 100 : Math.min(stepCap, 96, Math.max(timeTarget(), floorT));
-    if (cur < tg){
-      cur += finishing ? Math.max((tg - cur) * 0.25, 1.5) : Math.max((tg - cur) * 0.07, 0.12);
-      if (cur > tg) cur = tg;
-    }
-    paint();
-    if (finishing && cur >= 99.9) doExit();
-  }, 50);
-
-  /* ===== Toast messages (animation ke saath aate aur jaate hain) ===== */
-  function showToast(text, kind){
-    if (!toastEl) return;
-    toastEl.className = 'pks2-toast';
-    toastEl.innerHTML = '<span class="pks2-t-ic pks2-t-' + kind + '"></span><span>' + text + '</span>';
-    void toastEl.offsetWidth;
-    toastEl.className = 'pks2-toast in';
-  }
-  function hideToast(){ if (toastEl) toastEl.className = 'pks2-toast out'; }
-
-  /* ===== Real network speed test (chhoti si file, max 1.8 second) ===== */
-  var netInfo = null;
-  function fmtSpeed(m){ var mb = m / 8; return mb < 1 ? Math.round(mb * 1000) + ' KB/s' : mb.toFixed(1) + ' MB/s'; }
-  function speedTest(){
-    if (navigator.onLine === false){ netInfo = { offline: true, mbps: 0 }; return; }
-    var url = 'https://193-122-76-131.nip.io/files/pika-speedtest.bin?pks=' + Date.now();
-    var ctl = window.AbortController ? new AbortController() : null;
-    var tStart = performance.now(), tFirst = 0, bytes = 0, done = false;
-    function finish(ended){
-      if (done) return; done = true;
-      try{ if (ctl) ctl.abort(); }catch(e){}
-      var t = tFirst ? (performance.now() - tFirst) / 1000 : 0;
-      var mbps = (bytes && t) ? (bytes * 8 / 1e6) / Math.max(t, 0.25) : 0;
-      var c = navigator.connection;
-      if (bytes < 100000 && c && c.downlink) mbps = c.downlink;
-      if (!bytes && navigator.onLine === false) netInfo = { offline: true, mbps: 0 };
-      else netInfo = { offline: false, mbps: mbps };
-    }
-    setTimeout(function(){ finish(false); }, 2000);
-    try{
-      fetch(url, { cache: 'no-store', mode: 'cors', signal: ctl ? ctl.signal : undefined }).then(function(r){
-        if (!r.body || !r.body.getReader){
-          return r.blob().then(function(b){ tFirst = tFirst || tStart; bytes = b.size; finish(true); });
-        }
-        var rd = r.body.getReader();
-        (function pump(){
-          rd.read().then(function(x){
-            if (done) return;
-            if (x.done){ finish(true); return; }
-            if (!tFirst) tFirst = performance.now();
-            bytes += x.value.length;
-            pump();
-          }).catch(function(){ finish(false); });
-        })();
-      }).catch(function(){ finish(false); });
-    }catch(e){ finish(false); }
-  }
-  function netToast(){
-    var n = netInfo;
-    if (!n) return ['Network Checking...', 'spin'];
-    if (n.offline) return ['No Internet', 'warn'];
-    var mb = n.mbps / 8, lv = 'Super Fast 5G', k = 'ok';
-    if (mb < 0.1){ lv = 'Very Poor'; k = 'warn'; }
-    else if (mb < 1){ lv = 'Poor'; k = 'warn'; }
-    else if (mb < 2){ lv = 'Good'; k = 'info'; }
-    else if (mb < 4){ lv = 'Strong'; k = 'ok'; }
-    else if (mb < 8){ lv = 'Excellent'; k = 'ok'; }
-    else if (mb < 16){ lv = 'Very Excellent'; k = 'ok'; }
-    return ['Network ' + lv + (n.mbps >= 0.05 ? ' &bull; ' + fmtSpeed(n.mbps) : ''), k];
-  }
-
-  /* ===== Messages ka sequence ===== */
-  var STEPS = [
-    function(){ return ['Welcome', 'info']; },
-    function(){ return ['Network Checking...', 'spin']; },
-    netToast,
-    function(){ return ['Security Check...', 'spin']; },
-    function(){ return ['Security Check Pass', 'ok']; },
-    function(){ return ['Integrity Check...', 'spin']; },
-    function(){ return ['Integrity Pass', 'ok']; }
-  ];
-  var WAIT_MSGS = ['Loading Apps...', 'Almost Ready...', 'Please Wait...'];
-  var seqIdx = 0, seqStart = 0, seqShow = true, waitIdx = 0;
-  function startStep(){
-    var s;
-    if (seqIdx < STEPS.length) s = STEPS[seqIdx]();
-    else { s = [WAIT_MSGS[waitIdx % WAIT_MSGS.length], 'spin']; waitIdx++; }
-    stepCap = Math.min(96, 14 * (seqIdx + 1));
-    showToast(s[0], s[1]);
-    seqStart = Date.now(); seqShow = true;
-  }
-  function startSeq(){
-    startStep();
-    setInterval(function(){
-      if (exited || finishing) return;
-      if (appReady && seqIdx >= STEPS.length){ finishing = true; return; }
-      var now = Date.now();
-      if (seqShow){
-        var dwell = appReady ? STEP_FAST_MS : (seqIdx < STEPS.length ? STEP_SLOW_MS : 2500);
-        if (now - seqStart >= dwell){ hideToast(); seqShow = false; seqStart = now; }
-      } else if (now - seqStart >= 300){
-        seqIdx++;
-        if (seqIdx >= STEPS.length && appReady){ finishing = true; return; }
-        startStep();
-      }
-    }, 100);
-  }
-
-  var skipSplash = false;
-  try{ skipSplash = (Date.now() - (+sessionStorage.getItem('pika_booted') || 0)) < 120000; }catch(e){}
-  if (skipSplash){ exited = true; window.__pks2Exited = true; splashEl.remove(); }
-  else { splashEl.classList.add('run'); paint(); startSeq(); speedTest(); }
-
-  setTimeout(function(){
-    if (exited || window.__pksModuleOk) return;
-    var reloaded = false;
-    try{ reloaded = sessionStorage.getItem('pks_reloaded') === '1'; sessionStorage.setItem('pks_reloaded', '1'); }catch(e){}
-    if (!reloaded) location.reload();
-    else label.textContent = 'Slow connection… check internet';
-  }, 90000);
-  window.addEventListener('load', function(){ window.__pksStage(35, 58); });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ window.__pksStage(45, 58); });
-  setTimeout(doExit, 60000);
-  window.__pksHide = function(){ appReady = true; };
-})();
-</script>
   <div id="username-gate" hidden>
   <img class="gate-logo" alt="Pika Store" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
   <h1>Welcome to Pika Store</h1>
@@ -2583,7 +2387,7 @@ body:has(#web-page:not([hidden])) #web-page iframe{
   </div>
 </div>
 
-<div id="app" hidden>
+<div id="app">
   <header class="topbar">
     <div class="brand">
       <img class="mark" alt="" src="https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png" />
@@ -2634,6 +2438,11 @@ body:has(#web-page:not([hidden])) #web-page iframe{
     </div>
     <div class="gh-list" id="gh-latest-list"></div>
   </section>
+
+  <div class="gh-skeleton" id="gh-skeleton" hidden>
+    <div class="gh-skel-row"><div class="gh-skel-card"></div><div class="gh-skel-card"></div></div>
+    <div class="gh-skel-row"><div class="gh-skel-card"></div><div class="gh-skel-card"></div></div>
+  </div>
 
   <div class="gh-empty" id="gh-empty" hidden>
     <div style="font-size:56px;">📦</div>
@@ -5403,6 +5212,7 @@ let booted = false;
 
 function boot(){
   if(booted) return; booted = true;
+  loadCachedApps();
   renderProfile();
   initOwnerConsole();
   initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); initTelegramUI(); initHomeCategories();
@@ -6105,10 +5915,19 @@ function listenApps(){
   const q = query(collection(db,"apps"), orderBy("createdAt","desc"), limit(200));
   onSnapshot(q, snap=>{
     state.apps = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    try{ localStorage.setItem('pika_apps_cache', JSON.stringify(state.apps)); }catch(e){}
     window.__pksAppsReady = true; if(window.__pksWantHide) hideSplash();
     window.__pksAppFullyBooted = true;
     renderHome(); renderProfile(); renderUsersPage(); applyDeepLink(); checkAutoVerification();
   }, err=>{ console.warn(err); toast(`Firestore error: ${err.code || ""}`, "ic-close"); renderEmptyState(); });
+}
+function loadCachedApps(){
+  try{
+    const raw = localStorage.getItem('pika_apps_cache');
+    if(!raw) return;
+    const cached = JSON.parse(raw);
+    if(Array.isArray(cached) && cached.length){ state.apps = cached; renderHome(); }
+  }catch(e){}
 }
 function renderEmptyState(){}
 function listenCategories(){
@@ -6584,10 +6403,19 @@ function renderHome(){
     ['gh-trending-sec','gh-latest-sec'].forEach(id => {
       const el = document.getElementById(id); if (el) el.hidden = true;
     });
-    if (empty) empty.hidden = false;
+    const skel = document.getElementById('gh-skeleton');
+    if(!window.__pksAppsReady){
+      if (skel) skel.hidden = false;
+      if (empty) empty.hidden = true;
+    } else {
+      if (skel) skel.hidden = true;
+      if (empty) empty.hidden = false;
+    }
     ghRenderChips();
     return;
   }
+  const skel2 = document.getElementById('gh-skeleton');
+  if (skel2) skel2.hidden = true;
   if (heroEl) heroEl.style.display = '';
   const dotsEl = document.getElementById('gh-dots');
   if(dotsEl) dotsEl.style.display = '';
@@ -14024,6 +13852,141 @@ window.startMariaPet = function(){
   pet.classList.add('started');
   state='emerge';show(1);resetIdle();
 };
+})();
+</script>
+
+<script>
+/* ============ OFFLINE MINI-GAME (Pika 2048) — pure client-side, no network ============ */
+(function(){
+  var wrap = document.getElementById('pog-wrap');
+  if(!wrap) return;
+  var boardEl = document.getElementById('pog-board');
+  var scoreEl = document.getElementById('pog-score');
+  var bestEl  = document.getElementById('pog-best');
+  var msgEl   = document.getElementById('pog-msg');
+  var restartBtn = document.getElementById('pog-restart');
+
+  var SIZE = 4, grid, score, best, over, won;
+
+  function emptyGrid(){ var g=[]; for(var r=0;r<SIZE;r++) g.push([0,0,0,0]); return g; }
+  function loadBest(){ try{ return parseInt(localStorage.getItem('pog_best')||'0',10)||0; }catch(e){ return 0; } }
+  function saveBest(v){ try{ localStorage.setItem('pog_best', String(v)); }catch(e){} }
+  function randomTile(){
+    var empties=[];
+    for(var r=0;r<SIZE;r++) for(var c=0;c<SIZE;c++) if(grid[r][c]===0) empties.push([r,c]);
+    if(!empties.length) return;
+    var pick = empties[Math.floor(Math.random()*empties.length)];
+    grid[pick[0]][pick[1]] = Math.random() < 0.9 ? 2 : 4;
+  }
+  function newGame(){
+    grid = emptyGrid(); score = 0; over = false; won = false;
+    randomTile(); randomTile();
+    msgEl.hidden = true;
+    render();
+  }
+  function render(){
+    boardEl.innerHTML = '';
+    for(var i=0;i<SIZE*SIZE;i++){ var cell=document.createElement('div'); cell.className='pog-cell'; boardEl.appendChild(cell); }
+    var pad=8, gap=8, size=boardEl.clientWidth;
+    var cellSize = (size - pad*2 - gap*(SIZE-1)) / SIZE;
+    for(var r=0;r<SIZE;r++){
+      for(var c=0;c<SIZE;c++){
+        var v = grid[r][c];
+        if(!v) continue;
+        var t = document.createElement('div');
+        t.className = 'pog-tile'; t.setAttribute('data-v', v>2048?'2048':String(v));
+        t.textContent = v;
+        t.style.width = cellSize+'px'; t.style.height = cellSize+'px';
+        t.style.left = (pad + c*(cellSize+gap))+'px';
+        t.style.top  = (pad + r*(cellSize+gap))+'px';
+        boardEl.appendChild(t);
+      }
+    }
+    scoreEl.textContent = score;
+    if(score > best){ best = score; saveBest(best); }
+    bestEl.textContent = best;
+  }
+  function slideRow(row){
+    var vals = row.filter(function(v){ return v!==0; });
+    var out = [];
+    for(var i=0;i<vals.length;i++){
+      if(i<vals.length-1 && vals[i]===vals[i+1]){
+        var merged = vals[i]*2;
+        out.push(merged); score += merged;
+        if(merged===2048) won = true;
+        i++;
+      } else out.push(vals[i]);
+    }
+    while(out.length<SIZE) out.push(0);
+    return out;
+  }
+  function rotateCW(g){
+    var ng = emptyGrid();
+    for(var r=0;r<SIZE;r++) for(var c=0;c<SIZE;c++) ng[c][SIZE-1-r] = g[r][c];
+    return ng;
+  }
+  function move(dir){
+    if(over) return;
+    var g = grid, rotations = 0;
+    if(dir==='up') rotations = 3;
+    else if(dir==='right') rotations = 2;
+    else if(dir==='down') rotations = 1;
+    for(var i=0;i<rotations;i++) g = rotateCW(g);
+    var moved = false, newG = [];
+    for(var r=0;r<SIZE;r++){
+      var before = g[r].join(',');
+      var after = slideRow(g[r]);
+      if(after.join(',') !== before) moved = true;
+      newG.push(after);
+    }
+    var back = (4 - rotations) % 4;
+    for(i=0;i<back;i++) newG = rotateCW(newG);
+    grid = newG;
+    if(moved){ randomTile(); render(); checkEnd(); }
+  }
+  function canMove(){
+    for(var r=0;r<SIZE;r++){
+      for(var c=0;c<SIZE;c++){
+        if(grid[r][c]===0) return true;
+        if(c<SIZE-1 && grid[r][c]===grid[r][c+1]) return true;
+        if(r<SIZE-1 && grid[r][c]===grid[r+1][c]) return true;
+      }
+    }
+    return false;
+  }
+  function checkEnd(){
+    if(won){ msgEl.textContent = 'You made 2048! Keep going for a higher score.'; msgEl.hidden = false; won = false; }
+    if(!canMove()){ over = true; msgEl.textContent = 'Game Over — tap New Game to try again.'; msgEl.hidden = false; }
+  }
+
+  document.addEventListener('keydown', function(e){
+    if(wrap.hidden) return;
+    var map = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right' };
+    if(map[e.key]){ e.preventDefault(); move(map[e.key]); }
+  });
+  var touchX=0, touchY=0;
+  boardEl.addEventListener('touchstart', function(e){
+    var t = e.changedTouches[0]; touchX = t.clientX; touchY = t.clientY;
+  }, { passive:true });
+  boardEl.addEventListener('touchend', function(e){
+    var t = e.changedTouches[0];
+    var dx = t.clientX - touchX, dy = t.clientY - touchY;
+    if(Math.max(Math.abs(dx),Math.abs(dy)) < 24) return;
+    if(Math.abs(dx) > Math.abs(dy)) move(dx>0?'right':'left');
+    else move(dy>0?'down':'up');
+  }, { passive:true });
+  restartBtn.addEventListener('click', newGame);
+  window.addEventListener('resize', render);
+
+  best = loadBest();
+
+  function pogShow(){ if(!wrap.hidden) return; if(!grid) newGame(); wrap.hidden = false; }
+  function pogHide(){ wrap.hidden = true; }
+  function pogMaybeShow(){ if(!navigator.onLine) pogShow(); }
+  window.addEventListener('offline', pogMaybeShow);
+  window.addEventListener('online', pogHide);
+  pogMaybeShow();
+  window.addEventListener('load', pogMaybeShow);
 })();
 </script>
 </body>

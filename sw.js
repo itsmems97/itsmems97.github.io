@@ -154,15 +154,8 @@ async function handlePage(e) {
     return res;
   }
 
-  const job = refreshPage(cache);
-  e.waitUntil(job.catch(() => {}));
-
-  const timeout = new Promise((resolve) => setTimeout(() => resolve(null), PAGE_WAIT_MS));
-  const fresh = await Promise.race([job.then(makeResponse).catch(() => null), timeout]);
-  if (fresh) return fresh;
-
-  /* Net slow tha: purana page abhi dikhaya, naya baad mein aaye to user ko bata do */
-  e.waitUntil(job.then((r) => (r.changed ? notifyClients() : null)).catch(() => {}));
+  /* Turant purana (cached) page do — wait nahi karna. Naya version background mein check hoga. */
+  e.waitUntil(refreshPage(cache).then((r) => (r.changed ? notifyClients() : null)).catch(() => {}));
   return cached;
 }
 
