@@ -1800,8 +1800,7 @@ html[data-theme="dark"] .gh-sec-title{ color:#eef1f6; }
   box-shadow:0 16px 28px -16px rgba(30,24,70,.45), 0 4px 10px -6px rgba(30,24,70,.20);
 }
 .gh-gcover::after{
-  content:''; position:absolute; left:12%; top:10%; width:60%; height:34%;
-  border-radius:50%; background:rgba(255,255,255,.24);  pointer-events:none;
+  display:none;
 }
 .gh-gbadge{
   position:absolute; left:9px; bottom:9px; height:20px; padding:0 8px; border-radius:10px;
@@ -1859,8 +1858,7 @@ html[data-theme="dark"] .gh-ldl{ background:rgba(106,77,230,.22); }
 }
 .gh-pcard:active{ transform:scale(.96); }
 .gh-pcard::after{
-  content:''; position:absolute; left:14%; top:8%; width:52%; height:30%;
-  border-radius:50%; background:rgba(255,255,255,.26);  pointer-events:none;
+  display:none;
 }
 .gh-ptag{
   position:absolute; left:14px; top:13px; font-size:9.5px; font-weight:700;
@@ -1892,7 +1890,7 @@ html[data-theme="dark"] .gh-empty{ color:#eef1f6; }
 }
 .gh-app-obj::after{
   content:''; position:absolute; inset:0; pointer-events:none;
-  background:linear-gradient(160deg, rgba(255,255,255,.4), rgba(255,255,255,0) 46%);
+  background:none;
 }
 .gh-app-obj:active{ transform:rotate(var(--gh-tilt, 0deg)) scale(.94); }
 .gh-app-obj-fallback{
