@@ -4745,6 +4745,13 @@ async function installApp(){
 
   const LOGO = "https://raw.githubusercontent.com/itsmems97/itsmems97.github.io/refs/heads/main/pika.png";
 
+  // ⚡ Native prompt TURANT (tap ke saath), warna Chrome block kar deta hai
+  let nativeChoice = null;
+  try{
+    const pr = deferredInstall.prompt();
+    nativeChoice = Promise.all([pr, deferredInstall.userChoice]).then(r => r[1]);
+  }catch(e){ console.warn(e); }
+
   // ============ STAGE 1: PREPARING (custom) ============
   document.body.insertAdjacentHTML("beforeend", `
     <div id="install-anim">
@@ -4782,12 +4789,19 @@ async function installApp(){
 
   // ============ STAGE 2: NATIVE PROMPT ============
   let accepted = false;
+  let installFailed = !nativeChoice;
   try{
-    deferredInstall.prompt();
-    const c = await deferredInstall.userChoice;
-    deferredInstall = null;
-    accepted = !!(c && c.outcome === "accepted");
-  }catch(e){ console.warn(e); }
+    if(nativeChoice){
+      const c = await nativeChoice;
+      deferredInstall = null;
+      accepted = !!(c && c.outcome === "accepted");
+    }
+  }catch(e){ console.warn(e); installFailed = true; }
+
+  if(installFailed){
+    await infoSheet("Install Pika Store", installInstructions(), "OK");
+    return;
+  }
 
   if(!accepted){
     // User cancelled — nothing more to do
