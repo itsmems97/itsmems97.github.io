@@ -2128,7 +2128,7 @@ html:has(#movie-chooser),body:has(#movie-chooser){overflow:hidden!important}
 .pktg-preview-lock{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 
 .broadcast-card{opacity:1;transform:none}
-#pet{top:34%;bottom:auto}
+#pet{left:0;right:auto;top:18%;bottom:auto}
 .bottom-nav{background:var(--bg-elevated);border:1px solid var(--border);box-shadow:0 -2px 10px rgba(0,0,0,.25);touch-action:manipulation}
 html[data-theme="light"] .bottom-nav{background:#fff}
 .bottom-nav .nav-btn.active{flex-grow:1}
@@ -13694,6 +13694,7 @@ var LOOPMSG = { speak: [], gift: [] };
 var LOOPIDX = { speak: 0, gift: 0 };
 var msgActive = false;
 pet.style.width=SIZE+'px';pet.style.height=SIZE+'px';
+edge='left';pet.classList.add('flip');
 for(var i=1;i<=15;i++){(function(n){
 var v=document.createElement('video');
 v.src=BASE+(n===14?'Maria5loop':n===15?'Maria5pop':'Maria'+n)+'.webm';v.muted=true;v.poster='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';v.loop=(n===14);v.playsInline=true;v.setAttribute('playsinline','');v.preload='metadata';
