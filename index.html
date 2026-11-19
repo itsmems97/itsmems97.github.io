@@ -2745,10 +2745,6 @@ body:has(#web-page:not([hidden])) #web-page iframe{
   <button class="nav-btn" data-page="upload-page"><svg><use href="#ic-upload"/></svg>Upload</button>
   <button class="nav-btn" data-page="profile-page"><svg><use href="#ic-user"/></svg>Profile</button>
 </nav>
-  <button class="chat-fab" id="chat-fab-btn">
-    <svg><use href="#ic-chat"/></svg>
-    <span class="badge" id="chat-badge" hidden>0</span>
-  </button>
   <div id="toast-container"></div>
   <!-- Owner Console Detector (shown only for owner when enabled) -->
 <button id="owner-console-btn" title="Console Errors" style="display:none">
@@ -5295,7 +5291,7 @@ function boot(){
   listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance(); listenSpoofSetting(); listenSpoofMembers();
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity(); startHeartbeat();
-  if(state.isGuest){ $("#chat-fab-btn").style.display = "none"; toast("Guest mode: preview & download only", "ic-lock"); }
+  if(state.isGuest){ toast("Guest mode: preview & download only", "ic-lock"); }
   if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelMembers(); migrateChannelMessageMedia(); toast("Owner control enabled", "ic-check"); }
 
   // ⚡ Auto-backfill VIP badges — users who joined channels BEFORE the VIP feature
@@ -6980,7 +6976,7 @@ ${state.isOwner ? `
     </div>
     <div style="padding:12px 18px 6px">
       <button class="btn btn-ghost btn-block" id="detail-comments-btn" type="button" style="justify-content:center">
-        <svg width="16" height="16"><use href="#ic-chat"/></svg> Comments & Reviews
+        <svg width="16" height="16"><use href="#ic-chat"/></svg> Report Problem
       </button>
     </div>
     <div style="height:20px"></div>
@@ -7014,7 +7010,10 @@ if(closeBtnDirect) {
 
 $("#detail-copy-btn").addEventListener("click", async ()=>{ await shareApp(app, up); });
   const cmtBtn = $("#detail-comments-btn");
-if(cmtBtn) cmtBtn.addEventListener("click", ()=> openCommentsSheet(app.id, "pika", app.name));
+if(cmtBtn) cmtBtn.addEventListener("click", ()=>{
+  const msg = encodeURIComponent(app.name + "\n[ Write Problem ]");
+  window.open("https://wa.me/923041891897?text=" + msg, "_blank", "noopener");
+});
   const delBtn = $("#detail-delete-btn");
 if(delBtn) delBtn.addEventListener("click", async ()=>{ if(await deleteApp(app)) wrap.remove(); });
 
@@ -7993,7 +7992,6 @@ function openChatPanel(){
   $("#chat-input").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
   $("#chat-attach-btn").addEventListener("click", ()=>{ openAppPicker(app=> postChat("Shared an app", { appId: app.id, appName: app.name, appThumb: app.thumbUrl || "" })); });
 }
-$("#chat-fab-btn").addEventListener("click", openChatPanel);
 
 function popupNotify(title, body){
   if("Notification" in window && Notification.permission === "granted" && document.hidden){ try{ new Notification(title, { body }); }catch(e){} }
@@ -8663,10 +8661,9 @@ function openUserSheet(uid){
   const jm = joinedMs(raw);
   const canDm = uid !== state.uid && !raw.guest && (u.verified || state.verified || state.isOwner);
   const canWa = uid !== state.uid && !raw.guest && (u.verified || state.isOwner);
-  const contactBtns = canDm ? `
+  const contactBtns = canWa ? `
       <div style="display:flex;gap:10px;padding:0 18px 16px">
-        ${canWa ? `<button class="btn btn-primary" style="flex:1" id="us-wa" type="button" hidden><svg><use href="#ic-chat"/></svg> WhatsApp</button>` : ""}
-        <button class="btn btn-ghost" style="flex:1" id="us-dm" type="button"><svg><use href="#ic-chat"/></svg> Private chat</button>
+        <button class="btn btn-primary" style="flex:1" id="us-wa" type="button" hidden><svg><use href="#ic-chat"/></svg> WhatsApp</button>
       </div>` : "";
   const hasVip = Array.isArray(raw.vipChannels) && raw.vipChannels.length > 0;
 const controls = (state.isOwner && uid !== state.uid && !raw.owner) ? `
@@ -8706,10 +8703,6 @@ const controls = (state.isOwner && uid !== state.uid && !raw.owner) ? `
       const b = $("#us-wa");
       if(b && ph){ b.hidden = false; b.addEventListener("click", ()=> window.open(`https://wa.me/${ph.replace(/\D/g,"")}`, "_blank", "noopener")); }
     }).catch(()=>{});
-  }
-  if(canDm){
-    const d = $("#us-dm");
-    if(d) d.addEventListener("click", ()=>{ wrap.remove(); openDmPanel(uid); });
   }
   wrap.addEventListener("click", async e=>{
   if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
@@ -13389,7 +13382,7 @@ Version: ${escapeHtml(app.version || '—')}</div>
       </div>
       <div style="padding:12px 18px 6px">
         <button class="btn btn-ghost btn-block" id="disc-comments-btn" type="button" style="justify-content:center">
-          <svg width="16" height="16"><use href="#ic-chat"/></svg> Comments & Reviews
+          <svg width="16" height="16"><use href="#ic-chat"/></svg> Report Problem
         </button>
       </div>
       <div style="height:20px"></div>
@@ -13403,7 +13396,10 @@ Version: ${escapeHtml(app.version || '—')}</div>
   document.getElementById('disc-dl-btn').addEventListener('click', ()=>{
     startDiscoverDownload(app);
   });
-  document.getElementById('disc-comments-btn').addEventListener('click', ()=> openCommentsSheet(app.id, "discover", app.name));
+  document.getElementById('disc-comments-btn').addEventListener('click', ()=>{
+    const msg = encodeURIComponent(app.name + "\n[ Write Problem ]");
+    window.open("https://wa.me/923041891897?text=" + msg, "_blank", "noopener");
+  });
   document.getElementById('disc-cp-btn').addEventListener('click', async ()=>{
     await shareDiscoverApp(app);
   });
