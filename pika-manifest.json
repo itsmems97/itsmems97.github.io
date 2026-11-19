@@ -103,7 +103,7 @@
       "purpose": "any"
     },
     {
-      "src": "pika.png",
+      "src": "pika-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
