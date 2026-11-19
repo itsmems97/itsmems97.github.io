@@ -2287,6 +2287,22 @@ body:has(#web-page:not([hidden])) #web-page iframe{
   animation:ghSkelShine 1.4s ease-in-out infinite;
 }
 @keyframes ghSkelShine{ 0%{ background-position:100% 0; } 100%{ background-position:0 0; } }
+
+/* ============ CHANNELS SKELETON ============ */
+.ch-skel{ pointer-events:none; }
+.ch-skel .sk{
+  background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 37%,var(--surface-2) 63%);
+  background-size:400% 100%; animation:ghSkelShine 1.4s ease-in-out infinite; border-radius:8px;
+}
+.ch-skel .sk-av{ width:46px; height:46px; border-radius:50%; flex-shrink:0; }
+.ch-skel .sk-l1{ height:13px; width:62%; margin-bottom:8px; }
+.ch-skel .sk-l2{ height:10px; width:42%; }
+.ch-skel .sk-bd{ width:46px; height:11px; flex-shrink:0; }
+.ch-badge-skel{
+  display:inline-block; width:46px; height:11px; border-radius:6px;
+  background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 37%,var(--surface-2) 63%);
+  background-size:400% 100%; animation:ghSkelShine 1.4s ease-in-out infinite;
+}
 </style>
 </head>
 <body>
@@ -2602,7 +2618,12 @@ body:has(#web-page:not([hidden])) #web-page iframe{
         <div class="section-head"><h2>Channels</h2></div>
         <div style="margin-bottom:12px"><button class="btn btn-ghost btn-block" id="channel-create-btn"><svg><use href="#ic-plus"/></svg> Create a channel</button></div>
       </div>
-      <div class="settings-list" id="channels-list"></div>
+      <div class="settings-list" id="channels-list">
+<div class="mini-row ch-skel"><div class="sk sk-av"></div><div class="mini-main" style="flex:1"><div class="sk sk-l1"></div><div class="sk sk-l2"></div></div><div class="sk sk-bd"></div></div>
+<div class="mini-row ch-skel"><div class="sk sk-av"></div><div class="mini-main" style="flex:1"><div class="sk sk-l1"></div><div class="sk sk-l2"></div></div><div class="sk sk-bd"></div></div>
+<div class="mini-row ch-skel"><div class="sk sk-av"></div><div class="mini-main" style="flex:1"><div class="sk sk-l1"></div><div class="sk sk-l2"></div></div><div class="sk sk-bd"></div></div>
+<div class="mini-row ch-skel"><div class="sk sk-av"></div><div class="mini-main" style="flex:1"><div class="sk sk-l1"></div><div class="sk sk-l2"></div></div><div class="sk sk-bd"></div></div>
+</div>
       <div style="height:30px"></div>
     </section>
 
@@ -5099,6 +5120,7 @@ setInterval(()=>{
   if(appVisible || gateVisible) st.remove();
 }, 1000);
 loadCachedApps();   // ⚡ Login check ka wait kiye bina, turant saved apps dikhao
+try{ loadCachedChannels(); }catch(e){}
 initAuthWithRetry();
 }
 /* ⚡ Backfill VIP badges for users who joined channels before VIP feature existed */
@@ -5221,7 +5243,7 @@ function boot(){
   loadCachedApps();
   renderProfile();
   initOwnerConsole();
-  initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); initTelegramUI(); initHomeCategories();
+  initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); loadCachedChannels(); initTelegramUI(); initHomeCategories();
   if(!state.isGuest) loadMyPhone();
   listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance(); listenSpoofSetting(); listenSpoofMembers();
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
@@ -9422,12 +9444,50 @@ function isActiveMemberOfChannel(channelId){
   const m = state.myChannels[channelId];
   return !!(m && !m.blocked);
 }
+/* ⚡ CHANNELS CACHE — Home ki tarah: pehle saved list turant dikhao, phir Firestore se update */
+const CH_CACHE_KEY = "pika_channels_cache";
+const CH_MY_CACHE_KEY = "pika_my_channels_cache";
+function saveChannelsCache(){
+  try{
+    const lean = state.channels.map(ch=>{
+      const o = {};
+      Object.keys(ch).forEach(k=>{
+        const v = ch[k];
+        if(v && typeof v === "object" && typeof v.toMillis === "function") return;   // Firestore Timestamp skip
+        if(k === "photoURL" && typeof v === "string" && v.length > 60000) return;   // bohat bhari data-URL skip
+        o[k] = v;
+      });
+      return o;
+    });
+    const str = JSON.stringify(lean);
+    if(str.length < 1500000) localStorage.setItem(CH_CACHE_KEY, str);
+  }catch(e){}
+}
+function saveMyChannelsCache(){
+  try{ localStorage.setItem(CH_MY_CACHE_KEY, JSON.stringify({ key: myMemberKey(), data: JSON.parse(JSON.stringify(state.myChannels || {})) })); }catch(e){}
+}
+function loadCachedChannels(){
+  try{
+    const raw = localStorage.getItem("pika_channels_cache");
+    if(raw){
+      const arr = JSON.parse(raw);
+      if(Array.isArray(arr) && arr.length && !state.channels.length) state.channels = arr;
+    }
+    const rawMy = localStorage.getItem("pika_my_channels_cache");
+    if(rawMy){
+      const m = JSON.parse(rawMy);
+      if(m && m.key && m.key === myMemberKey() && m.data && typeof m.data === "object") state.myChannels = m.data;
+    }
+  }catch(e){}
+  renderChannelsPage();
+}
 function listenChannels(){
-  if(!firebaseReady) return;
+  if(!firebaseReady){ state.channelsFailed = true; renderChannelsPage(); return; }
   const q = query(collection(db,"channels"), orderBy("createdAt","desc"), limit(200));
   onSnapshot(q, snap=>{
     state.channels = snap.docs.map(d=>({ id:d.id, ...d.data() }));
     state.channelsLoaded = true;
+    saveChannelsCache();
     refreshMyChannels();
     if(state.tg.panelOpen && state.tg.channelId){
       const fresh = state.channels.find(c=>c.id === state.tg.channelId);
@@ -9441,7 +9501,7 @@ function listenChannels(){
         }
       }
     }
-  }, err=>{ console.warn("channels listener", err); toast(`Channels sync error: ${err.code||""}`, "ic-close"); });
+  }, err=>{ console.warn("channels listener", err); state.channelsFailed = true; renderChannelsPage(); toast(`Channels sync error: ${err.code||""}`, "ic-close"); });
 }
 async function refreshMyChannels(){
   renderChannelsPage();
@@ -9456,6 +9516,7 @@ async function refreshMyChannels(){
   }));
   state.myChannels = entries;
   state.myChannelsLoaded = true;
+  saveMyChannelsCache();
   renderChannelsPage();
   // If we're in preview mode for a channel and just became a member, reload as member
   if(state.tg.panelOpen && state.tg.channelId && state.tg.previewMode && entries[state.tg.channelId]){
@@ -9470,12 +9531,20 @@ function renderChannelsPage(){
   const list = $("#channels-list"); if(!list) return;
   const createBtn = $("#channel-create-btn");
   if(createBtn) createBtn.hidden = state.isGuest || !(state.verified || state.isOwner);
+  /* ⚡ Pehla data aane tak skeleton dikhao (khali screen nahi) */
+  if(!state.channelsLoaded && !state.channelsFailed && !state.channels.length){
+    const row = `<div class="mini-row ch-skel"><div class="sk sk-av"></div><div class="mini-main" style="flex:1"><div class="sk sk-l1"></div><div class="sk sk-l2"></div></div><div class="sk sk-bd"></div></div>`;
+    list.innerHTML = row.repeat(5);
+    return;
+  }
   list.innerHTML = state.channels.map(ch=>{
     const mine = state.myChannels[ch.id];
     const badge = mine ? (mine.blocked
       ? `<span style="color:var(--danger);font-size:11px;font-weight:700">BLOCKED</span>`
       : `<span style="color:var(--accent-2);font-size:11px;font-weight:700">JOINED</span>`)
-      : `<span style="color:var(--text-faint);font-size:11px;font-weight:700">PREVIEW</span>`;
+      : ((state.myChannelsLoaded || state.isGuest)
+          ? `<span style="color:var(--text-faint);font-size:11px;font-weight:700">PREVIEW</span>`
+          : `<span class="ch-badge-skel"></span>`);
     return `<div class="mini-row tap" data-channel-open="${ch.id}">
       ${avatarHtml(ch.name, ch.photoURL, "lg")}
       <div class="mini-main"><b>${escapeHtml(ch.name)}${tick(true)}</b><small>by ${escapeHtml(ch.ownerName||"—")} • ${fmtCount(ch.memberCount||1)} member${(ch.memberCount||1)===1?"":"s"}</small></div>
