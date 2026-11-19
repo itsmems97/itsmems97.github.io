@@ -9734,21 +9734,24 @@ async function joinChannelWithCode(channel, codeRaw){
   if(guestBlock("join a channel")) return false;
   if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return false; }
   const memberKey = myMemberKey();
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
   try{
+    const vr = await fetch(VPS + "/secret_code.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ secret: SECRET, action: "redeem", code: code, channelId: channel.id, usedByUid: state.uid, usedByName: state.username || "" })
+    });
+    const vdata = await vr.json();
+    if(!vdata.status){
+      if(vdata.message === "used") toast("This code was already used", "ic-close");
+      else if(vdata.message === "otherchannel") toast("This code is for a different channel", "ic-close");
+      else toast("Code not found - check it and try again", "ic-close");
+      return false;
+    }
+
     await runTransaction(db, async tx=>{
       // ============ SAARI READS PEHLE ============
-      const codeRef = doc(db,"channelCodes",code);
-      const codeSnap = await tx.get(codeRef);
-      if(!codeSnap.exists()){
-        const e = new Error("Code not found"); e.code = "WRONGCODE"; e.why = "notfound"; throw e;
-      }
-      if(codeSnap.data().channelId !== channel.id){
-        const e = new Error("Other channel"); e.code = "WRONGCODE"; e.why = "otherchannel"; throw e;
-      }
-      if(codeSnap.data().used){
-        const e = new Error("Already used"); e.code = "WRONGCODE"; e.why = "used"; throw e;
-      }
-      
       const channelRef = doc(db,"channels",channel.id);
       const channelSnap = await tx.get(channelRef);
       const isCustom = channelSnap.exists() && channelSnap.data().customMemberCount === true;
@@ -9757,8 +9760,6 @@ async function joinChannelWithCode(channel, codeRaw){
       const userSnap = await tx.get(userRef);
       
       // ============ AB SAARI WRITES ============
-      tx.update(codeRef, { used:true, usedBy: memberKey, usedAt: serverTimestamp() });
-      
       tx.set(doc(db,"channels",channel.id,"members",memberKey), {
         uid: state.uid, name: state.username, photoURL: state.photoURL || "",
         role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
@@ -9784,12 +9785,7 @@ async function joinChannelWithCode(channel, codeRaw){
     await refreshMyChannels();
     return true;
   }catch(e){
-    if(e && e.code === "WRONGCODE"){
-      if(e.why === "used") toast("This code was already used", "ic-close");
-      else if(e.why === "otherchannel") toast("This code is for a different channel", "ic-close");
-      else toast("Code not found - check it and try again", "ic-close");
-    }
-    else toast("Failed: " + (e.code||e.message), "ic-close");
+    toast("Failed: " + (e.code||e.message), "ic-close");
     return false;
   }
 }
@@ -10078,20 +10074,23 @@ function openChannelMembersSheet(channelId){
   });
 }
 async function generateUniqueChannelCode(channelId, channelName){
-  let lastErr = null;
-  for(let i=0;i<6;i++){
-    const code = randomChannelCode(12);
-    try{
-      await setDoc(doc(db,"channelCodes",code), {
-        channelId, channelName, createdBy: state.authUid || state.uid,
-        createdAt: serverTimestamp(), createdAtMs: Date.now(),
-        used:false, usedBy:null, usedAt:null
-      });
-      try{ await updateDoc(doc(db,"channels",channelId), { codeIds: arrayUnion(code) }); }catch(e){}
-      return code;
-    }catch(e){ lastErr = e; break; }
-  }
-  throw lastErr || new Error("Could not generate a unique code");
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
+  const r = await fetch(VPS + "/secret_code.php", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      secret: SECRET,
+      action: "generate",
+      channelId: channelId,
+      channelName: channelName,
+      createdByUid: state.authUid || state.uid,
+      createdByName: state.username || ""
+    })
+  });
+  const data = await r.json();
+  if(!data.status) throw new Error(data.message || "Could not generate a unique code");
+  return data.code;
 }
 function openChannelKeysManagementSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId);
@@ -10312,6 +10311,8 @@ function openChannelKeysManagementSheet(channelId){
 function openChannelCodesSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId); if(!ch) return;
   if(!isChannelOwner(ch)){ toast("Only the channel owner can view secret codes", "ic-close"); return; }
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
   const html = `
   <div class="sheet-backdrop" id="chcodes-backdrop"><div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
       <div class="sheet-handle"></div>
@@ -10323,78 +10324,72 @@ function openChannelCodesSheet(channelId){
   </div></div>`;
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#chcodes-backdrop");
-  if(chCodesUnsub){ chCodesUnsub(); chCodesUnsub = null; }
-  if(chDocUnsub){ chDocUnsub(); chDocUnsub = null; }
-  let codeIds = [];
-  const codeData = {};
+  let codesList = [];
   function render(){
     const box = $("#chcodes-list"); if(!box) return;
-    if(!codeIds.length){ box.innerHTML = `<div class="mini-row" style="color:var(--text-faint)">No codes yet. Tap "Generate new code" to make one.</div>`; return; }
-    box.innerHTML = codeIds.map(id=>{
-      const c = codeData[id];
-      const used = c && c !== "loading" && c !== "missing" && c.used;
-      const notFound = (c === "missing");
-      const statusColor = (used || notFound) ? "var(--danger)" : "var(--accent-2)";
-      const statusText = used ? "Used" : (notFound ? "Not found (do not share)" : "Unused");
+    if(!codesList.length){ box.innerHTML = `<div class="mini-row" style="color:var(--text-faint)">No codes yet. Tap "Generate new code" to make one.</div>`; return; }
+    box.innerHTML = codesList.map(c=>{
+      const used = !!c.used;
+      const statusColor = used ? "var(--danger)" : "var(--accent-2)";
       let joinedBy = "";
-      if(used && c && c.usedBy){
-        const u = state.users[c.usedBy];
-        joinedBy = (u && u.name) ? u.name : "a member";
+      if(used && c.usedByUid){
+        const u = state.users[c.usedByUid];
+        joinedBy = c.usedByName || (u && u.name) || "a member";
       }
       const metaLine = used && joinedBy
         ? `<b style="color:${statusColor}">Used</b> • joined by <span style="color:var(--text-dim);font-weight:600">${escapeHtml(joinedBy)}</span>`
-        : `<b style="color:${statusColor}">${statusText}</b>`;
+        : `<b style="color:${statusColor}">${used ? "Used" : "Unused"}</b>`;
       return `<div class="code-row">
   <div class="code-main">
-    <span class="code-value">${escapeHtml(id)}</span>
+    <span class="code-value">${escapeHtml(c.code)}</span>
     <span class="code-meta">${metaLine}</span>
   </div>
   <div style="display:flex;gap:6px;">
-    <button class="icon-del" data-copy-code="${escapeHtml(id)}" title="Copy code" style="color:var(--accent-2)">
+    <button class="icon-del" data-copy-code="${escapeHtml(c.code)}" title="Copy code" style="color:var(--accent-2)">
       <svg style="color:var(--accent-2) !important"><use href="#ic-copy"/></svg>
     </button>
-    <button class="icon-del" data-del-code="${escapeHtml(id)}" title="Delete code" style="color:var(--danger)">
+    <button class="icon-del" data-del-code="${escapeHtml(c.code)}" title="Delete code" style="color:var(--danger)">
       <svg style="color:var(--danger) !important"><use href="#ic-trash"/></svg>
     </button>
   </div>
 </div>`;
     }).join("");
   }
-  async function loadAll(ids){
-    codeIds = ids.slice().reverse();
-    codeIds.forEach(id=>{ if(!(id in codeData)) codeData[id] = "loading"; });
+  async function loadAll(){
+    try{
+      const r = await fetch(VPS + "/secret_code.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "list", channelId: channelId })
+      });
+      const data = await r.json();
+      codesList = data.status ? (data.codes || []) : [];
+    }catch(e){ console.warn("load codes failed", e); }
     render();
-    await Promise.all(codeIds.map(async id=>{
-      if(codeData[id] !== "loading") return;
-      try{ const s = await getDoc(doc(db,"channelCodes",id)); codeData[id] = s.exists() ? s.data() : "missing"; }
-      catch(e){ codeData[id] = "missing"; }
-      render();
-    }));
   }
-  chDocUnsub = onSnapshot(doc(db,"channels",channelId), s=>{
-    const fresh = s.exists() ? s.data() : null;
-    const ids = (fresh && Array.isArray(fresh.codeIds)) ? fresh.codeIds : [];
-    loadAll(ids);
-  }, err=>{ console.warn("channel doc listener", err); toast("Could not load codes: " + (err.code||err.message), "ic-close"); });
-  const pollTimer = setInterval(async ()=>{
+  loadAll();
+  const pollTimer = setInterval(()=>{
     if(!document.body.contains(wrap)) return;
-    await Promise.all(codeIds.map(async id=>{
-      try{ const s = await getDoc(doc(db,"channelCodes",id)); codeData[id] = s.exists() ? s.data() : "missing"; }catch(e){}
-    }));
-    render();
+    loadAll();
   }, 4000);
   wrap.addEventListener("click", async e=>{
-    if(e.target === wrap || e.target.closest("[data-close]")){ if(chDocUnsub){ chDocUnsub(); chDocUnsub = null; } clearInterval(pollTimer); wrap.remove(); return; }
+    if(e.target === wrap || e.target.closest("[data-close]")){ clearInterval(pollTimer); wrap.remove(); return; }
     // DELETE CODE LOGIC
 const del = e.target.closest("[data-del-code]");
 if(del){
   const codeToDel = del.dataset.delCode;
   if(!(await confirmSheet("Delete Secret Code?", "This code will be removed forever. Members who already joined using this code will NOT be removed.", "Delete"))) return;
   try{
-    await deleteDoc(doc(db, "channelCodes", codeToDel));
-    await updateDoc(doc(db, "channels", channelId), { codeIds: arrayRemove(codeToDel) }).catch(()=>{});
+    const r = await fetch(VPS + "/secret_code.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ secret: SECRET, action: "delete", code: codeToDel, requesterUid: state.authUid || state.uid })
+    });
+    const data = await r.json();
+    if(!data.status) throw new Error(data.message);
     toast("Secret code deleted");
-  }catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
+    loadAll();
+  }catch(err){ toast("Delete failed: " + (err.message||"error"), "ic-close"); }
   return;
 }
 
@@ -10402,8 +10397,8 @@ if(del){
 const cp = e.target.closest("[data-copy-code]");
 if(cp){ const ok = await copyText(cp.dataset.copyCode); toast(ok ? "Code copied" : "Could not copy", ok ? "ic-check" : "ic-close"); return; }
     if(e.target.closest("#chcodes-add")){
-      try{ const code = await generateUniqueChannelCode(channelId, ch.name); toast("New code: " + code, "ic-check"); }
-      catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+      try{ const code = await generateUniqueChannelCode(channelId, ch.name); toast("New code: " + code, "ic-check"); loadAll(); }
+      catch(err){ toast("Failed: " + (err.message||"error"), "ic-close"); }
     }
   });
 }
