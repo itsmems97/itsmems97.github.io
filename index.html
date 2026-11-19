@@ -9743,36 +9743,49 @@ async function joinChannelWithCode(channel, codeRaw){
       return false;
     }
 
-    await runTransaction(db, async tx=>{
-      // ============ SAARI READS PEHLE ============
-      const channelRef = doc(db,"channels",channel.id);
-      const channelSnap = await tx.get(channelRef);
-      const isCustom = channelSnap.exists() && channelSnap.data().customMemberCount === true;
-      
-      const userRef = doc(db,"users", state.uid);
-      const userSnap = await tx.get(userRef);
-      
-      // ============ AB SAARI WRITES ============
-      tx.set(doc(db,"channels",channel.id,"members",memberKey), {
-        uid: state.uid, name: state.username, photoURL: state.photoURL || "",
-        role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
-      });
-      
-      if(!isCustom){
-        tx.update(channelRef, { memberCount: increment(1) });
-      }
-      
-      // ⚡ Auto VIP badge for joining member
-      if(userSnap.exists()){
-        const existing = Array.isArray(userSnap.data().vipChannels) ? userSnap.data().vipChannels : [];
-        if(!existing.includes(channel.name)){
-          tx.update(userRef, {
-            vipChannels: arrayUnion(channel.name),
-            updatedAt: serverTimestamp()
-          });
+    try{
+      await runTransaction(db, async tx=>{
+        // ============ SAARI READS PEHLE ============
+        const channelRef = doc(db,"channels",channel.id);
+        const channelSnap = await tx.get(channelRef);
+        const isCustom = channelSnap.exists() && channelSnap.data().customMemberCount === true;
+        
+        const userRef = doc(db,"users", state.uid);
+        const userSnap = await tx.get(userRef);
+        
+        // ============ AB SAARI WRITES ============
+        tx.set(doc(db,"channels",channel.id,"members",memberKey), {
+          uid: state.uid, name: state.username, photoURL: state.photoURL || "",
+          role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
+        });
+        
+        if(!isCustom){
+          tx.update(channelRef, { memberCount: increment(1) });
         }
-      }
-    });
+        
+        // ⚡ Auto VIP badge for joining member
+        if(userSnap.exists()){
+          const existing = Array.isArray(userSnap.data().vipChannels) ? userSnap.data().vipChannels : [];
+          if(!existing.includes(channel.name)){
+            tx.update(userRef, {
+              vipChannels: arrayUnion(channel.name),
+              updatedAt: serverTimestamp()
+            });
+          }
+        }
+      });
+    }catch(txErr){
+      // Firestore step fail ho gaya — code ko VPS pe wapas "unused" kar do, waste na ho
+      try{
+        await fetch(VPS + "/secret_code.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ secret: SECRET, action: "unredeem", code: code, channelId: channel.id, usedByUid: state.uid })
+        });
+      }catch(e2){}
+      throw txErr;
+    }
+
     toast("Joined " + channel.name);
     if(window.__pikaOneSignal){ try{ await window.__pikaOneSignal.User.addTag("channel_"+channel.id, "joined"); }catch(e){} }
     await refreshMyChannels();
