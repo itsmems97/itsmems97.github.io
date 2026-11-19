@@ -86,6 +86,40 @@ window.addEventListener('unhandledrejection',function(e){var r=e.reason;window._
 </script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FFC61A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' font-family='Arial' font-weight='900' fill='%230B0E14'%3EP%3C/text%3E%3C/svg%3E" />
 
+<script>
+(function(){
+  try{
+    var q = location.search || '';
+    var hasApp = /[?&](app|cat|dm|disc)=/.test(q);
+    var hasCh = /[?&]channel=/.test(q);
+    if(!hasApp && !hasCh) return;
+    window.__pksDlPending = { app: hasApp, ch: hasCh };
+    var st = document.createElement('style');
+    st.textContent = '#pks-dl-wait{position:fixed;inset:0;z-index:9990;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(120% 90% at 50% 18%,#fdf7dd 0%,#f4f5f9 46%,#e9e9e9 100%);color:#3a3320;font:600 16px system-ui,-apple-system,Roboto,sans-serif;transition:opacity .3s}'
+      + '#pks-dl-wait.out{opacity:0;pointer-events:none}'
+      + '#pks-dl-wait .sp{width:44px;height:44px;border-radius:50%;border:4px solid rgba(0,0,0,.12);border-top-color:#FFC61A;animation:pksDlSpin .8s linear infinite}'
+      + '#pks-dl-wait small{font-weight:400;font-size:12.5px;opacity:.65}'
+      + '@keyframes pksDlSpin{to{transform:rotate(360deg)}}';
+    document.documentElement.appendChild(st);
+    var d = document.createElement('div');
+    d.id = 'pks-dl-wait';
+    d.innerHTML = '<div class="sp"></div><div>Please wait\u2026</div><small>Opening your link</small>';
+    document.documentElement.appendChild(d);
+    function remove(){
+      var e = document.getElementById('pks-dl-wait'); if(!e) return;
+      e.classList.add('out');
+      setTimeout(function(){ if(e.parentNode) e.parentNode.removeChild(e); }, 350);
+    }
+    window.__pksDlDone = function(kind){
+      var p = window.__pksDlPending; if(!p) return;
+      if(kind === 'all'){ window.__pksDlPending = null; remove(); return; }
+      p[kind] = false;
+      if(!p.app && !p.ch){ window.__pksDlPending = null; remove(); }
+    };
+    setTimeout(function(){ window.__pksDlDone('all'); }, 20000);
+  }catch(e){}
+})();
+</script>
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script src="https://accounts.google.com/gsi/client?hl=en" async defer></script>
 
@@ -4466,6 +4500,7 @@ function enterStore(){
 function showGate(notice){
   if(notice !== "banned" && !window.__gateForce && firebaseReady && __autoGuestTries < 2 && new URLSearchParams(location.search).get("owner") !== "1"){ autoGuest(notice); return; }
   hideSplash(); $("#app").hidden = true; $("#username-gate").hidden = false;
+  if(window.__pksDlDone) window.__pksDlDone('all');
   const msgs = { session:"You were signed out because this account was opened in another browser.", revoked:"You were logged out by the store admin.", guestExpired:"Your Guest account expired after 3 days." };
   const n = $("#gate-notice");
   if(msgs[notice]){ n.textContent = msgs[notice]; n.hidden = false; } else { n.hidden = true; }
@@ -6598,6 +6633,7 @@ function applyDeepLink(searchOverride, force){
   if(dm && state.uid) openDmPanel(dm);
   if(disc){ setTimeout(()=> resolveDiscoverShareCode(disc), 800); }
   if((cat || appId || dm || disc) && !isLive){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
+  if(window.__pksDlDone) window.__pksDlDone('app');
 }
 function renderAppRow(selector, apps, showRank){
   const row = $(selector);
@@ -9577,16 +9613,17 @@ function applyChannelDeepLink(searchOverride, force){
   const isLive = searchOverride !== undefined;
   const qs = new URLSearchParams(isLive ? searchOverride : location.search);
   const cid = qs.get("channel");
-  if(!cid){ if(!force) channelDeepLinkDone = true; return; }
+  if(!cid){ if(!force) channelDeepLinkDone = true; if(window.__pksDlDone) window.__pksDlDone('ch'); return; }
   if(!state.channelsLoaded) return;
   if(!state.isGuest && !state.myChannelsLoaded) return;
   channelDeepLinkDone = true;
   if(!isLive){ try{ history.replaceState(null, "", location.pathname); }catch(e){} }
   const ch = state.channels.find(c=>c.id===cid);
-  if(!ch){ toast("This channel is no longer available.", "ic-close"); return; }
+  if(!ch){ toast("This channel is no longer available.", "ic-close"); if(window.__pksDlDone) window.__pksDlDone('ch'); return; }
   const nav = document.querySelector('.nav-btn[data-page="channels-page"]');
   if(nav) nav.click();
   openChannelEntry(cid);
+  if(window.__pksDlDone) window.__pksDlDone('ch');
 }
 function openChannelEntry(channelId){
   // Guests can view channels in preview mode (blurred) — sign-in prompt appears on unlock tap
