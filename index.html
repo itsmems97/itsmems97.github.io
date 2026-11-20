@@ -5309,7 +5309,7 @@ function boot(){
   if(!state.isGuest){ listenChat(); listenDmActivity(); }
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ toast("Guest mode: preview & download only", "ic-lock"); }
-  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelMembers(); migrateChannelMessageMedia(); toast("Owner control enabled", "ic-check"); }
+  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelMembers(); migrateChannelMessageMedia(); migrateChannelsToVPS(); toast("Owner control enabled", "ic-check"); }
 
   // ⚡ Auto-backfill VIP badges — users who joined channels BEFORE the VIP feature
 // Runs 2.5s after boot so listenChannels() has finished loading channel data.
@@ -5577,6 +5577,106 @@ async function migrateChannelMessageMedia(){
     }
     if(moved > 0) console.log(`Migrated ${moved} channel message(s) to private media collection`);
   }catch(e){ console.warn("channel message media migration", e); }
+}
+
+/* ================= ONE-TIME MIGRATION: Firestore channels → VPS ================= */
+async function migrateChannelsToVPS(){
+  if(!state.isOwner) return;
+  if(localStorage.getItem("pika_vps_channel_migration_done")) return;
+  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
+  let chCount = 0, memCount = 0, msgCount = 0;
+  try{
+    const chSnap = await getDocs(collection(db,"channels"));
+    for(const chDoc of chSnap.docs){
+      const ch = chDoc.data();
+      const chId = chDoc.id;
+      try{
+        await fetch(VPS + "/channels.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            secret: SECRET, action: "import", id: chId,
+            name: ch.name || "Channel", photoURL: ch.photoURL || "",
+            ownerUid: ch.ownerUid || "", ownerName: ch.ownerName || "",
+            memberCount: ch.memberCount || 1,
+            activeMemberCount: ch.activeMemberCount || 0,
+            customMemberCount: !!ch.customMemberCount,
+            createdAt: ch.createdAtMs || (ch.createdAt && ch.createdAt.toMillis ? ch.createdAt.toMillis() : Date.now())
+          })
+        });
+        chCount++;
+      }catch(e){ console.warn("migrate channel failed", chId, e); }
+
+      try{
+        const memSnap = await getDocs(collection(db,"channels",chId,"members"));
+        for(const memDoc of memSnap.docs){
+          const m = memDoc.data();
+          try{
+            await fetch(VPS + "/members.php", {
+              method: "POST",
+              headers: {"Content-Type":"application/json"},
+              body: JSON.stringify({
+                secret: SECRET, action: "import",
+                channelId: chId, uid: memDoc.id,
+                name: m.name || "", photoURL: m.photoURL || "",
+                role: m.role || "member", blocked: !!m.blocked,
+                viaCode: m.viaCode || "imported",
+                joinedAt: m.joinedAt && m.joinedAt.toMillis ? m.joinedAt.toMillis() : Date.now()
+              })
+            });
+            memCount++;
+          }catch(e){ console.warn("migrate member failed", memDoc.id, e); }
+        }
+      }catch(e){ console.warn("members fetch failed", chId, e); }
+    }
+
+    const msgSnap = await getDocs(collection(db,"channelMessages"));
+    for(const msgDoc of msgSnap.docs){
+      const m = msgDoc.data();
+      let mediaUrl = "", filesArr = null;
+      try{
+        const mediaDoc = await getDoc(doc(db,"channelMessageMedia", msgDoc.id));
+        if(mediaDoc.exists()){
+          const md = mediaDoc.data();
+          mediaUrl = md.mediaUrl || md.fileUrl || "";
+          if(Array.isArray(md.files)) filesArr = md.files;
+        }
+      }catch(e){}
+      try{
+        await fetch(VPS + "/messages.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            secret: SECRET, action: "import", id: msgDoc.id,
+            channelId: m.channelId || "",
+            type: m.type || "text",
+            text: m.text || "", caption: m.caption || "",
+            filename: m.filename || "", mimeType: m.mimeType || "",
+            size: m.size || 0, durationSec: m.durationSec || 0,
+            mediaUrl: mediaUrl, iconUrl: m.iconUrl || "",
+            previewThumbUrl: m.previewThumbUrl || "",
+            files: filesArr,
+            appId: m.appId || "", appName: m.appName || "",
+            appThumb: m.appThumb || "", appFormat: m.appFormat || "", appSize: m.appSize || "",
+            senderUid: m.senderUid || "", senderName: m.senderName || "", senderPhoto: m.senderPhoto || "",
+            replyTo: m.replyTo || null,
+            views: m.views || 0, customViews: !!m.customViews,
+            deleted: !!m.deleted, edited: !!m.edited,
+            createdAt: m.createdAtMs || Date.now()
+          })
+        });
+        msgCount++;
+      }catch(e){ console.warn("migrate message failed", msgDoc.id, e); }
+    }
+
+    localStorage.setItem("pika_vps_channel_migration_done", "1");
+    toast(`✅ Migrated to VPS: ${chCount} channels, ${memCount} members, ${msgCount} messages`, "ic-check");
+    console.log(`[VPS Migration] Done: ${chCount} channels, ${memCount} members, ${msgCount} messages`);
+  }catch(e){
+    console.warn("[VPS Migration] Failed:", e);
+    toast("VPS migration failed — check console", "ic-close");
+  }
 }
 
 /* ================= MAINTENANCE MODE ================= */
