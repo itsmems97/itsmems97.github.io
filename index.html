@@ -5306,10 +5306,10 @@ function boot(){
   initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); loadCachedChannels(); initTelegramUI(); initHomeCategories();
   if(!state.isGuest) loadMyPhone();
   listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance(); listenSpoofSetting(); listenSpoofMembers();
-  if(!state.isGuest){ listenChat(); listenDmActivity(); }
+  // listenChat / listenDmActivity band: group aur private chat UI se hata diye
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ toast("Guest mode: preview & download only", "ic-lock"); }
-  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelMembers(); migrateChannelMessageMedia(); migrateChannelsToVPS(); toast("Owner control enabled", "ic-check"); }
+  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); toast("Owner control enabled", "ic-check"); }
 
   // ⚡ VIP backfill ab zaroori nahi — naye joins ka VIP badge VPS se already sahi milta hai
   // (ye functions Firestore ke purane/khaali members data check karte, isliye band kar diye)
@@ -9640,39 +9640,78 @@ function loadCachedChannels(){
   renderChannelsPage();
 }
 function listenChannels(){
-  if(!firebaseReady){ state.channelsFailed = true; renderChannelsPage(); return; }
-  const q = query(collection(db,"channels"), orderBy("createdAt","desc"), limit(200));
-  onSnapshot(q, snap=>{
-    state.channels = snap.docs.map(d=>({ id:d.id, ...d.data() }));
-    state.channelsLoaded = true;
-    saveChannelsCache();
-    refreshMyChannels();
-    if(state.tg.panelOpen && state.tg.channelId){
-      const fresh = state.channels.find(c=>c.id === state.tg.channelId);
-      if(fresh){
-        state.tg.channel = fresh;
-        // If membership just changed (user joined via code while in preview), refresh mode
-        const nowMember = isActiveMemberOfChannel(state.tg.channelId);
-        if(nowMember && state.tg.previewMode){
-          closeTelegramChannel();
-          openTelegramChannel(state.tg.channelId);
+  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
+  let firstLoad = true, lastJson = "", warned = false;
+  const load = async ()=>{
+    if(document.hidden && !firstLoad) return;
+    try{
+      const r = await fetch(VPS + "/channels.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "list" })
+      });
+      const data = await r.json();
+      if(!data.status) throw new Error(data.message || "load failed");
+      const fresh = (data.channels || []).map(c=>({
+        ...c,
+        customMemberCount: !!Number(c.customMemberCount),
+        createdAtMs: (c.createdAt || 0) * 1000
+      }));
+      const json = JSON.stringify(fresh);
+      state.channelsFailed = false;
+      if(!firstLoad && json === lastJson) return;
+      lastJson = json;
+      firstLoad = false;
+      state.channels = fresh;
+      state.channelsLoaded = true;
+      saveChannelsCache();
+      refreshMyChannels();
+      if(state.tg.panelOpen && state.tg.channelId){
+        const f = state.channels.find(c=>c.id === state.tg.channelId);
+        if(f){
+          state.tg.channel = f;
+          const nowMember = isActiveMemberOfChannel(state.tg.channelId);
+          if(nowMember && state.tg.previewMode){
+            closeTelegramChannel();
+            openTelegramChannel(state.tg.channelId);
+          }
         }
       }
+    }catch(err){
+      console.warn("channels load", err);
+      if(!state.channelsLoaded){ state.channelsFailed = true; renderChannelsPage(); }
+      if(!warned){ warned = true; toast("Channels sync error", "ic-close"); }
     }
-  }, err=>{ console.warn("channels listener", err); state.channelsFailed = true; renderChannelsPage(); toast(`Channels sync error: ${err.code||""}`, "ic-close"); });
+  };
+  state.reloadChannels = load;
+  load();
+  setInterval(load, 8000);
 }
 async function refreshMyChannels(){
   renderChannelsPage();
   if(!firebaseReady || !state.uid || state.isGuest){ state.myChannelsLoaded = true; applyChannelDeepLink(); return; }
   const entries = {};
-  const key = myMemberKey();
-  await Promise.all(state.channels.map(async ch=>{
+  const uids = [myMemberKey()];
+  if(state.uid && state.uid !== uids[0]) uids.push(state.uid);
+  let gotOk = false;
+  for(const u of uids){
     try{
-      const s = await getDoc(doc(db,"channels",ch.id,"members",key));
-      if(s.exists()) entries[ch.id] = s.data();
+      const r = await fetch("https://193-122-76-131.nip.io/keyapi/PikaChannel/members.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: "PIKAZOO_VPS_SECRET_2026", action: "myChannels", uid: u })
+      });
+      const data = await r.json();
+      if(data.status){
+        gotOk = true;
+        (data.memberships || []).forEach(m=>{
+          if(!entries[m.channelId]) entries[m.channelId] = { ...m, blocked: !!Number(m.blocked) };
+        });
+      }
     }catch(e){}
-  }));
-  state.myChannels = entries;
+  }
+  if(gotOk) state.myChannels = entries;
   state.myChannelsLoaded = true;
   saveMyChannelsCache();
   renderChannelsPage();
