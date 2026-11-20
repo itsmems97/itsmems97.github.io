@@ -5311,15 +5311,8 @@ function boot(){
   if(state.isGuest){ toast("Guest mode: preview & download only", "ic-lock"); }
   if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelMembers(); migrateChannelMessageMedia(); migrateChannelsToVPS(); toast("Owner control enabled", "ic-check"); }
 
-  // ⚡ Auto-backfill VIP badges — users who joined channels BEFORE the VIP feature
-// Runs 2.5s after boot so listenChannels() has finished loading channel data.
-if(state.isOwner){
-  // Owner: bulk scan — fix ALL users at once
-  setTimeout(()=>{ ownerBulkBackfillVip(); }, 3000);
-} else {
-  // Regular users: self-backfill only
-  setTimeout(()=>{ backfillVipChannels(); }, 2500);
-}
+  // ⚡ VIP backfill ab zaroori nahi — naye joins ka VIP badge VPS se already sahi milta hai
+  // (ye functions Firestore ke purane/khaali members data check karte, isliye band kar diye)
 
   // ⚡ PWA Shortcut trigger — safe navigation after boot
   setTimeout(()=>{
@@ -5503,17 +5496,20 @@ function watchConnectivity(){
   window.addEventListener("online", kick);
 }
 function startHeartbeat(){
-  let warned = false;
+  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaUser";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
   const push = extra => {
     if(!state.uid) return;
-    updateDoc(doc(db,"users",state.uid), { ...presenceFields(), updatedAt: serverTimestamp(), ...extra }).catch(e=>{
-      if(!warned){ warned = true; console.warn("Presence write blocked", e && e.code); }
-    });
+    fetch(VPS + "/users.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ secret: SECRET, action: "heartbeat", uid: state.uid, ...extra })
+    }).catch(()=>{});
   };
-  const goOffline = ()=> push({ activeThreadId: null });
+  const goOffline = ()=> push({ activeThreadId: "" });
   const beat = ()=>{ if(document.visibilityState === "visible") push({}); };
   beat();
-  setInterval(beat, 25*1000);
+  setInterval(beat, 75*1000);
   document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") beat(); else goOffline(); });
   window.addEventListener("pagehide", goOffline);
   window.addEventListener("beforeunload", goOffline);
@@ -8886,17 +8882,19 @@ if(act === "givevip"){
   if(!channel){ toast("Channel name required", "ic-close"); return false; }
   const existing = Array.isArray(raw.vipChannels) ? raw.vipChannels : [];
   if(existing.includes(channel)){ toast("Already VIP in this channel", "ic-close"); return false; }
-  await updateDoc(doc(db,"users",uid), {
-    vipChannels: arrayUnion(channel),
-    updatedAt: serverTimestamp()
+  await fetch("https://193-122-76-131.nip.io/keyapi/PikaUser/users.php", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ secret: "PIKAZOO_VPS_SECRET_2026", action: "addVip", uid: uid, channelName: channel })
   });
   toast("VIP badge given");
   return true;
 }
 if(act === "removevip"){
-  await updateDoc(doc(db,"users",uid), {
-    vipChannels: [],
-    updatedAt: serverTimestamp()
+  await fetch("https://193-122-76-131.nip.io/keyapi/PikaUser/users.php", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ secret: "PIKAZOO_VPS_SECRET_2026", action: "clearVip", uid: uid })
   });
   toast("VIP badge removed");
   return true;
@@ -9323,8 +9321,10 @@ function openDmPanel(otherId){
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#dm-backdrop"), log = $("#dm-log");
   let msgs = [];
-  if(firebaseReady) updateDoc(doc(db,"users",state.uid), { activeThreadId: tid, ...presenceFields() }).catch(()=>{});
-  const clearActiveThread = ()=>{ if(firebaseReady) updateDoc(doc(db,"users",state.uid), { activeThreadId: null }).catch(()=>{}); };
+  const VPS_PRESENCE = "https://193-122-76-131.nip.io/keyapi/PikaUser";
+  const SECRET_PRESENCE = "PIKAZOO_VPS_SECRET_2026";
+  fetch(VPS_PRESENCE + "/users.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET_PRESENCE, action:"heartbeat", uid: state.uid, activeThreadId: tid }) }).catch(()=>{});
+  const clearActiveThread = ()=>{ fetch(VPS_PRESENCE + "/users.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET_PRESENCE, action:"heartbeat", uid: state.uid, activeThreadId: "" }) }).catch(()=>{}); };
   const markSeen = ()=>{ msgs.filter(m=> m.to === state.uid && !m.seenAt).forEach(m=>{ updateDoc(doc(db,"dmMessages",m.id), { seenAt: serverTimestamp() }).catch(()=>{}); }); };
   const render = ()=>{
     msgs.sort((a,b)=> (a.createdAtMs||0) - (b.createdAtMs||0));
@@ -9843,7 +9843,6 @@ async function joinChannelWithCode(channel, codeRaw){
   if(!code){ toast("Enter the code", "ic-close"); return false; }
   if(guestBlock("join a channel")) return false;
   if(!state.uid || !firebaseReady){ toast("Please log in first.", "ic-close"); return false; }
-  const memberKey = myMemberKey();
   const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   try{
@@ -9861,38 +9860,24 @@ async function joinChannelWithCode(channel, codeRaw){
     }
 
     try{
-      await runTransaction(db, async tx=>{
-        // ============ SAARI READS PEHLE ============
-        const channelRef = doc(db,"channels",channel.id);
-        const channelSnap = await tx.get(channelRef);
-        const isCustom = channelSnap.exists() && channelSnap.data().customMemberCount === true;
-        
-        const userRef = doc(db,"users", state.uid);
-        const userSnap = await tx.get(userRef);
-        
-        // ============ AB SAARI WRITES ============
-        tx.set(doc(db,"channels",channel.id,"members",memberKey), {
-          uid: state.uid, name: state.username, photoURL: state.photoURL || "",
-          role: "member", blocked: false, joinedAt: serverTimestamp(), viaCode: code
-        });
-        
-        if(!isCustom){
-          tx.update(channelRef, { memberCount: increment(1) });
-        }
-        
-        // ⚡ Auto VIP badge for joining member
-        if(userSnap.exists()){
-          const existing = Array.isArray(userSnap.data().vipChannels) ? userSnap.data().vipChannels : [];
-          if(!existing.includes(channel.name)){
-            tx.update(userRef, {
-              vipChannels: arrayUnion(channel.name),
-              updatedAt: serverTimestamp()
-            });
-          }
-        }
+      const jr = await fetch(VPS + "/PikaChannel/members.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "join", channelId: channel.id, uid: state.uid, name: state.username, photoURL: state.photoURL || "", viaCode: code })
       });
-    }catch(txErr){
-      // Firestore step fail ho gaya — code ko VPS pe wapas "unused" kar do, waste na ho
+      const jdata = await jr.json();
+      if(!jdata.status) throw new Error(jdata.message || "Join failed");
+
+      // ⚡ Auto VIP badge — ab VPS (PikaUser) pe
+      try{
+        await fetch(VPS + "/PikaUser/users.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ secret: SECRET, action: "addVip", uid: state.uid, channelName: channel.name })
+        });
+      }catch(e){}
+    }catch(joinErr){
+      // VPS join fail ho gaya — code ko wapas "unused" kar do, waste na ho
       try{
         await fetch(VPS + "/secretcode/secret_code.php", {
           method: "POST",
@@ -9900,7 +9885,7 @@ async function joinChannelWithCode(channel, codeRaw){
           body: JSON.stringify({ secret: SECRET, action: "unredeem", code: code, channelId: channel.id, usedByUid: state.uid })
         });
       }catch(e2){}
-      throw txErr;
+      throw joinErr;
     }
 
     toast("Joined " + channel.name);
@@ -10053,7 +10038,16 @@ function openChannelManageSheet(channelId){
       const v = await askText({ title:"Rename channel", value: ch.name, placeholder:"Channel name", max:30 });
       if(v === null) return;
       const nn = v.trim(); if(nn.length < 3){ toast("Too short", "ic-close"); return; }
-      try{ await updateDoc(doc(db,"channels",channelId), { name: nn, nameLower: lowerName(nn) }); toast("Renamed"); wrap.remove(); openChannelManageSheet(channelId); }
+      try{
+        const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+        const SECRET = "PIKAZOO_VPS_SECRET_2026";
+        await fetch(VPS + "/channels.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ secret: SECRET, action: "rename", channelId: channelId, name: nn })
+        });
+        toast("Renamed"); wrap.remove(); openChannelManageSheet(channelId);
+      }
       catch(err){ toast("Failed", "ic-close"); }
     } else if(a === "photo"){
   wrap.remove();
@@ -10070,7 +10064,13 @@ function openChannelManageSheet(channelId){
     try{
       const cropFile = new File([croppedBlob], "channel.jpg", { type: "image/jpeg" });
       const url = await uploadAvatar(cropFile);
-      await updateDoc(doc(db,"channels",channelId), { photoURL: url });
+      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const SECRET = "PIKAZOO_VPS_SECRET_2026";
+      await fetch(VPS + "/channels.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "setPhoto", channelId: channelId, photoURL: url })
+      });
       toast("Channel photo updated");
     }catch(err){ toast("Failed", "ic-close"); }
   };
@@ -10081,20 +10081,20 @@ else if(a === "members"){ wrap.remove(); openChannelMembersSheet(channelId); }
   wrap.remove();
   openUserPicker(async u=>{
     try{
-      await setDoc(doc(db,"channels",channelId,"members",u.id), { uid:u.id, name:u.name||"", photoURL:u.photoURL||"", role:"member", blocked:false, joinedAt: serverTimestamp(), viaCode:"added-by-owner" });
-      if(!ch.customMemberCount){
-        await updateDoc(doc(db,"channels",channelId), { memberCount: increment(1) });
-      }
-      // ⚡ Auto VIP badge
+      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const SECRET = "PIKAZOO_VPS_SECRET_2026";
+      await fetch(VPS + "/members.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "add", channelId: channelId, uid: u.id, name: u.name||"", photoURL: u.photoURL||"" })
+      });
+      // ⚡ Auto VIP badge — ab VPS pe
       try{
-        const userRef = doc(db,"users", u.id);
-        const userSnap = await getDoc(userRef);
-        if(userSnap.exists()){
-          const existing = Array.isArray(userSnap.data().vipChannels) ? userSnap.data().vipChannels : [];
-          if(!existing.includes(ch.name)){
-            await updateDoc(userRef, { vipChannels: arrayUnion(ch.name), updatedAt: serverTimestamp() });
-          }
-        }
+        await fetch("https://193-122-76-131.nip.io/keyapi/PikaUser/users.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ secret: "PIKAZOO_VPS_SECRET_2026", action: "addVip", uid: u.id, channelName: ch.name })
+        });
       }catch(e){ console.warn("VIP update failed", e); }
       toast("Added to channel");
     }catch(err){ toast("Failed", "ic-close"); }
@@ -10115,13 +10115,28 @@ else if(a === "setmembers"){
     }
   }
   try{
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
     if(n === 0){
-      const memSnap = await getDocs(collection(db,"channels",channelId,"members"));
-      const realCount = Math.max(1, memSnap.size);
-      await updateDoc(doc(db,"channels",channelId), { memberCount: realCount, activeMemberCount: 0, customMemberCount: false });
+      const mr = await fetch(VPS + "/members.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "list", channelId: channelId })
+      });
+      const mdata = await mr.json();
+      const realCount = Math.max(1, (mdata.members || []).length);
+      await fetch(VPS + "/channels.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "setMemberCount", channelId: channelId, memberCount: realCount, activeMemberCount: 0, custom: false })
+      });
       toast("Reset to real count: " + realCount);
     } else {
-      await updateDoc(doc(db,"channels",channelId), { memberCount: n, activeMemberCount: activeN, customMemberCount: true });
+      await fetch(VPS + "/channels.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "setMemberCount", channelId: channelId, memberCount: n, activeMemberCount: activeN, custom: true })
+      });
       toast("Members: " + fmtCount(n) + " • Active: " + fmtCount(activeN));
     }
     wrap.remove();
@@ -10153,6 +10168,28 @@ else if(a === "delete"){
     }
   });
 }
+async function loadChannelMembersIntoBox(channelId){
+  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
+  const box = $("#chmem-list"); if(!box) return;
+  try{
+    const r = await fetch(VPS + "/members.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ secret: SECRET, action: "list", channelId: channelId })
+    });
+    const data = await r.json();
+    const members = (data.members || []).map(m=>({ id:m.uid, ...m }));
+    box.innerHTML = members.map(m=>`
+      <div class="mini-row">
+        ${avatarHtml(m.name, m.photoURL)}
+        <div class="mini-main"><b>${escapeHtml(m.name||"—")}${m.role==="owner" ? " (owner)" : ""}${m.blocked ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BLOCKED</span>' : ""}</b></div>
+        ${m.role !== "owner" ? `
+        <button class="icon-del" data-mem-act="${m.blocked ? "unblock" : "block"}" data-mem="${m.id}" title="${m.blocked ? "Unblock" : "Block"}"><svg width="16" height="16"><use href="#ic-lock"/></svg></button>
+        <button class="icon-del" data-mem-act="remove" data-mem="${m.id}" title="Remove"><svg width="16" height="16"><use href="#ic-trash"/></svg></button>` : ""}
+      </div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
+  }catch(err){ console.warn("members load", err); }
+}
 function openChannelMembersSheet(channelId){
   const ch = state.channels.find(c=>c.id===channelId); if(!ch) return;
   if(!isChannelOwner(ch)){ toast("Only the channel owner can manage members", "ic-close"); return; }
@@ -10165,34 +10202,22 @@ function openChannelMembersSheet(channelId){
   </div></div>`;
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#chmem-backdrop");
-  if(chMembersUnsub){ chMembersUnsub(); chMembersUnsub = null; }
-  chMembersUnsub = onSnapshot(collection(db,"channels",channelId,"members"), snap=>{
-    const members = snap.docs.map(d=>({ id:d.id, ...d.data() }));
-    const box = $("#chmem-list"); if(!box) return;
-    box.innerHTML = members.map(m=>`
-      <div class="mini-row">
-        ${avatarHtml(m.name, m.photoURL)}
-        <div class="mini-main"><b>${escapeHtml(m.name||"—")}${m.role==="owner" ? " (owner)" : ""}${m.blocked ? ' <span style="color:var(--danger);font-size:11px;font-weight:700">BLOCKED</span>' : ""}</b></div>
-        ${m.role !== "owner" ? `
-        <button class="icon-del" data-mem-act="${m.blocked ? "unblock" : "block"}" data-mem="${m.id}" title="${m.blocked ? "Unblock" : "Block"}"><svg width="16" height="16"><use href="#ic-lock"/></svg></button>
-        <button class="icon-del" data-mem-act="remove" data-mem="${m.id}" title="Remove"><svg width="16" height="16"><use href="#ic-trash"/></svg></button>` : ""}
-      </div>`).join("") || `<div class="mini-row" style="color:var(--text-faint)">No members yet.</div>`;
-  }, err=> console.warn("channel members listener", err));
+  loadChannelMembersIntoBox(channelId);
   wrap.addEventListener("click", async e=>{
-    if(e.target === wrap || e.target.closest("[data-close]")){ if(chMembersUnsub){ chMembersUnsub(); chMembersUnsub = null; } wrap.remove(); return; }
+    if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
     const btn = e.target.closest("[data-mem-act]"); if(!btn) return;
     const uid = btn.dataset.mem, act = btn.dataset.memAct;
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
     try{
-      if(act === "block") await updateDoc(doc(db,"channels",channelId,"members",uid), { blocked:true });
-      else if(act === "unblock") await updateDoc(doc(db,"channels",channelId,"members",uid), { blocked:false });
+      if(act === "block") await fetch(VPS + "/members.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action:"block", channelId: channelId, uid: uid }) });
+      else if(act === "unblock") await fetch(VPS + "/members.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action:"unblock", channelId: channelId, uid: uid }) });
       else if(act === "remove"){
   if(!(await confirmSheet("Remove this member?", "They'll need a new code to rejoin.", "Remove"))) return;
-  await deleteDoc(doc(db,"channels",channelId,"members",uid));
-  if(!ch.customMemberCount){
-    await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
-  }
+  await fetch(VPS + "/members.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action:"remove", channelId: channelId, uid: uid }) });
 }
       toast("Updated");
+      loadChannelMembersIntoBox(channelId);
     }catch(err){ toast("Failed", "ic-close"); }
   });
 }
@@ -10527,14 +10552,13 @@ if(cp){ const ok = await copyText(cp.dataset.copyCode); toast(ok ? "Code copied"
 }
 async function deleteChannelForever(ch){
   try{
-    const memSnap = await getDocs(collection(db,"channels",ch.id,"members"));
-    for(const d of memSnap.docs) await deleteDoc(d.ref);
-    const msgSnap = await getDocs(query(collection(db,"channelMessages"), where("channelId","==",ch.id)));
-    for(const d of msgSnap.docs){
-      await deleteDoc(d.ref).catch(()=>{});
-      await deleteDoc(doc(db,"channelMessageMedia",d.id)).catch(()=>{});
-    }
-    await deleteDoc(doc(db,"channels",ch.id));
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
+    await fetch(VPS + "/channels.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ secret: SECRET, action: "delete", channelId: ch.id })
+    });
     closeTelegramChannel();
     toast("Channel deleted");
   }catch(e){ toast("Delete failed: " + (e.code||e.message), "ic-close"); }
@@ -11435,34 +11459,34 @@ $("#pktg-subs").textContent = preview
   if(state.tg.unsub){ state.tg.unsub(); state.tg.unsub = null; }
   if(state.tg.unsubMedia){ state.tg.unsubMedia(); state.tg.unsubMedia = null; }
 
-  // Public messages — readable by everyone (preview + members)
-  const q = query(collection(db,"channelMessages"), where("channelId","==",channelId));
-  state.tg.unsub = onSnapshot(q, snap=>{
-    const all = snap.docs.map(d=>({ id:d.id, ...d.data() })).filter(m=> !m.deleted);
-    all.sort((a,b)=> (a.createdAtMs||0) - (b.createdAtMs||0));
-    state.tg.messages = all;
-    renderTelegramFeed();
-    if(!preview) countViews(all);
-  }, err=>{
-    console.warn("channel messages listener", err);
-    if((err.code||"").includes("permission-denied")){
-      rulesBanner("The channelMessages collection isn't readable with your current rules.");
-      $("#pktg-feed").innerHTML = `<div class="pktg-empty"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-lock"/></svg></div><b>Cannot load messages</b><span>Firestore rules need updating — see the yellow banner above.</span></div>`;
-    } else {
-      $("#pktg-feed").innerHTML = `<div class="pktg-empty"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-lock"/></svg></div><b>Could not load messages</b><span>${escapeHtml(err.code || err.message || "")}</span></div>`;
-    }
-  });
-
-  // Private media — readable only by active members. Preview mode skips this entirely.
-  if(!preview){
-    const mq = query(collection(db,"channelMessageMedia"), where("channelId","==",channelId));
-    state.tg.unsubMedia = onSnapshot(mq, snap=>{
+  // Messages — ab VPS se aate hain, har 5 second mein refresh hota hai
+  const VPS_MSG = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+  const SECRET_MSG = "PIKAZOO_VPS_SECRET_2026";
+  const loadChannelMessagesFromVPS = async ()=>{
+    try{
+      const r = await fetch(VPS_MSG + "/messages.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET_MSG, action: "list", channelId: channelId })
+      });
+      const data = await r.json();
+      const all = (data.messages || []).map(m=>({ ...m, createdAtMs: (m.createdAt||0) * 1000 }));
+      all.sort((a,b)=> (a.createdAtMs||0) - (b.createdAtMs||0));
+      state.tg.messages = all;
       const map = {};
-      snap.docs.forEach(d=>{ map[d.id] = d.data(); });
+      all.forEach(m=>{ map[m.id] = { mediaUrl: m.mediaUrl || "", files: (m.files||[]).map(f=>({ mediaUrl: f.mediaUrl || "" })) }; });
       state.tg.mediaMap = map;
       renderTelegramFeed();
-    }, err=> console.warn("channel media listener", err));
-  }
+      if(!preview) countViews(all);
+    }catch(err){
+      console.warn("channel messages load", err);
+      $("#pktg-feed").innerHTML = `<div class="pktg-empty"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-lock"/></svg></div><b>Could not load messages</b></div>`;
+    }
+  };
+  loadChannelMessagesFromVPS();
+  const _msgPoll = setInterval(loadChannelMessagesFromVPS, 5000);
+  state.tg.unsub = ()=> clearInterval(_msgPoll);
+  state.tg.unsubMedia = null;
 
   if(state.tg.unsubTyping){ state.tg.unsubTyping(); state.tg.unsubTyping = null; }
   state.tg.unsubTyping = onSnapshot(doc(db,"typing","ch_"+channelId), s=>{
@@ -12210,22 +12234,25 @@ async function tgSendText(){
   if(problem){ toast(problem, "ic-close"); return; }
   clearTgInput(); input.style.height = "auto"; updateSendBtnIcon();
   try{
-    await addDoc(collection(db,"channelMessages"), {
-      channelId: state.tg.channelId,
-      type: "text",
-      text: text.slice(0, 4000),
-      senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
-      createdAt: serverTimestamp(), createdAtMs: Date.now(),
-      deleted: false,
-      replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null,
-      views: 0
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
+    await fetch(VPS + "/messages.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        secret: SECRET, action: "send",
+        channelId: state.tg.channelId,
+        type: "text",
+        text: text.slice(0, 4000),
+        senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
+        replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null
+      })
     });
     state.tg.replyTo = null;
     updateTgReplyBar();
   }catch(e){
     console.error(e);
-    if((e.code||"").includes("permission-denied")){ rulesBanner("Posting to this channel is blocked by your current Firestore rules."); toast("Firestore rules need updating", "ic-close"); }
-    else toast("Send failed: " + (e.code||e.message), "ic-close");
+    toast("Send failed", "ic-close");
   }
 }
 function updateTgReplyBar(){
@@ -12378,30 +12405,31 @@ async function sendVoiceBlob(blob, durationSec, description){
   try{
     const res = await uploadFileToServer(file, msgId, "file", p=> setTgUpload(p));
     setTgUpload(100);
-    // Write metadata to PUBLIC collection (no mediaUrl), actual URL to PRIVATE collection
-    await addDoc(collection(db,"channelMessages"), {
-      channelId: state.tg.channelId,
-      type: "audio",
-      text: "",
-      caption,
-      filename: file.name,
-      mimeType: file.type,
-      size: file.size,
-      durationSec,
-      senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
-      createdAt: serverTimestamp(), createdAtMs: Date.now(),
-      deleted: false,
-      replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null,
-      views: 0
-    }).then(async ref => {
-      await setDoc(doc(db,"channelMessageMedia", ref.id), { channelId: state.tg.channelId, mediaUrl: res.url }, { merge: true });
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
+    await fetch(VPS + "/messages.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        secret: SECRET, action: "send",
+        channelId: state.tg.channelId,
+        type: "audio",
+        text: "",
+        caption,
+        filename: file.name,
+        mimeType: file.type,
+        size: file.size,
+        durationSec,
+        mediaUrl: res.url,
+        senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
+        replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null
+      })
     });
     state.tg.replyTo = null;
     updateTgReplyBar();
   }catch(e){
     console.error(e);
-    if((e.code||"").includes("permission-denied")){ rulesBanner("Posting voice messages to this channel is blocked by your current Firestore rules."); toast("Firestore rules need updating", "ic-close"); }
-    else toast(e.message || "Voice upload failed", "ic-close");
+    toast(e.message || "Voice upload failed", "ic-close");
   }finally{ hideTgUpload(); }
 }
 /* ============ STORE APP → CHANNEL ============ */
@@ -12485,29 +12513,32 @@ async function sendStoreAppToChannel(){
   if(!state.tg.channelId) return;
   if(guestBlock("broadcast in channels")) return;
   try{
-    await addDoc(collection(db,"channelMessages"), {
-      channelId: state.tg.channelId,
-      type: "store_app",
-      text: "",
-      caption: description,
-      appId: app.id,
-      appName: app.name,
-      appThumb: app.thumbUrl || "",
-      appFormat: app.format || "APK",
-      appSize: app.sizeLabel || "",
-      senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
-      createdAt: serverTimestamp(), createdAtMs: Date.now(),
-      deleted: false,
-      replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null,
-      views: 0
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
+    await fetch(VPS + "/messages.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        secret: SECRET, action: "send",
+        channelId: state.tg.channelId,
+        type: "store_app",
+        text: "",
+        caption: description,
+        appId: app.id,
+        appName: app.name,
+        appThumb: app.thumbUrl || "",
+        appFormat: app.format || "APK",
+        appSize: app.sizeLabel || "",
+        senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
+        replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null
+      })
     });
     state.tg.replyTo = null;
     updateTgReplyBar();
     toast("App sent to channel");
   }catch(e){
     console.error(e);
-    if((e.code||"").includes("permission-denied")){ rulesBanner("Posting to this channel is blocked by your current Firestore rules."); toast("Firestore rules need updating", "ic-close"); }
-    else toast("Send failed: " + (e.code||e.message), "ic-close");
+    toast("Send failed", "ic-close");
   }
 }
 async function tgHandleFile(e, kind){
@@ -12682,35 +12713,33 @@ async function performTgUpload(){
       }catch(e){ console.warn("Icon upload failed", e); }
     }
     const type = kind === "image" ? "image" : kind === "video" ? "video" : (file.type && file.type.startsWith("audio/") ? "audio" : "file");
-    // Write to PUBLIC collection — NO mediaUrl, only previewThumbUrl (safe)
-    const pubRef = await addDoc(collection(db,"channelMessages"), {
-      channelId: state.tg.channelId,
-      type,
-      text: "",
-      caption: description || file.name,
-      filename: file.name,
-      mimeType: file.type || "",
-      size: file.size,
-      iconUrl: iconUrl || null,
-      previewThumbUrl: previewThumbUrl || null,
-      senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
-      createdAt: serverTimestamp(), createdAtMs: Date.now(),
-      deleted: false,
-      replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null,
-      views: 0
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
+    await fetch(VPS + "/messages.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        secret: SECRET, action: "send",
+        channelId: state.tg.channelId,
+        type,
+        text: "",
+        caption: description || file.name,
+        filename: file.name,
+        mimeType: file.type || "",
+        size: file.size,
+        iconUrl: iconUrl || "",
+        previewThumbUrl: previewThumbUrl || "",
+        mediaUrl: res.url,
+        senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
+        replyTo: state.tg.replyTo ? { id: state.tg.replyTo.id, name: state.tg.replyTo.senderName || state.username, preview: tgMsgLabel(state.tg.replyTo), type: state.tg.replyTo.type } : null
+      })
     });
-    // Write actual URL to PRIVATE collection
-    await setDoc(doc(db,"channelMessageMedia", pubRef.id), {
-      channelId: state.tg.channelId,
-      mediaUrl: res.url
-    }, { merge: true });
     state.tg.replyTo = null;
     updateTgReplyBar();
     toast("Uploaded to channel");
   }catch(err){
     console.error(err);
     if(cancelled){ toast("Upload cancelled"); }
-    else if((err.code||"").includes("permission-denied")){ rulesBanner("Uploading files to this channel is blocked by your current Firestore rules."); toast("Firestore rules need updating — see banner", "ic-close"); }
     else toast(err.message || "Upload failed", "ic-close");
   }finally{
     state.tg.uploadAbort = null;
@@ -12812,22 +12841,25 @@ async function performTgBatchUpload(items, description){
   const okItems = queue.filter(q => q.status === 'done' && q.result);
   setTimeout(closeTgBatchQueue, 500);
   if(!okItems.length){ toast("No files uploaded"); return; }
-  const publicFiles = okItems.map(q => ({ filename: q.file.name, mimeType: q.file.type || "", size: q.file.size, iconUrl: q.iconUrl || null }));
-  const privateFiles = okItems.map(q => ({ mediaUrl: q.result.url }));
+  const combinedFiles = okItems.map(q => ({ filename: q.file.name, mimeType: q.file.type || "", size: q.file.size, iconUrl: q.iconUrl || "", mediaUrl: q.result.url }));
   try{
-    const pubRef = await addDoc(collection(db,"channelMessages"), {
-      channelId: state.tg.channelId, type: "batch", text: "",
-      caption: description || "",
-      files: publicFiles,
-      senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || "",
-      createdAt: serverTimestamp(), createdAtMs: Date.now(), deleted: false, views: 0
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
+    await fetch(VPS + "/messages.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        secret: SECRET, action: "send",
+        channelId: state.tg.channelId, type: "batch", text: "",
+        caption: description || "",
+        files: combinedFiles,
+        senderUid: state.uid, senderName: state.username, senderPhoto: state.photoURL || ""
+      })
     });
-    await setDoc(doc(db,"channelMessageMedia", pubRef.id), { channelId: state.tg.channelId, files: privateFiles }, { merge: true });
     toast("Uploaded " + okItems.length + " file(s) to channel");
   }catch(e){
     console.error(e);
-    if((e.code || "").includes("permission-denied")){ rulesBanner("Uploading files to this channel is blocked by your current Firestore rules."); toast("Firestore rules need updating — see banner", "ic-close"); }
-    else toast("Could not save batch: " + (e.message || e.code || ""), "ic-close");
+    toast("Could not save batch", "ic-close");
   }
 }
 function pingTyping(){
