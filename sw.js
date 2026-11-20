@@ -1,4 +1,4 @@
-/* Pika Store service worker (v3 - image cache upgrade)
+/* Pika Store service worker (v4 - image cache upgrade)
    - Dobara kholne par site slow net par bhi jaldi khule (cache se)
    - Naya index.html GitHub par jaate hi user tak pahunche (auto update)
    - Firebase files / fonts ek baar download hoke cache mein rehti hain
@@ -13,11 +13,11 @@
 try { importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'); } catch (err) {}
 
 /* ================== SETTINGS (yahan se sab control hota hai) ================== */
-const STORE_CACHE = 'pika-store-v7';
-const MOVIE_CACHE = 'pika-movie-v3';
-const IMG_CACHE = 'pika-img-v3';          // sirf tab badlo jab saari images zabardasti dobara download karwani ho
-const MEDIA_CACHE = 'pika-media-v3';      // Maria ke videos/awaaz (zabardasti dobara download karwane ho to v2 kar do)
-const META_CACHE = 'pika-media-meta-v2';  // Maria files ka chhota hisaab-kitaab (kab check hua, size kitna)
+const STORE_CACHE = 'pika-store-v8';
+const MOVIE_CACHE = 'pika-movie-v4';
+const IMG_CACHE = 'pika-img-v4';          // sirf tab badlo jab saari images zabardasti dobara download karwani ho
+const MEDIA_CACHE = 'pika-media-v4';      // Maria ke videos/awaaz (zabardasti dobara download karwane ho to v2 kar do)
+const META_CACHE = 'pika-media-meta-v3';  // Maria files ka chhota hisaab-kitaab (kab check hua, size kitna)
 
 const MOVIE_ASSETS = ['/pika-movie-manifest.json', '/Pika-Movie.png'];
 

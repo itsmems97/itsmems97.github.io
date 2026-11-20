@@ -11044,7 +11044,7 @@ input.addEventListener("paste", e=>{
           } else if(act === "edit"){
   const ch = state.channels.find(c=>c.id === m.channelId);
   if(!isChannelOwner(ch)){ toast("Only the channel owner can edit messages", "ic-close"); return; }
-  openChannelMessageEdit(m);
+  if(m.type === "batch") openBatchMessageEdit(m); else openChannelMessageEdit(m);
 } else if(act === "views"){
     const ch = state.channels.find(c=>c.id === m.channelId);
     if(!isChannelOwner(ch)){ toast("Only the channel owner can set views", "ic-close"); return; }
@@ -12265,6 +12265,142 @@ async function saveChannelMessageEdit(m, newFile, newDesc, newThumbFile){
     toast(e.message || "Update failed", "ic-close");
   }finally{ hideTgUpload(); }
 }
+/* ===================== EDIT BATCH MESSAGE ===================== */
+function openBatchMessageEdit(m){
+  let files = (Array.isArray(m.files) ? m.files : []).map(f => ({ ...f, _newFile: null, _newIcon: null, _previewIcon: "" }));
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="sheet-backdrop dlg" id="bedit-backdrop">
+      <div class="sheet" style="padding:22px 20px calc(22px + var(--safe-bottom));max-height:92vh;overflow-y:auto;">
+        <h3 style="text-align:center;font-size:17px;margin:0 0 6px;">Edit batch</h3>
+        <p id="bedit-count" style="font-size:12px;color:var(--text-dim);text-align:center;margin:0 0 14px;"></p>
+        <div id="bedit-rows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+        <button class="btn btn-ghost btn-block" id="bedit-add" type="button" style="justify-content:center;margin-bottom:14px;"><svg><use href="#ic-upload"/></svg> Add more files</button>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px;">Description</label>
+          <textarea id="che-desc" rows="3" style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:13.5px;font-family:inherit;resize:vertical;min-height:70px;outline:none;-webkit-user-select:text;user-select:text;">${escapeHtml(m.caption || "")}</textarea>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1" id="bedit-cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" id="bedit-save" type="button">Save</button>
+        </div>
+      </div>
+    </div>`);
+  const wrap = document.getElementById("bedit-backdrop");
+  const rowsEl = document.getElementById("bedit-rows");
+  const render = ()=>{
+    document.getElementById("bedit-count").textContent = files.length + " file(s) • tap icon = thumbnail, tap name = rename";
+    rowsEl.innerHTML = files.map((f, i)=>`
+      <div class="pktg-batchrow">
+        <div class="pktg-batchrow-icon" data-bthumb="${i}">${fileIconHTML(f.filename, f._previewIcon || f.iconUrl)}</div>
+        <div class="pktg-batchrow-info" data-brename="${i}">
+          <div class="pktg-batchrow-name">${escapeHtml(f.filename || "File")}</div>
+          <div class="pktg-batchrow-size">${escapeHtml(fmtBytes(f.size || 0))}${f._newFile ? " • new" : ""}</div>
+        </div>
+        <button type="button" class="pktg-batchrow-remove" data-bdel="${i}" title="Remove">&times;</button>
+      </div>`).join("");
+  };
+  render();
+  rowsEl.addEventListener("click", async e=>{
+    const del = e.target.closest("[data-bdel]");
+    const th = e.target.closest("[data-bthumb]");
+    const rn = e.target.closest("[data-brename]");
+    if(del){
+      files.splice(parseInt(del.dataset.bdel, 10), 1);
+      render();
+      return;
+    }
+    if(th){
+      const i = parseInt(th.dataset.bthumb, 10);
+      const inp = document.createElement("input");
+      inp.type = "file"; inp.accept = "image/*"; inp.style.display = "none";
+      inp.onchange = async ev=>{
+        const pf = ev.target.files[0]; if(!pf || !files[i]) return;
+        try{
+          const cropped = await cropImageToFile(pf, { aspect: 1, size: 256 });
+          files[i]._newIcon = cropped;
+          files[i]._previewIcon = URL.createObjectURL(cropped);
+          render();
+        }catch(err){ if(err && err.message !== "Crop cancelled") toast("Could not load image", "ic-close"); }
+      };
+      document.body.appendChild(inp); inp.click();
+      setTimeout(()=> inp.remove(), 1200);
+      return;
+    }
+    if(rn){
+      const i = parseInt(rn.dataset.brename, 10);
+      if(!files[i]) return;
+      const v = await askText({ title:"Rename file", value: files[i].filename || "", placeholder:"File name", max:120, okLabel:"Save" });
+      if(v === null) return;
+      const nv = v.trim();
+      if(nv){ files[i].filename = nv; render(); }
+    }
+  });
+  document.getElementById("bedit-add").addEventListener("click", ()=>{
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.multiple = true; inp.accept = "*/*"; inp.style.display = "none";
+    inp.onchange = ev=>{
+      Array.from(ev.target.files || []).forEach(f=>{
+        files.push({ filename: f.name, mimeType: f.type || "", size: f.size, iconUrl: "", mediaUrl: "", _newFile: f, _newIcon: null, _previewIcon: "" });
+      });
+      render();
+    };
+    document.body.appendChild(inp); inp.click();
+    setTimeout(()=> inp.remove(), 1200);
+  });
+  document.getElementById("bedit-cancel").addEventListener("click", ()=> wrap.remove());
+  wrap.addEventListener("click", e=>{ if(e.target === wrap) wrap.remove(); });
+  document.getElementById("bedit-save").addEventListener("click", async ()=>{
+    const newDesc = (document.getElementById("che-desc").value || "").trim();
+    wrap.remove();
+    await saveBatchMessageEdit(m, files, newDesc);
+  });
+}
+
+async function saveBatchMessageEdit(m, files, newDesc){
+  const ch = state.channels.find(c=>c.id === m.channelId);
+  if(!isChannelOwner(ch)){ toast("Only the channel owner can edit messages", "ic-close"); return; }
+  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
+  const post = async body=>{
+    const r = await fetch(VPS + "/messages.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, ...body }) });
+    const d = await r.json();
+    if(!d.status) throw new Error(d.message || "Update failed");
+    return d;
+  };
+  if(!files.length){
+    if(!(await confirmSheet("Delete message?", "All files removed, so the whole message will be deleted.", "Delete"))) return;
+    try{ await post({ action:"delete", messageId: m.id }); toast("Message deleted"); }
+    catch(e){ toast(e.message || "Delete failed", "ic-close"); }
+    return;
+  }
+  showTgUpload("Updating batch…");
+  try{
+    const base = "chmsg_" + state.tg.channelId + "_" + generateAppId();
+    const out = [];
+    for(let i = 0; i < files.length; i++){
+      const f = files[i];
+      let mediaUrl = f.mediaUrl || "", iconUrl = f.iconUrl || "";
+      if(f._newFile){
+        showTgUpload(f._newFile.name);
+        const res = await uploadFileToServer(f._newFile, base + "_" + i, "file", p => setTgUpload(p));
+        mediaUrl = res.url;
+      }
+      if(f._newIcon){
+        const iw = new File([f._newIcon], "thumb.jpg", { type: f._newIcon.type || "image/jpeg" });
+        const ic = await uploadFileToServer(iw, base + "_" + i + "_icon", "icon", null);
+        iconUrl = ic.url;
+      }
+      out.push({ filename: f.filename || "File", mimeType: f.mimeType || "", size: f.size || 0, iconUrl: iconUrl, mediaUrl: mediaUrl });
+    }
+    setTgUpload(100);
+    await post({ action:"edit", messageId: m.id, caption: newDesc, files: out });
+    toast("Batch updated");
+  }catch(e){
+    console.error(e);
+    toast(e.message || "Update failed", "ic-close");
+  }finally{ hideTgUpload(); }
+}
+
 function nativeDownload(url, filename){
   const a = document.createElement("a");
   a.href = (String(url).indexOf("193-122-76-131.nip.io") > -1)
