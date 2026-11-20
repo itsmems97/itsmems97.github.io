@@ -13,7 +13,7 @@
 try { importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'); } catch (err) {}
 
 /* ================== SETTINGS (yahan se sab control hota hai) ================== */
-const STORE_CACHE = 'pika-store-v3';
+const STORE_CACHE = 'pika-store-v5';
 const MOVIE_CACHE = 'pika-movie-v2';
 const IMG_CACHE = 'pika-img-v2';          // sirf tab badlo jab saari images zabardasti dobara download karwani ho
 const MEDIA_CACHE = 'pika-media-v2';      // Maria ke videos/awaaz (zabardasti dobara download karwane ho to v2 kar do)

@@ -2990,8 +2990,6 @@ function generateAppId(){
   return "app" + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
 }
 /* ============ GITHUB RELEASES STORAGE ============ */
-const GH_CACHE = { secrets: null, secretsAt: 0, releases: {} };
-const GH_SECRET_TTL = 30 * 60 * 1000; // 30 minutes
 
 function githubReady(){ return firebaseReady; }
 function storageReady(){ return githubReady(); }
@@ -5306,6 +5304,7 @@ function boot(){
   initOneSignal(); initNotifFlow(); initProfileActions(); initUsersPage(); initChannelsPage(); loadCachedChannels(); initTelegramUI(); initHomeCategories();
   if(!state.isGuest) loadMyPhone();
   listenUsers(); listenSession(); listenApps(); listenCategories(); listenChannels(); listenMaintenance(); listenSpoofSetting(); listenSpoofMembers();
+  migrateUsersToVPS();
   // listenChat / listenDmActivity band: group aur private chat UI se hata diye
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ toast("Guest mode: preview & download only", "ic-lock"); }
@@ -5575,6 +5574,47 @@ async function migrateChannelMessageMedia(){
   }catch(e){ console.warn("channel message media migration", e); }
 }
 
+/* ================= ONE-TIME MIGRATION: Firestore users → VPS ================= */
+async function migrateUsersToVPS(){
+  if(!state.isOwner){
+    if(auth.currentUser && String(auth.currentUser.email || "").toLowerCase() === CONFIG.ownerEmail.toLowerCase()) toast("Owner email but isOwner is false", "ic-close");
+    return;
+  }
+  if(localStorage.getItem("pika_vps_users_migration_done")){ toast("Users sync already marked done", "ic-check"); return; }
+  toast("Users sync started...", "ic-check");
+  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaUser";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
+  const sec = t => (t && typeof t.toMillis === "function") ? Math.floor(t.toMillis()/1000) : (typeof t === "number" ? (t > 1e12 ? Math.floor(t/1000) : t) : 0);
+  let ok = 0, fail = 0;
+  try{
+    const snap = await getDocs(collection(db,"users"));
+    for(const d of snap.docs){
+      const u = d.data();
+      try{
+        const r = await fetch(VPS + "/users.php", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            secret: SECRET, action: "import", uid: d.id,
+            name: u.name || "User", nameLower: u.nameLower || "", photoURL: u.photoURL || "",
+            owner: !!u.owner, verified: !!u.verified, banned: !!u.banned,
+            setupDone: !!u.setupDone, guest: !!u.guest,
+            joinedAt: sec(u.joinedAt) || undefined,
+            createdAt: sec(u.createdAt) || sec(u.joinedAt) || undefined,
+            lastActiveMs: u.lastActiveMs || 0,
+            vipChannels: Array.isArray(u.vipChannels) ? u.vipChannels : [],
+            inviteCount: u.inviteCount || 0, deviceId: u.deviceId || "",
+            expireAtMs: u.expireAtMs || 0
+          })
+        });
+        const j = await r.json();
+        if(j.status) ok++; else { fail++; console.warn("user import", d.id, j.message); }
+      }catch(e){ fail++; console.warn("user import", d.id, e); }
+    }
+    if(fail === 0) localStorage.setItem("pika_vps_users_migration_done", "1");
+    toast("Users migrated: " + ok + (fail ? (", failed: " + fail) : ""), fail ? "ic-close" : "ic-check");
+  }catch(e){ console.warn("users migration", e); toast("Users migration failed", "ic-close"); }
+}
 /* ================= ONE-TIME MIGRATION: Firestore channels → VPS ================= */
 async function migrateChannelsToVPS(){
   if(!state.isOwner) return;
@@ -9996,23 +10036,20 @@ async function openCreateChannelSheet(){
     const nn = v.trim();
     if(nn.length < 3){ toast("Name is too short", "ic-close"); return; }
 
-    const memberKey = myMemberKey();
     try{
-      const ref = doc(collection(db,"channels"));
-      await setDoc(ref, {
-        name: nn, nameLower: lowerName(nn), photoURL: "",
-        ownerUid: state.uid, ownerName: state.username,
-        memberCount: 1, codeIds: [],
-        createdAt: serverTimestamp(), createdAtMs: Date.now()
+      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const SECRET = "PIKAZOO_VPS_SECRET_2026";
+      const r = await fetch(VPS + "/channels.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "create", name: nn, ownerUid: state.uid, ownerName: state.username })
       });
-      await setDoc(doc(db,"channels",ref.id,"members",memberKey), {
-        uid: state.uid, name: state.username, photoURL: state.photoURL || "",
-        role: "owner", blocked: false, joinedAt: serverTimestamp(), viaCode: "owner"
-      });
+      const data = await r.json();
+      if(!data.status) throw new Error(data.message || "Create failed");
       toast("🎉 Channel created successfully!");
       refreshMyChannels();
-      openTelegramChannel(ref.id);
-    }catch(e){ toast("Failed: " + (e.code||e.message), "ic-close"); }
+      openTelegramChannel(data.channelId);
+    }catch(e){ toast("Failed: " + e.message, "ic-close"); }
   });
 }
 async function copyChannelLink(ch){
@@ -10187,18 +10224,19 @@ else if(a === "setviewsall"){
   const n = parseInt(v.trim(), 10);
   if(!Number.isFinite(n) || n < 0){ toast("Enter a valid number", "ic-close"); return; }
   try{
-    const allSnap = await getDocs(query(collection(db,"channelMessages"), where("channelId","==",channelId)));
-    const targets = allSnap.docs.filter(d => !d.data().deleted);
-    if(!targets.length){ toast("No posts in this channel", "ic-close"); return; }
-    const upd = n === 0 ? { views: 0, customViews: false } : { views: n, customViews: true };
-    let okCount = 0;
-    for(let i = 0; i < targets.length; i += 20){
-      const part = targets.slice(i, i + 20);
-      await Promise.all(part.map(d => updateDoc(d.ref, upd).then(()=>{ okCount++; }).catch(()=>{})));
-    }
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
+    const r = await fetch(VPS + "/messages.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ secret: SECRET, action: "setViewsAll", channelId: channelId, views: n, custom: n !== 0 })
+    });
+    const data = await r.json();
+    if(!data.status) throw new Error(data.message || "Failed");
+    const okCount = data.changed || 0;
     toast(n === 0 ? ("Views reset on " + okCount + " posts") : ("Views set to " + fmtCount(n) + " on " + okCount + " posts"));
     wrap.remove();
-  }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+  }catch(err){ toast("Failed: Network error", "ic-close"); }
 }
 else if(a === "delete"){
       wrap.remove();
@@ -10732,19 +10770,20 @@ function openExitChannelConfirm(channelId){
   $("#chexit-cancel").addEventListener("click", ()=> wrap.remove());
   ok.addEventListener("click", async ()=>{
     if(input.value.trim().toLowerCase() !== "exit") return;
-    const memberKey = myMemberKey();
     try{
       ok.disabled = true;
-await deleteDoc(doc(db,"channels",channelId,"members",memberKey)).catch(()=>{});
-const chExit = state.channels.find(c=>c.id===channelId);
-if(!(chExit && chExit.customMemberCount)){
-  await updateDoc(doc(db,"channels",channelId), { memberCount: increment(-1) }).catch(()=>{});
-}
-toast("You left the channel");
+      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const SECRET = "PIKAZOO_VPS_SECRET_2026";
+      await fetch(VPS + "/members.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "remove", channelId: channelId, uid: state.uid })
+      });
+      toast("You left the channel");
       wrap.remove();
       closeTelegramChannel();
       refreshMyChannels();
-    }catch(e){ ok.disabled = false; toast("Failed: " + (e.code||e.message), "ic-close"); }
+    }catch(e){ ok.disabled = false; toast("Failed: Network error", "ic-close"); }
   });
   wrap.addEventListener("click", e=>{ if(e.target === wrap) wrap.remove(); });
 }
@@ -10982,20 +11021,27 @@ input.addEventListener("paste", e=>{
     const n = parseInt(v.trim(), 10);
     if(!Number.isFinite(n) || n < 0){ toast("Enter a valid number", "ic-close"); return; }
     try{
+      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const SECRET = "PIKAZOO_VPS_SECRET_2026";
       if(n === 0){
-        await updateDoc(doc(db,"channelMessages", m.id), { views: 0, customViews: false });
+        await fetch(VPS + "/messages.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action: "setViews", messageId: m.id, views: 0, custom: false }) });
         toast("Views reset to auto");
       } else {
-        await updateDoc(doc(db,"channelMessages", m.id), { views: n, customViews: true });
+        await fetch(VPS + "/messages.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action: "setViews", messageId: m.id, views: n, custom: true }) });
         toast("Views set to " + fmtCount(n));
       }
-    }catch(err){ toast("Failed: " + (err.code||err.message), "ic-close"); }
+    }catch(err){ toast("Failed: Network error", "ic-close"); }
   } else if(act === "delete"){
     const ch = state.channels.find(c=>c.id === m.channelId);
     if(!isChannelOwner(ch)){ toast("Only the channel owner can delete messages", "ic-close"); return; }
     if(!(await confirmSheet("Delete message?", "Removed for everyone.", "Delete"))) return;
-    try{ await deleteDoc(doc(db,"channelMessages", m.id)); await deleteDoc(doc(db,"channelMessageMedia", m.id)).catch(()=>{}); toast("Message deleted"); }
-    catch(err){ toast("Delete failed: " + (err.code||err.message), "ic-close"); }
+    try{
+      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const SECRET = "PIKAZOO_VPS_SECRET_2026";
+      await fetch(VPS + "/messages.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action: "delete", messageId: m.id }) });
+      toast("Message deleted");
+    }
+    catch(err){ toast("Delete failed: Network error", "ic-close"); }
   }
 });
   P("pktg-upload-cancel").addEventListener("click", ()=>{ if(state.tg.uploadAbort){ try{ state.tg.uploadAbort(); }catch(e){} } hideTgUpload(); });
@@ -11561,7 +11607,15 @@ async function countViews(messages){
   toIncrement.push(m.id);
 }
     saveViewedMsgs(seen);
-    for(const id of toIncrement){ updateDoc(doc(db,"channelMessages", id), { views: increment(1) }).catch(()=>{}); }
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
+    for(const id of toIncrement){
+      fetch(VPS + "/messages.php", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ secret: SECRET, action: "bumpViews", messageId: id })
+      }).catch(()=>{});
+    }
   }finally{ viewsInFlight = false; }
 }
 function renderTelegramFeed(){
@@ -12132,18 +12186,12 @@ async function saveChannelMessageEdit(m, newFile, newDesc, newThumbFile){
 
   showTgUpload(newFile ? newFile.name : "Updating message…");
   try{
-    const updates = {
-      caption: newDesc,
-      edited: true,
-      updatedAt: serverTimestamp(),
-      updatedAtMs: Date.now()
-    };
-    const mediaUpdates = {};
+    const updates = { caption: newDesc };
 
     if(newFile){
       const msgId = "chmsg_" + state.tg.channelId + "_" + generateAppId();
       const res = await uploadFileToServer(newFile, msgId, "file", p => setTgUpload(p));
-      mediaUpdates.mediaUrl = res.url;
+      updates.mediaUrl = res.url;
       updates.filename = newFile.name;
       updates.mimeType = newFile.type || "";
       updates.size = newFile.size;
@@ -12170,10 +12218,15 @@ async function saveChannelMessageEdit(m, newFile, newDesc, newThumbFile){
 }
 
     setTgUpload(100);
-    await updateDoc(doc(db,"channelMessages", m.id), updates);
-    if(Object.keys(mediaUpdates).length){
-      await setDoc(doc(db,"channelMessageMedia", m.id), mediaUpdates, { merge: true });
-    }
+    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const SECRET = "PIKAZOO_VPS_SECRET_2026";
+    const r = await fetch(VPS + "/messages.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ secret: SECRET, action: "edit", messageId: m.id, ...updates })
+    });
+    const data = await r.json();
+    if(!data.status) throw new Error(data.message || "Update failed");
     toast("Message updated — position and views preserved");
   }catch(e){
     console.error(e);
