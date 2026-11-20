@@ -9730,7 +9730,7 @@ async function joinChannelWithCode(channel, codeRaw){
   const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   try{
-    const vr = await fetch(VPS + "/secret_code.php", {
+    const vr = await fetch(VPS + "/secretcode/secret_code.php", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "redeem", code: code, channelId: channel.id, usedByUid: state.uid, usedByName: state.username || "" })
@@ -9777,7 +9777,7 @@ async function joinChannelWithCode(channel, codeRaw){
     }catch(txErr){
       // Firestore step fail ho gaya — code ko VPS pe wapas "unused" kar do, waste na ho
       try{
-        await fetch(VPS + "/secret_code.php", {
+        await fetch(VPS + "/secretcode/secret_code.php", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ secret: SECRET, action: "unredeem", code: code, channelId: channel.id, usedByUid: state.uid })
@@ -10082,7 +10082,7 @@ function openChannelMembersSheet(channelId){
 async function generateUniqueChannelCode(channelId, channelName){
   const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
-  const r = await fetch(VPS + "/secret_code.php", {
+  const r = await fetch(VPS + "/secretcode/secret_code.php", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({
@@ -10363,7 +10363,7 @@ function openChannelCodesSheet(channelId){
   }
   async function loadAll(){
     try{
-      const r = await fetch(VPS + "/secret_code.php", {
+      const r = await fetch(VPS + "/secretcode/secret_code.php", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "list", channelId: channelId })
@@ -10386,7 +10386,7 @@ if(del){
   const codeToDel = del.dataset.delCode;
   if(!(await confirmSheet("Delete Secret Code?", "This code will be removed forever. Members who already joined using this code will NOT be removed.", "Delete"))) return;
   try{
-    const r = await fetch(VPS + "/secret_code.php", {
+    const r = await fetch(VPS + "/secretcode/secret_code.php", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "delete", code: codeToDel, requesterUid: state.authUid || state.uid })
