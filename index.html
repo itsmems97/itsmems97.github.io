@@ -4457,16 +4457,33 @@ async function dedupeOwnerDocs(){
   }catch(e){}
 }
 async function ensureProfile(){
-  const ref = doc(db,"users",state.uid);
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
   let existing = null;
-  try{ const s = await getDoc(ref); if(s.exists()) existing = s.data(); }catch(e){}
+  try{
+    const r = await fetch(VPS + "/PikaUser/users.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ secret: SECRET, action: "get", uid: state.uid })
+    });
+    const data = await r.json();
+    if(data.status) existing = data.user;
+  }catch(e){ console.warn(e); }
   if(existing){
     state.username = state.isOwner ? CONFIG.ownerPublicName : (existing.name || state.username);
     state.photoURL = existing.photoURL || state.photoURL || "";
   }
-  const base = { name: state.username, nameLower: lowerName(state.username), photoURL: state.photoURL || "", verified: state.verified, owner: state.isOwner, ...presenceFields(), updatedAt: serverTimestamp() };
-  try{ await setDoc(ref, existing ? base : { ...base, joinedAt: serverTimestamp(), setupDone: false }, { merge:true }); }
-  catch(e){ console.warn(e); }
+  try{
+    await fetch(VPS + "/PikaUser/users.php", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        secret: SECRET, action: "save", uid: state.uid,
+        name: state.username, nameLower: lowerName(state.username),
+        photoURL: state.photoURL || "", verified: state.verified, owner: state.isOwner
+      })
+    });
+  }catch(e){ console.warn(e); }
 }
 function hideSplash(){
   if(window.__pksHide){ window.__pksHide(); return; }
