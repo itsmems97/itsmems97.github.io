@@ -5581,7 +5581,7 @@ async function vpsMemberSnap(cid, uid){
 
 async function migrateUsersFromFirebase(){
   if(!state.isOwner) return;
-  if(localStorage.getItem("pika_users_import_v1")) return;
+  if(localStorage.getItem("pika_users_import_v2")) return;
   const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   const sec = t => (t && typeof t.toMillis === "function") ? Math.floor(t.toMillis()/1000) : (typeof t === "number" ? (t > 1e12 ? Math.floor(t/1000) : t) : 0);
@@ -5598,7 +5598,7 @@ async function migrateUsersFromFirebase(){
         if(j.status) ok++; else fail++;
       }catch(e){ fail++; }
     }
-    if(fail === 0) localStorage.setItem("pika_users_import_v1", "1");
+    if(fail === 0) localStorage.setItem("pika_users_import_v2", "1");
     toast("Users import: " + ok + " done, " + skip + " guests skipped" + (fail ? (", " + fail + " failed") : ""), fail ? "ic-close" : "ic-check");
   }catch(e){ console.warn("users import", e); toast("Users import failed: " + (e.code || e.message), "ic-close"); }
 }
