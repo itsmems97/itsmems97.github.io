@@ -5307,7 +5307,7 @@ function boot(){
   // listenChat / listenDmActivity band: group aur private chat UI se hata diye
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ toast("Guest mode: preview & download only", "ic-lock"); }
-  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); toast("Owner control enabled", "ic-check"); }
+  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateUsersFromFirebase(); toast("Owner control enabled", "ic-check"); }
 
   // ⚡ VIP backfill ab zaroori nahi — naye joins ka VIP badge VPS se already sahi milta hai
   // (ye functions Firestore ke purane/khaali members data check karte, isliye band kar diye)
@@ -5579,6 +5579,29 @@ async function vpsMemberSnap(cid, uid){
 // removed: old users migration (ab Telegram par hai)
 // removed: old channels migration (ab Oracle + Telegram par hai)
 
+async function migrateUsersFromFirebase(){
+  if(!state.isOwner) return;
+  if(localStorage.getItem("pika_users_import_v1")) return;
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
+  const sec = t => (t && typeof t.toMillis === "function") ? Math.floor(t.toMillis()/1000) : (typeof t === "number" ? (t > 1e12 ? Math.floor(t/1000) : t) : 0);
+  let ok = 0, fail = 0, skip = 0;
+  toast("Users import started - app khula rakho", "ic-check");
+  try{
+    const snap = await getDocs(collection(db,"users"));
+    for(const d of snap.docs){
+      const u = d.data();
+      if(u.guest){ skip++; continue; }
+      try{
+        const r = await fetch(VPS + "/users", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action:"import", uid: d.id, name: u.name || "User", nameLower: u.nameLower || "", photoURL: u.photoURL || "", owner: !!u.owner, verified: !!u.verified, banned: !!u.banned, setupDone: !!u.setupDone, joinedAt: sec(u.joinedAt) || undefined, createdAt: sec(u.createdAt) || sec(u.joinedAt) || undefined, lastActiveMs: u.lastActiveMs || 0, vipChannels: Array.isArray(u.vipChannels) ? u.vipChannels : [], inviteCount: u.inviteCount || 0, deviceId: u.deviceId || "" }) });
+        const j = await r.json();
+        if(j.status) ok++; else fail++;
+      }catch(e){ fail++; }
+    }
+    if(fail === 0) localStorage.setItem("pika_users_import_v1", "1");
+    toast("Users import: " + ok + " done, " + skip + " guests skipped" + (fail ? (", " + fail + " failed") : ""), fail ? "ic-close" : "ic-check");
+  }catch(e){ console.warn("users import", e); toast("Users import failed: " + (e.code || e.message), "ic-close"); }
+}
 /* ================= MAINTENANCE MODE ================= */
 let MAINTENANCE_MODE = false;
 
