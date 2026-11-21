@@ -5202,7 +5202,7 @@ async function backfillVipChannels(){
     for(const ch of state.channels){
       if(!ch || !ch.id || !ch.name) continue;
       try{
-        const snap = await getDoc(doc(db, "channels", ch.id, "members", memberKey));
+        const snap = await vpsMemberSnap(ch.id, memberKey);
         if(snap.exists() && !snap.data().blocked){
           memberChannelNames.push(ch.name);
         }
@@ -5260,7 +5260,7 @@ async function ownerBulkBackfillVip(){
       for(const ch of state.channels){
         if(!ch || !ch.id || !ch.name) continue;
         try{
-          const msnap = await getDoc(doc(db, "channels", ch.id, "members", uid));
+          const msnap = await vpsMemberSnap(ch.id, uid);
           if(msnap.exists() && !msnap.data().blocked){
             memberChannelNames.push(ch.name);
           }
@@ -5307,7 +5307,7 @@ function boot(){
   // listenChat / listenDmActivity band: group aur private chat UI se hata diye
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ toast("Guest mode: preview & download only", "ic-lock"); }
-  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelsToVPS(); toast("Owner control enabled", "ic-check"); }
+  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); toast("Owner control enabled", "ic-check"); }
 
   // ⚡ VIP backfill ab zaroori nahi — naye joins ka VIP badge VPS se already sahi milta hai
   // (ye functions Firestore ke purane/khaali members data check karte, isliye band kar diye)
@@ -5564,6 +5564,14 @@ function listenUsers(){
 }
 function listenCodes(){
   onSnapshot(collection(db,"verifyCodes"), snap=>{ state.codes = snap.docs.map(d=>d.id).sort(); }, err=> console.warn("codes listener", err));
+}
+async function vpsMemberSnap(cid, uid){
+  try{
+    const r = await fetch("https://193-122-76-131.nip.io/keyapi/members", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret:"PIKAZOO_VPS_SECRET_2026", action:"get", channelId: cid, uid: uid }) });
+    const d = await r.json();
+    const m = (d && d.status && d.member) ? d.member : null;
+    return { exists: () => !!m, data: () => (m ? { ...m, blocked: !!Number(m.blocked) } : {}) };
+  }catch(e){ return { exists: () => false, data: () => ({}) }; }
 }
 async function migrateChannelMembers(){
   if(!state.isOwner || !state.authUid) return;
