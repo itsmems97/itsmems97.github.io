@@ -5555,7 +5555,7 @@ function listenUsers(){
       renderProfile(); renderUsersPage(); renderChatLog(); renderTelegramFeed();
     }catch(err){
       console.warn("users listener", err);
-      if(!warned){ warned = true; toast("Users sync error", "ic-close"); }
+      if(!warned){ warned = true; toast("Users sync error: " + (err && err.message ? err.message : err), "ic-close"); }
     }
   };
   state.reloadUsers = load;
@@ -9753,7 +9753,7 @@ function listenChannels(){
     }catch(err){
       console.warn("channels load", err);
       if(!state.channelsLoaded){ state.channelsFailed = true; renderChannelsPage(); }
-      if(!warned){ warned = true; toast("Channels sync error", "ic-close"); }
+      if(!warned){ warned = true; toast("Channels sync error: " + (err && err.message ? err.message : err), "ic-close"); }
     }
   };
   state.reloadChannels = load;
@@ -11596,7 +11596,7 @@ $("#pktg-subs").textContent = preview
       renderTelegramFeed();
       if(!preview) countViews(all);
     }catch(err){
-      console.warn("channel messages load", err);
+      console.warn("channel messages load", err); toast("Msg error: " + (err && err.message ? err.message : err), "ic-close");
       $("#pktg-feed").innerHTML = `<div class="pktg-empty"><div class="pktg-empty-icon"><svg width="26" height="26"><use href="#ic-lock"/></svg></div><b>Could not load messages</b></div>`;
     }
   };

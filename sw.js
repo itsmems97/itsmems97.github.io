@@ -13,11 +13,11 @@
 try { importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'); } catch (err) {}
 
 /* ================== SETTINGS (yahan se sab control hota hai) ================== */
-const STORE_CACHE = 'pika-store-v8';
-const MOVIE_CACHE = 'pika-movie-v4';
+const STORE_CACHE = 'pika-store-v10';
+const MOVIE_CACHE = 'pika-movie-v5';
 const IMG_CACHE = 'pika-img-v4';          // sirf tab badlo jab saari images zabardasti dobara download karwani ho
-const MEDIA_CACHE = 'pika-media-v4';      // Maria ke videos/awaaz (zabardasti dobara download karwane ho to v2 kar do)
-const META_CACHE = 'pika-media-meta-v3';  // Maria files ka chhota hisaab-kitaab (kab check hua, size kitna)
+const MEDIA_CACHE = 'pika-media-v5';      // Maria ke videos/awaaz (zabardasti dobara download karwane ho to v2 kar do)
+const META_CACHE = 'pika-media-meta-v4';  // Maria files ka chhota hisaab-kitaab (kab check hua, size kitna)
 
 const MOVIE_ASSETS = ['/pika-movie-manifest.json', '/Pika-Movie.png'];
 
