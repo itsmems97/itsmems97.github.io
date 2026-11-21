@@ -4459,7 +4459,7 @@ async function ensureProfile(){
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   let existing = null;
   try{
-    const r = await fetch(VPS + "/PikaUser/users.php", {
+    const r = await fetch(VPS + "/users", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "get", uid: state.uid })
@@ -4472,7 +4472,7 @@ async function ensureProfile(){
     state.photoURL = existing.photoURL || state.photoURL || "";
   }
   try{
-    await fetch(VPS + "/PikaUser/users.php", {
+    await fetch(VPS + "/users", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
@@ -5498,7 +5498,7 @@ function startHeartbeat(){
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   const push = extra => {
     if(!state.uid) return;
-    fetch(VPS + "/users.php", {
+    fetch(VPS + "/users", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "heartbeat", uid: state.uid, ...extra })
@@ -5514,13 +5514,13 @@ function startHeartbeat(){
   setInterval(()=> renderUsersPage(), 20*1000);
 }
 function listenUsers(){
-  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaUser";
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   let firstLoad = true, lastJson = "", warned = false;
   const load = async ()=>{
     if(document.hidden && !firstLoad) return;
     try{
-      const r = await fetch(VPS + "/users.php", {
+      const r = await fetch(VPS + "/users", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "list" })
@@ -5614,7 +5614,7 @@ async function migrateUsersToVPS(){
   }
   if(localStorage.getItem("pika_vps_users_migration_done")){ toast("Users sync already marked done", "ic-check"); return; }
   toast("Users sync started...", "ic-check");
-  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaUser";
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   const sec = t => (t && typeof t.toMillis === "function") ? Math.floor(t.toMillis()/1000) : (typeof t === "number" ? (t > 1e12 ? Math.floor(t/1000) : t) : 0);
   let ok = 0, fail = 0;
@@ -5623,7 +5623,7 @@ async function migrateUsersToVPS(){
     for(const d of snap.docs){
       const u = d.data();
       try{
-        const r = await fetch(VPS + "/users.php", {
+        const r = await fetch(VPS + "/users", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({
@@ -5660,7 +5660,7 @@ async function migrateChannelsToVPS(){
       const ch = chDoc.data();
       const chId = chDoc.id;
       try{
-        await fetch(VPS + "/channels.php", {
+        await fetch(VPS + "/channels", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({
@@ -5681,7 +5681,7 @@ async function migrateChannelsToVPS(){
         for(const memDoc of memSnap.docs){
           const m = memDoc.data();
           try{
-            await fetch(VPS + "/members.php", {
+            await fetch(VPS + "/members", {
               method: "POST",
               headers: {"Content-Type":"application/json"},
               body: JSON.stringify({
@@ -5712,7 +5712,7 @@ async function migrateChannelsToVPS(){
         }
       }catch(e){}
       try{
-        await fetch(VPS + "/messages.php", {
+        await fetch(VPS + "/ch_messages", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({
@@ -8954,7 +8954,7 @@ if(act === "givevip"){
   if(!channel){ toast("Channel name required", "ic-close"); return false; }
   const existing = Array.isArray(raw.vipChannels) ? raw.vipChannels : [];
   if(existing.includes(channel)){ toast("Already VIP in this channel", "ic-close"); return false; }
-  await fetch("https://193-122-76-131.nip.io/keyapi/PikaUser/users", {
+  await fetch("https://193-122-76-131.nip.io/keyapi/users", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ secret: "PIKAZOO_VPS_SECRET_2026", action: "addVip", uid: uid, channelName: channel })
@@ -8963,7 +8963,7 @@ if(act === "givevip"){
   return true;
 }
 if(act === "removevip"){
-  await fetch("https://193-122-76-131.nip.io/keyapi/PikaUser/users.php", {
+  await fetch("https://193-122-76-131.nip.io/keyapi/users", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ secret: "PIKAZOO_VPS_SECRET_2026", action: "clearVip", uid: uid })
@@ -9393,10 +9393,10 @@ function openDmPanel(otherId){
   document.body.insertAdjacentHTML("beforeend", html);
   const wrap = $("#dm-backdrop"), log = $("#dm-log");
   let msgs = [];
-  const VPS_PRESENCE = "https://193-122-76-131.nip.io/keyapi/PikaUser";
+  const VPS_PRESENCE = "https://193-122-76-131.nip.io/keyapi";
   const SECRET_PRESENCE = "PIKAZOO_VPS_SECRET_2026";
-  fetch(VPS_PRESENCE + "/users.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET_PRESENCE, action:"heartbeat", uid: state.uid, activeThreadId: tid }) }).catch(()=>{});
-  const clearActiveThread = ()=>{ fetch(VPS_PRESENCE + "/users.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET_PRESENCE, action:"heartbeat", uid: state.uid, activeThreadId: "" }) }).catch(()=>{}); };
+  fetch(VPS_PRESENCE + "/users", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET_PRESENCE, action:"heartbeat", uid: state.uid, activeThreadId: tid }) }).catch(()=>{});
+  const clearActiveThread = ()=>{ fetch(VPS_PRESENCE + "/users", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET_PRESENCE, action:"heartbeat", uid: state.uid, activeThreadId: "" }) }).catch(()=>{}); };
   const markSeen = ()=>{ msgs.filter(m=> m.to === state.uid && !m.seenAt).forEach(m=>{ updateDoc(doc(db,"dmMessages",m.id), { seenAt: serverTimestamp() }).catch(()=>{}); }); };
   const render = ()=>{
     msgs.sort((a,b)=> (a.createdAtMs||0) - (b.createdAtMs||0));
@@ -9712,7 +9712,7 @@ function loadCachedChannels(){
   renderChannelsPage();
 }
 function listenChannels(){
-  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   let firstLoad = true, lastJson = "", warned = false;
   const load = async ()=>{
@@ -9769,7 +9769,7 @@ async function refreshMyChannels(){
   let gotOk = false;
   for(const u of uids){
     try{
-      const r = await fetch("https://193-122-76-131.nip.io/keyapi/PikaChannel/members", {
+      const r = await fetch("https://193-122-76-131.nip.io/keyapi/members", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: "PIKAZOO_VPS_SECRET_2026", action: "myChannels", uid: u })
@@ -9957,7 +9957,7 @@ async function joinChannelWithCode(channel, codeRaw){
   const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   try{
-    const vr = await fetch(VPS + "/secretcode/secret_code.php", {
+    const vr = await fetch(VPS + "/secret_codes", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "redeem", code: code, channelId: channel.id, usedByUid: state.uid, usedByName: state.username || "" })
@@ -9971,7 +9971,7 @@ async function joinChannelWithCode(channel, codeRaw){
     }
 
     try{
-      const jr = await fetch(VPS + "/PikaChannel/members.php", {
+      const jr = await fetch(VPS + "/members", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "join", channelId: channel.id, uid: state.uid, name: state.username, photoURL: state.photoURL || "", viaCode: code })
@@ -9979,9 +9979,9 @@ async function joinChannelWithCode(channel, codeRaw){
       const jdata = await jr.json();
       if(!jdata.status) throw new Error(jdata.message || "Join failed");
 
-      // ⚡ Auto VIP badge — ab VPS (PikaUser) pe
+      // ⚡ Auto VIP badge — ab VPS pe
       try{
-        await fetch(VPS + "/PikaUser/users.php", {
+        await fetch(VPS + "/users", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ secret: SECRET, action: "addVip", uid: state.uid, channelName: channel.name })
@@ -9990,7 +9990,7 @@ async function joinChannelWithCode(channel, codeRaw){
     }catch(joinErr){
       // VPS join fail ho gaya — code ko wapas "unused" kar do, waste na ho
       try{
-        await fetch(VPS + "/secretcode/secret_code.php", {
+        await fetch(VPS + "/secret_codes", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ secret: SECRET, action: "unredeem", code: code, channelId: channel.id, usedByUid: state.uid })
@@ -10069,9 +10069,9 @@ async function openCreateChannelSheet(){
     if(nn.length < 3){ toast("Name is too short", "ic-close"); return; }
 
     try{
-      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const VPS = "https://193-122-76-131.nip.io/keyapi";
       const SECRET = "PIKAZOO_VPS_SECRET_2026";
-      const r = await fetch(VPS + "/channels.php", {
+      const r = await fetch(VPS + "/channels", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "create", name: nn, ownerUid: state.uid, ownerName: state.username })
@@ -10147,9 +10147,9 @@ function openChannelManageSheet(channelId){
       if(v === null) return;
       const nn = v.trim(); if(nn.length < 3){ toast("Too short", "ic-close"); return; }
       try{
-        const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+        const VPS = "https://193-122-76-131.nip.io/keyapi";
         const SECRET = "PIKAZOO_VPS_SECRET_2026";
-        await fetch(VPS + "/channels.php", {
+        await fetch(VPS + "/channels", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ secret: SECRET, action: "rename", channelId: channelId, name: nn })
@@ -10172,9 +10172,9 @@ function openChannelManageSheet(channelId){
     try{
       const cropFile = new File([croppedBlob], "channel.jpg", { type: "image/jpeg" });
       const url = await uploadAvatar(cropFile);
-      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const VPS = "https://193-122-76-131.nip.io/keyapi";
       const SECRET = "PIKAZOO_VPS_SECRET_2026";
-      await fetch(VPS + "/channels.php", {
+      await fetch(VPS + "/channels", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "setPhoto", channelId: channelId, photoURL: url })
@@ -10189,16 +10189,16 @@ else if(a === "members"){ wrap.remove(); openChannelMembersSheet(channelId); }
   wrap.remove();
   openUserPicker(async u=>{
     try{
-      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const VPS = "https://193-122-76-131.nip.io/keyapi";
       const SECRET = "PIKAZOO_VPS_SECRET_2026";
-      await fetch(VPS + "/members.php", {
+      await fetch(VPS + "/members", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "add", channelId: channelId, uid: u.id, name: u.name||"", photoURL: u.photoURL||"" })
       });
       // ⚡ Auto VIP badge — ab VPS pe
       try{
-        await fetch("https://193-122-76-131.nip.io/keyapi/PikaUser/users.php", {
+        await fetch("https://193-122-76-131.nip.io/keyapi/users", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ secret: "PIKAZOO_VPS_SECRET_2026", action: "addVip", uid: u.id, channelName: ch.name })
@@ -10223,24 +10223,24 @@ else if(a === "setmembers"){
     }
   }
   try{
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
     if(n === 0){
-      const mr = await fetch(VPS + "/members.php", {
+      const mr = await fetch(VPS + "/members", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "list", channelId: channelId })
       });
       const mdata = await mr.json();
       const realCount = Math.max(1, (mdata.members || []).length);
-      await fetch(VPS + "/channels.php", {
+      await fetch(VPS + "/channels", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "setMemberCount", channelId: channelId, memberCount: realCount, activeMemberCount: 0, custom: false })
       });
       toast("Reset to real count: " + realCount);
     } else {
-      await fetch(VPS + "/channels.php", {
+      await fetch(VPS + "/channels", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "setMemberCount", channelId: channelId, memberCount: n, activeMemberCount: activeN, custom: true })
@@ -10256,7 +10256,7 @@ else if(a === "setviewsall"){
   const n = parseInt(v.trim(), 10);
   if(!Number.isFinite(n) || n < 0){ toast("Enter a valid number", "ic-close"); return; }
   try{
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
     const r = await fetch(VPS + "/ch_messages", {
       method: "POST",
@@ -10278,11 +10278,11 @@ else if(a === "delete"){
   });
 }
 async function loadChannelMembersIntoBox(channelId){
-  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   const box = $("#chmem-list"); if(!box) return;
   try{
-    const r = await fetch(VPS + "/members.php", {
+    const r = await fetch(VPS + "/members", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "list", channelId: channelId })
@@ -10316,14 +10316,14 @@ function openChannelMembersSheet(channelId){
     if(e.target === wrap || e.target.closest("[data-close]")){ wrap.remove(); return; }
     const btn = e.target.closest("[data-mem-act]"); if(!btn) return;
     const uid = btn.dataset.mem, act = btn.dataset.memAct;
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
     try{
-      if(act === "block") await fetch(VPS + "/members.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action:"block", channelId: channelId, uid: uid }) });
-      else if(act === "unblock") await fetch(VPS + "/members.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action:"unblock", channelId: channelId, uid: uid }) });
+      if(act === "block") await fetch(VPS + "/members", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action:"block", channelId: channelId, uid: uid }) });
+      else if(act === "unblock") await fetch(VPS + "/members", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action:"unblock", channelId: channelId, uid: uid }) });
       else if(act === "remove"){
   if(!(await confirmSheet("Remove this member?", "They'll need a new code to rejoin.", "Remove"))) return;
-  await fetch(VPS + "/members.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action:"remove", channelId: channelId, uid: uid }) });
+  await fetch(VPS + "/members", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action:"remove", channelId: channelId, uid: uid }) });
 }
       toast("Updated");
       loadChannelMembersIntoBox(channelId);
@@ -10430,7 +10430,7 @@ function openChannelKeysManagementSheet(channelId){
 
   const loadKeys = async () => {
     try{
-      const r = await fetch(VPS + "/manage_key.php", {
+      const r = await fetch(VPS + "/keys/manage", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "list", userEmail: ownerEmail })
@@ -10522,7 +10522,7 @@ function openChannelKeysManagementSheet(channelId){
     // PAUSE BUTTON
     else if(act === "pause"){
       try{
-        const r = await fetch(VPS + "/manage_key.php", {
+        const r = await fetch(VPS + "/keys/manage", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ secret: SECRET, action: "toggle", key: keyCode, userEmail: ownerEmail })
@@ -10536,7 +10536,7 @@ function openChannelKeysManagementSheet(channelId){
     // RESUME BUTTON
     else if(act === "resume"){
       try{
-        const r = await fetch(VPS + "/manage_key.php", {
+        const r = await fetch(VPS + "/keys/manage", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ secret: SECRET, action: "toggle", key: keyCode, userEmail: ownerEmail })
@@ -10551,7 +10551,7 @@ function openChannelKeysManagementSheet(channelId){
     else if(act === "revoke"){
       if(!(await confirmSheet("Revoke this key?", "This will unbind the key from its device. User can use it again on the same or any device. (Useful after factory reset)", "Revoke"))) return;
       try{ 
-        const r = await fetch(VPS + "/manage_key.php", {
+        const r = await fetch(VPS + "/keys/manage", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ secret: SECRET, action: "revoke", key: keyCode, userEmail: ownerEmail })
@@ -10614,7 +10614,7 @@ function openChannelCodesSheet(channelId){
   }
   async function loadAll(){
     try{
-      const r = await fetch(VPS + "/secretcode/secret_code.php", {
+      const r = await fetch(VPS + "/secret_codes", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "list", channelId: channelId })
@@ -10637,7 +10637,7 @@ if(del){
   const codeToDel = del.dataset.delCode;
   if(!(await confirmSheet("Delete Secret Code?", "This code will be removed forever. Members who already joined using this code will NOT be removed.", "Delete"))) return;
   try{
-    const r = await fetch(VPS + "/secretcode/secret_code.php", {
+    const r = await fetch(VPS + "/secret_codes", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "delete", code: codeToDel, requesterUid: state.authUid || state.uid })
@@ -10661,9 +10661,9 @@ if(cp){ const ok = await copyText(cp.dataset.copyCode); toast(ok ? "Code copied"
 }
 async function deleteChannelForever(ch){
   try{
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
-    await fetch(VPS + "/channels.php", {
+    await fetch(VPS + "/channels", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "delete", channelId: ch.id })
@@ -10710,7 +10710,7 @@ if(isMemberHere){
     const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
     
-    fetch(VPS + "/manage_key.php", {
+    fetch(VPS + "/keys/manage", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "list", userEmail: userEmail })
@@ -10724,7 +10724,7 @@ if(isMemberHere){
           btn.disabled = true; btn.innerHTML = "Generating...";
           try{
             const newKey = "PIKAZOO" + randomCode(7);
-            const r = await fetch(VPS + "/register_key.php", {
+            const r = await fetch(VPS + "/keys/register", {
               method: "POST",
               headers: {"Content-Type":"application/json"},
               body: JSON.stringify({
@@ -10804,9 +10804,9 @@ function openExitChannelConfirm(channelId){
     if(input.value.trim().toLowerCase() !== "exit") return;
     try{
       ok.disabled = true;
-      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const VPS = "https://193-122-76-131.nip.io/keyapi";
       const SECRET = "PIKAZOO_VPS_SECRET_2026";
-      await fetch(VPS + "/members.php", {
+      await fetch(VPS + "/members", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "remove", channelId: channelId, uid: state.uid })
@@ -11053,13 +11053,13 @@ input.addEventListener("paste", e=>{
     const n = parseInt(v.trim(), 10);
     if(!Number.isFinite(n) || n < 0){ toast("Enter a valid number", "ic-close"); return; }
     try{
-      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const VPS = "https://193-122-76-131.nip.io/keyapi";
       const SECRET = "PIKAZOO_VPS_SECRET_2026";
       if(n === 0){
-        await fetch(VPS + "/messages.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action: "setViews", messageId: m.id, views: 0, custom: false }) });
+        await fetch(VPS + "/ch_messages", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action: "setViews", messageId: m.id, views: 0, custom: false }) });
         toast("Views reset to auto");
       } else {
-        await fetch(VPS + "/messages.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action: "setViews", messageId: m.id, views: n, custom: true }) });
+        await fetch(VPS + "/ch_messages", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action: "setViews", messageId: m.id, views: n, custom: true }) });
         toast("Views set to " + fmtCount(n));
       }
     }catch(err){ toast("Failed: Network error", "ic-close"); }
@@ -11068,9 +11068,9 @@ input.addEventListener("paste", e=>{
     if(!isChannelOwner(ch)){ toast("Only the channel owner can delete messages", "ic-close"); return; }
     if(!(await confirmSheet("Delete message?", "Removed for everyone.", "Delete"))) return;
     try{
-      const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+      const VPS = "https://193-122-76-131.nip.io/keyapi";
       const SECRET = "PIKAZOO_VPS_SECRET_2026";
-      await fetch(VPS + "/messages.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action: "delete", messageId: m.id }) });
+      await fetch(VPS + "/ch_messages", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, action: "delete", messageId: m.id }) });
       toast("Message deleted");
     }
     catch(err){ toast("Delete failed: Network error", "ic-close"); }
@@ -11577,11 +11577,11 @@ $("#pktg-subs").textContent = preview
   if(state.tg.unsubMedia){ state.tg.unsubMedia(); state.tg.unsubMedia = null; }
 
   // Messages — ab VPS se aate hain, har 5 second mein refresh hota hai
-  const VPS_MSG = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+  const VPS_MSG = "https://193-122-76-131.nip.io/keyapi";
   const SECRET_MSG = "PIKAZOO_VPS_SECRET_2026";
   const loadChannelMessagesFromVPS = async ()=>{
     try{
-      const r = await fetch(VPS_MSG + "/messages.php", {
+      const r = await fetch(VPS_MSG + "/ch_messages", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET_MSG, action: "list", channelId: channelId })
@@ -11639,10 +11639,10 @@ async function countViews(messages){
   toIncrement.push(m.id);
 }
     saveViewedMsgs(seen);
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
     for(const id of toIncrement){
-      fetch(VPS + "/messages.php", {
+      fetch(VPS + "/ch_messages", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "bumpViews", messageId: id })
@@ -12250,9 +12250,9 @@ async function saveChannelMessageEdit(m, newFile, newDesc, newThumbFile){
 }
 
     setTgUpload(100);
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
-    const r = await fetch(VPS + "/messages.php", {
+    const r = await fetch(VPS + "/ch_messages", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "edit", messageId: m.id, ...updates })
@@ -12359,10 +12359,10 @@ function openBatchMessageEdit(m){
 async function saveBatchMessageEdit(m, files, newDesc){
   const ch = state.channels.find(c=>c.id === m.channelId);
   if(!isChannelOwner(ch)){ toast("Only the channel owner can edit messages", "ic-close"); return; }
-  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   const post = async body=>{
-    const r = await fetch(VPS + "/messages.php", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, ...body }) });
+    const r = await fetch(VPS + "/ch_messages", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ secret: SECRET, ...body }) });
     const d = await r.json();
     if(!d.status) throw new Error(d.message || "Update failed");
     return d;
@@ -12494,9 +12494,9 @@ async function tgSendText(){
   if(problem){ toast(problem, "ic-close"); return; }
   clearTgInput(); input.style.height = "auto"; updateSendBtnIcon();
   try{
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
-    await fetch(VPS + "/messages.php", {
+    await fetch(VPS + "/ch_messages", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
@@ -12665,9 +12665,9 @@ async function sendVoiceBlob(blob, durationSec, description){
   try{
     const res = await uploadFileToServer(file, msgId, "file", p=> setTgUpload(p));
     setTgUpload(100);
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
-    await fetch(VPS + "/messages.php", {
+    await fetch(VPS + "/ch_messages", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
@@ -12773,9 +12773,9 @@ async function sendStoreAppToChannel(){
   if(!state.tg.channelId) return;
   if(guestBlock("broadcast in channels")) return;
   try{
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
-    await fetch(VPS + "/messages.php", {
+    await fetch(VPS + "/ch_messages", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
@@ -12973,9 +12973,9 @@ async function performTgUpload(){
       }catch(e){ console.warn("Icon upload failed", e); }
     }
     const type = kind === "image" ? "image" : kind === "video" ? "video" : (file.type && file.type.startsWith("audio/") ? "audio" : "file");
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
-    await fetch(VPS + "/messages.php", {
+    await fetch(VPS + "/ch_messages", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
@@ -13103,9 +13103,9 @@ async function performTgBatchUpload(items, description){
   if(!okItems.length){ toast("No files uploaded"); return; }
   const combinedFiles = okItems.map(q => ({ filename: q.file.name, mimeType: q.file.type || "", size: q.file.size, iconUrl: q.iconUrl || "", mediaUrl: q.result.url }));
   try{
-    const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+    const VPS = "https://193-122-76-131.nip.io/keyapi";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
-    await fetch(VPS + "/messages.php", {
+    await fetch(VPS + "/ch_messages", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
