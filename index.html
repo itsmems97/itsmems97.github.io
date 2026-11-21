@@ -5307,7 +5307,7 @@ function boot(){
   // listenChat / listenDmActivity band: group aur private chat UI se hata diye
   watchConnectivity(); startHeartbeat();
   if(state.isGuest){ toast("Guest mode: preview & download only", "ic-lock"); }
-  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); toast("Owner control enabled", "ic-check"); }
+  if(state.isOwner){ listenCodes(); sweepExpiredGuests(); migrateChannelsToVPS(); toast("Owner control enabled", "ic-check"); }
 
   // ⚡ VIP backfill ab zaroori nahi — naye joins ka VIP badge VPS se already sahi milta hai
   // (ye functions Firestore ke purane/khaali members data check karte, isliye band kar diye)
@@ -5650,7 +5650,7 @@ async function migrateUsersToVPS(){
 /* ================= ONE-TIME MIGRATION: Firestore channels → VPS ================= */
 async function migrateChannelsToVPS(){
   if(!state.isOwner) return;
-  if(localStorage.getItem("pika_vps_channel_migration_done")) return;
+  if(localStorage.getItem("pika_vps_channel_migration_done_v2")) return;
   const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   let chCount = 0, memCount = 0, msgCount = 0;
@@ -5731,14 +5731,14 @@ async function migrateChannelsToVPS(){
             replyTo: m.replyTo || null,
             views: m.views || 0, customViews: !!m.customViews,
             deleted: !!m.deleted, edited: !!m.edited,
-            createdAt: m.createdAtMs || Date.now()
+            createdAt: m.createdAtMs || (m.createdAt && m.createdAt.toMillis ? m.createdAt.toMillis() : Date.now())
           })
         });
         msgCount++;
       }catch(e){ console.warn("migrate message failed", msgDoc.id, e); }
     }
 
-    localStorage.setItem("pika_vps_channel_migration_done", "1");
+    localStorage.setItem("pika_vps_channel_migration_done_v2", "1");
     toast(`✅ Migrated to VPS: ${chCount} channels, ${memCount} members, ${msgCount} messages`, "ic-check");
     console.log(`[VPS Migration] Done: ${chCount} channels, ${memCount} members, ${msgCount} messages`);
   }catch(e){
