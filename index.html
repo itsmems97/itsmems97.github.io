@@ -5537,7 +5537,7 @@ function listenUsers(){
           banned: !!Number(u.banned),
           setupDone: !!Number(u.setupDone),
           guest: !!Number(u.guest),
-          vipChannels: JSON.parse(u.vipChannels || "[]"),
+          vipChannels: Array.isArray(u.vipChannels) ? u.vipChannels : JSON.parse(u.vipChannels || "[]"),
           joinedAt: { toMillis: ()=> (u.joinedAt || 0) * 1000 }
         };
       });
