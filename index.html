@@ -5494,7 +5494,7 @@ function watchConnectivity(){
   window.addEventListener("online", kick);
 }
 function startHeartbeat(){
-  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaUser";
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   const push = extra => {
     if(!state.uid) return;
@@ -5651,7 +5651,7 @@ async function migrateUsersToVPS(){
 async function migrateChannelsToVPS(){
   if(!state.isOwner) return;
   if(localStorage.getItem("pika_vps_channel_migration_done")) return;
-  const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
   let chCount = 0, memCount = 0, msgCount = 0;
   try{
@@ -8954,7 +8954,7 @@ if(act === "givevip"){
   if(!channel){ toast("Channel name required", "ic-close"); return false; }
   const existing = Array.isArray(raw.vipChannels) ? raw.vipChannels : [];
   if(existing.includes(channel)){ toast("Already VIP in this channel", "ic-close"); return false; }
-  await fetch("https://193-122-76-131.nip.io/keyapi/PikaUser/users.php", {
+  await fetch("https://193-122-76-131.nip.io/keyapi/PikaUser/users", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ secret: "PIKAZOO_VPS_SECRET_2026", action: "addVip", uid: uid, channelName: channel })
@@ -9718,7 +9718,7 @@ function listenChannels(){
   const load = async ()=>{
     if(document.hidden && !firstLoad) return;
     try{
-      const r = await fetch(VPS + "/channels.php", {
+      const r = await fetch(VPS + "/channels", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: SECRET, action: "list" })
@@ -9769,7 +9769,7 @@ async function refreshMyChannels(){
   let gotOk = false;
   for(const u of uids){
     try{
-      const r = await fetch("https://193-122-76-131.nip.io/keyapi/PikaChannel/members.php", {
+      const r = await fetch("https://193-122-76-131.nip.io/keyapi/PikaChannel/members", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ secret: "PIKAZOO_VPS_SECRET_2026", action: "myChannels", uid: u })
@@ -10258,7 +10258,7 @@ else if(a === "setviewsall"){
   try{
     const VPS = "https://193-122-76-131.nip.io/keyapi/PikaChannel";
     const SECRET = "PIKAZOO_VPS_SECRET_2026";
-    const r = await fetch(VPS + "/messages.php", {
+    const r = await fetch(VPS + "/ch_messages", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ secret: SECRET, action: "setViewsAll", channelId: channelId, views: n, custom: n !== 0 })
@@ -10333,7 +10333,7 @@ function openChannelMembersSheet(channelId){
 async function generateUniqueChannelCode(channelId, channelName){
   const VPS = "https://193-122-76-131.nip.io/keyapi";
   const SECRET = "PIKAZOO_VPS_SECRET_2026";
-  const r = await fetch(VPS + "/secretcode/secret_code.php", {
+  const r = await fetch(VPS + "/secret_codes", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({
@@ -10467,7 +10467,7 @@ function openChannelKeysManagementSheet(channelId){
       btn.disabled = true; btn.innerHTML = "Generating...";
       try{
         const newKey = "PIKAZOO" + randomCode(7);
-        const r = await fetch(VPS + "/register_key.php", {
+        const r = await fetch(VPS + "/keys/register", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({
@@ -10508,7 +10508,7 @@ function openChannelKeysManagementSheet(channelId){
     if(act === "delete"){
       if(!(await confirmSheet("Delete key?", "This key will stop working immediately.", "Delete"))) return;
       try{
-        const r = await fetch(VPS + "/manage_key.php", {
+        const r = await fetch(VPS + "/keys/manage", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ secret: SECRET, action: "delete", key: keyCode, userEmail: ownerEmail })
