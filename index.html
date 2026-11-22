@@ -1186,7 +1186,20 @@ html[data-theme="light"] .pktg-emoji{ background:#FFFFFF; background-color:#FFFF
 #pktg-conv.pktg-readonly .pktg-bar,
 #pktg-conv.pktg-readonly .pktg-rec-bar,
 #pktg-conv.pktg-readonly .pktg-unlock-bar{ display:none !important; }
-#pktg-conv.pktg-readonly .pktg-feed{ padding-bottom:24px; }
+#pktg-conv.pktg-readonly .pktg-feed{ padding-bottom:110px; }
+.pktg-keybar{ display:none; position:absolute; bottom:max(8px, var(--safe-bottom)); left:8px; right:8px; z-index:10; }
+#pktg-conv.pktg-readonly .pktg-keybar{ display:block; }
+.pktg-keybtn{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:54px; border:none; border-radius:26px; background:linear-gradient(135deg, var(--accent), #FFA800); color:#171200; font-size:15px; font-weight:800; font-family:inherit; cursor:pointer; box-shadow:0 12px 30px rgba(255,168,0,.4); }
+.pktg-keybtn svg{ width:20px; height:20px; }
+.pktg-keybtn:disabled{ opacity:.7; }
+.pktg-keybtn:active{ transform:scale(.98); }
+.pktg-keybox{ display:flex; align-items:center; gap:10px; min-height:60px; padding:8px 8px 8px 18px; border-radius:26px; background:var(--bg-elevated); border:1px solid var(--border); box-shadow:var(--shadow); }
+.pktg-keybox .pktg-key-info{ flex:1; min-width:0; }
+.pktg-keybox .pktg-key-label{ font-size:11px; color:var(--text-faint); line-height:1.3; }
+.pktg-keybox .pktg-key-code{ font-family:ui-monospace,monospace; font-size:15px; font-weight:800; letter-spacing:1px; color:var(--accent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pktg-keybox .pktg-key-code.paused{ color:var(--danger); }
+.pktg-keybox .pktg-key-copy{ display:flex; align-items:center; gap:6px; flex-shrink:0; border:none; border-radius:22px; padding:0 16px; height:42px; background:linear-gradient(135deg, var(--accent), #FFA800); color:#171200; font-size:13px; font-weight:800; font-family:inherit; cursor:pointer; }
+.pktg-keybox .pktg-key-copy svg{ width:18px; height:18px; }
 .code-row{ display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); font-size:13px; }
 .code-row:last-child{ border-bottom:none; }
 .code-main{ flex:1; min-width:0; }
@@ -2790,6 +2803,7 @@ body:has(#web-page:not([hidden])) #web-page iframe{
       </div>
     </header>
     <main class="pktg-feed" id="pktg-feed"></main>
+    <div class="pktg-keybar" id="pktg-keybar"></div>
     <div class="pktg-composer">
       <div class="pktg-upload" id="pktg-upload">
         <div class="pktg-upload-head"><span id="pktg-upload-name">Uploading…</span><span id="pktg-upload-pct">0%</span></div>
@@ -10518,7 +10532,7 @@ function openChannelInfoSheet(channelId){
         ${isOwnerHere
   ? `<button class="btn btn-primary btn-block" id="chinfo-manage" type="button"><svg><use href="#ic-user"/></svg> Manage channel</button>`
   : (isMemberHere
-    ? `<div id="user-key-section" style="margin-bottom:10px;"></div>
+    ? `
        <button class="btn btn-ghost btn-block" id="chinfo-exit" type="button" style="color:var(--danger);border-color:rgba(255,92,108,.4)"><svg><use href="#ic-close"/></svg> Exit channel</button>`
     : `<button class="btn btn-primary btn-block" id="chinfo-unlock" type="button"><svg><use href="#ic-lock"/></svg> Unlock full access</button>`)}
       </div>
@@ -11342,6 +11356,80 @@ function updateSendBtnIcon(){
   const hasText = getTgInputText().trim().length > 0;
   icon.innerHTML = hasText ? `<use href="#ic-send"/>` : `<use href="#ic-mic"/>`;
 }
+/* ===== WallHack key: channel ke bottom bar mein (sirf members ke liye, owner ko normal text bar milti hai) ===== */
+async function renderChannelKeyBar(channelId, show){
+  const bar = document.getElementById("pktg-keybar");
+  if(!bar) return;
+  bar.innerHTML = "";
+  if(!show) return;
+  const VPS = "https://193-122-76-131.nip.io/keyapi";
+  const SECRET = "PIKAZOO_VPS_SECRET_2026";
+  const userEmail = auth.currentUser ? auth.currentUser.email : "";
+  const stillHere = () => state.tg.channelId === channelId;
+  const genBtnHtml = `<svg><use href="#ic-key"/></svg> Generate My WallHack Key`;
+  const showKeyBox = (code, label, statusText, paused) => {
+    bar.innerHTML = `<div class="pktg-keybox">
+      <div class="pktg-key-info">
+        <div class="pktg-key-label">${label}</div>
+        <div class="pktg-key-code${paused ? " paused" : ""}">${escapeHtml(code)}</div>
+        ${statusText ? `<div class="pktg-key-label">${statusText}</div>` : ""}
+      </div>
+      <button class="pktg-key-copy" id="pktg-key-copy" type="button"><svg><use href="#ic-copy"/></svg> Copy Key</button>
+    </div>`;
+    document.getElementById("pktg-key-copy").addEventListener("click", async () => {
+      const ok = await copyText(code);
+      toast(ok ? "Key copied!" : "Copy failed", ok ? "ic-check" : "ic-close");
+    });
+  };
+  const showGenerate = () => {
+    bar.innerHTML = `<button class="pktg-keybtn" id="pktg-key-gen" type="button">${genBtnHtml}</button>`;
+    document.getElementById("pktg-key-gen").addEventListener("click", async () => {
+      const btn = document.getElementById("pktg-key-gen");
+      btn.disabled = true; btn.innerHTML = "Generating...";
+      try{
+        const newKey = "PIKAZOO" + randomCode(7);
+        const r = await fetch(VPS + "/keys/register", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            secret: SECRET,
+            key: newKey,
+            channelId: channelId,
+            byName: state.username || "user",
+            userEmail: userEmail
+          })
+        });
+        const res = await r.json();
+        if(!res.status) throw new Error(res.message);
+        toast("Key generated successfully!");
+        if(stillHere()) showKeyBox(newKey, "Your WallHack Key", "", false);
+      }catch(e){
+        console.error(e);
+        btn.disabled = false; btn.innerHTML = genBtnHtml;
+        toast(e.message || "Failed to generate key", "ic-close");
+      }
+    });
+  };
+  bar.innerHTML = `<button class="pktg-keybtn" type="button" disabled>Loading...</button>`;
+  try{
+    const r = await fetch(VPS + "/keys/manage", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ secret: SECRET, action: "list", userEmail: userEmail })
+    });
+    const data = await r.json();
+    if(!stillHere()) return;
+    const myKey = data.status ? (data.keys || []).find(k => k.channelId === channelId) : null;
+    if(!myKey){ showGenerate(); return; }
+    const isActive = !!myKey.isActive;
+    showKeyBox(myKey.keyCode, "Your Key", "Status: " + (isActive ? "Active" : "Paused by Admin"), !isActive);
+  }catch(e){
+    console.warn("key check failed", e);
+    if(!stillHere()) return;
+    bar.innerHTML = `<button class="pktg-keybtn" id="pktg-key-retry" type="button">Could not load key. Tap to retry</button>`;
+    document.getElementById("pktg-key-retry").addEventListener("click", () => renderChannelKeyBar(channelId, true));
+  }
+}
 function closeTelegramChannel(){
   if(state.tg.unsub){ state.tg.unsub(); state.tg.unsub = null; }
   if(state.tg.unsubTyping){ state.tg.unsubTyping(); state.tg.unsubTyping = null; }
@@ -11394,6 +11482,7 @@ $("#pktg-subs").textContent = preview
   const isOwnerHere = isChannelOwner(ch);
   $("#pktg-manage-btn").style.display = isOwnerHere ? "flex" : "none";
   $("#pktg-conv").classList.toggle("pktg-readonly", !isOwnerHere && !preview);
+  renderChannelKeyBar(channelId, !isOwnerHere && !preview);
   updateSendBtnIcon();
 
   if(state.tg.unsub){ state.tg.unsub(); state.tg.unsub = null; }

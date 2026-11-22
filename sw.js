@@ -13,7 +13,7 @@
 try { importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'); } catch (err) {}
 
 /* ================== SETTINGS (yahan se sab control hota hai) ================== */
-const STORE_CACHE = 'pika-store-v10';
+const STORE_CACHE = 'pika-store-v11';
 const MOVIE_CACHE = 'pika-movie-v5';
 const IMG_CACHE = 'pika-img-v4';          // sirf tab badlo jab saari images zabardasti dobara download karwani ho
 const MEDIA_CACHE = 'pika-media-v5';      // Maria ke videos/awaaz (zabardasti dobara download karwane ho to v2 kar do)
@@ -154,8 +154,17 @@ async function handlePage(e) {
     return res;
   }
 
-  /* Turant purana (cached) page do — wait nahi karna. Naya version background mein check hoga. */
-  e.waitUntil(refreshPage(cache).then((r) => (r.changed ? notifyClients() : null)).catch(() => {}));
+  /* Pehle naya page lene ki koshish (PAGE_WAIT_MS tak). Net slow ho to purana cached page do, naya background mein aa jayega. */
+  const fresh = refreshPage(cache).then((r) => ({ r })).catch(() => null);
+  e.waitUntil(fresh);
+  const winner = await Promise.race([
+    fresh,
+    new Promise((resolve) => setTimeout(() => resolve('timeout'), PAGE_WAIT_MS))
+  ]);
+  if (winner && winner !== 'timeout') return makeResponse(winner.r);
+  if (winner === 'timeout') {
+    fresh.then((x) => { if (x && x.r.changed) notifyClients(); });
+  }
   return cached;
 }
 
