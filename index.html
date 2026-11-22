@@ -11805,6 +11805,7 @@ if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</
   const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"numeric", minute:"2-digit", hour12:true });
   html += `<div class="pktg-meta">${m.edited ? `<span style="color:var(--accent-2);font-weight:700">edited</span><span>•</span>` : ""}<span>${time}</span></div>`;
   card.innerHTML = html;
+  if(!window.__pkDbg2){ const _c = card.querySelector(".pktg-caption"); if(_c){ window.__pkDbg2 = 1; alert("WS: " + getComputedStyle(_c).whiteSpace + " | NL: " + (_c.textContent.indexOf("\n") > -1) + " | LEN: " + _c.textContent.length); } }
   if(preview){ return card; }
   const ref = card.querySelector("[data-tg-jump]");
   if(ref) ref.addEventListener("click", e=>{
