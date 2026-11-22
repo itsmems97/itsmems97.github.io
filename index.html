@@ -5,6 +5,22 @@
 <script>(function(){
 try{if(!screen.orientation){Object.defineProperty(screen,'orientation',{configurable:true,value:{type:'portrait-primary',angle:0,lock:function(){return Promise.resolve();},unlock:function(){},addEventListener:function(){},removeEventListener:function(){}}});}}catch(e){}
 window.__pksOpenOnline=function(){location.href='https://itsmems97.github.io/';};
+(function(){
+  var _f = window.fetch;
+  window.fetch = function(u, o){
+    try{
+      if(typeof u === 'string' && u.indexOf('/keyapi/ch_messages') > -1 && o && typeof o.body === 'string'){
+        var b = JSON.parse(o.body);
+        if(b.action === 'send' || b.action === 'edit'){
+          if(typeof b.text === 'string') b.text = b.text.replace(/\r?\n/g, '[[nl]]');
+          if(typeof b.caption === 'string') b.caption = b.caption.replace(/\r?\n/g, '[[nl]]');
+          o = Object.assign({}, o, { body: JSON.stringify(b) });
+        }
+      }
+    }catch(e){}
+    return _f.call(this, u, o);
+  };
+})();
 window.addEventListener('error',function(e){window.__pksLastErr=(e.message||'error')+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:'');});
 window.addEventListener('unhandledrejection',function(e){var r=e.reason;window.__pksLastErr='promise: '+((r&&r.message)||r);});
 ['localStorage','sessionStorage'].forEach(function(k){try{window[k].getItem('x');}catch(e){var m={};try{Object.defineProperty(window,k,{configurable:true,value:{getItem:function(a){return a in m?m[a]:null;},setItem:function(a,b){m[a]=String(b);},removeItem:function(a){delete m[a];},clear:function(){m={};},key:function(i){return Object.keys(m)[i]||null;},get length(){return Object.keys(m).length;}}});}catch(_){}}});
@@ -11499,7 +11515,10 @@ $("#pktg-subs").textContent = preview
         body: JSON.stringify({ secret: SECRET_MSG, action: "list", channelId: channelId })
       });
       const data = await r.json();
-      const all = (data.messages || []).map(m=>({ ...m, createdAtMs: (m.createdAt||0) * 1000 }));
+      const all = (data.messages || []).map(m=>({ ...m,
+  text: typeof m.text === 'string' ? m.text.split('[[nl]]').join('\n') : m.text,
+  caption: typeof m.caption === 'string' ? m.caption.split('[[nl]]').join('\n') : m.caption,
+  createdAtMs: (m.createdAt||0) * 1000 }));
       all.sort((a,b)=> (a.createdAtMs||0) - (b.createdAtMs||0));
       state.tg.messages = all;
       const map = {};
