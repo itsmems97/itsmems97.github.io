@@ -11692,7 +11692,7 @@ let descBody = "";
     descBody = body || "";
   }
 }
-if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</div>`;
+if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</div><div style="font-size:10px;color:#ff0;word-break:break-all">${escapeHtml(JSON.stringify(descBody).replace(/[\u0080-\u009f\u2028\u2029]/g, c=>"<"+c.charCodeAt(0).toString(16)+">"))}</div>`;
   const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
   html += `<div class="pktg-meta">${m.edited ? `<span style="color:var(--accent-2);font-weight:700">edited</span><span>•</span>` : ""}<span>${m.views || 0} views</span><span>•</span><span>${time}</span></div>`;
   card.innerHTML = html;
