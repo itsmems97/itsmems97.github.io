@@ -11382,7 +11382,7 @@ async function openTelegramChannel(channelId, opts = {}){
   $("#pktg-conv").classList.toggle("pktg-preview-mode", preview);
   $("#pktg-title").textContent = ch.name;
   const _mem = fmtCount(ch.memberCount||1);
-const _act = ch.activeMemberCount ? ` • ${fmtCount(ch.activeMemberCount)} active` : "";
+const _act = "";
 $("#pktg-subs").textContent = preview
   ? `Preview • ${_mem} member${(ch.memberCount||1)===1?"":"s"}${_act}`
   : `${_mem} member${(ch.memberCount||1)===1?"":"s"}${_act}`;
@@ -11438,7 +11438,7 @@ $("#pktg-subs").textContent = preview
       sub.textContent = (u && u.name ? u.name : "Someone") + " is typing…";
       } else {
     const _m2 = fmtCount(ch.memberCount||1);
-    const _a2 = ch.activeMemberCount ? ` • ${fmtCount(ch.activeMemberCount)} active` : "";
+    const _a2 = "";
     sub.textContent = preview
       ? `Preview • ${_m2} member${(ch.memberCount||1)===1?"":"s"}${_a2}`
       : `${_m2} member${(ch.memberCount||1)===1?"":"s"}${_a2}`;
@@ -11693,8 +11693,8 @@ let descBody = "";
   }
 }
 if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</div>`;
-  const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
-  html += `<div class="pktg-meta">${m.edited ? `<span style="color:var(--accent-2);font-weight:700">edited</span><span>•</span>` : ""}<span>${m.views || 0} views</span><span>•</span><span>${time}</span></div>`;
+  const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"numeric", minute:"2-digit", hour12:true });
+  html += `<div class="pktg-meta">${m.edited ? `<span style="color:var(--accent-2);font-weight:700">edited</span><span>•</span>` : ""}<span>${time}</span></div>`;
   card.innerHTML = html;
   if(preview){ return card; }
   const ref = card.querySelector("[data-tg-jump]");
