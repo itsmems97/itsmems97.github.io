@@ -5,22 +5,6 @@
 <script>(function(){
 try{if(!screen.orientation){Object.defineProperty(screen,'orientation',{configurable:true,value:{type:'portrait-primary',angle:0,lock:function(){return Promise.resolve();},unlock:function(){},addEventListener:function(){},removeEventListener:function(){}}});}}catch(e){}
 window.__pksOpenOnline=function(){location.href='https://itsmems97.github.io/';};
-(function(){
-  var _f = window.fetch;
-  window.fetch = function(u, o){
-    try{
-      if(typeof u === 'string' && u.indexOf('/keyapi/ch_messages') > -1 && o && typeof o.body === 'string'){
-        var b = JSON.parse(o.body);
-        if(b.action === 'send' || b.action === 'edit'){
-          if(typeof b.text === 'string') b.text = b.text.replace(/\r?\n/g, '[[nl]]');
-          if(typeof b.caption === 'string') b.caption = b.caption.replace(/\r?\n/g, '[[nl]]');
-          o = Object.assign({}, o, { body: JSON.stringify(b) });
-        }
-      }
-    }catch(e){}
-    return _f.call(this, u, o);
-  };
-})();
 window.addEventListener('error',function(e){window.__pksLastErr=(e.message||'error')+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:'');});
 window.addEventListener('unhandledrejection',function(e){var r=e.reason;window.__pksLastErr='promise: '+((r&&r.message)||r);});
 ['localStorage','sessionStorage'].forEach(function(k){try{window[k].getItem('x');}catch(e){var m={};try{Object.defineProperty(window,k,{configurable:true,value:{getItem:function(a){return a in m?m[a]:null;},setItem:function(a,b){m[a]=String(b);},removeItem:function(a){delete m[a];},clear:function(){m={};},key:function(i){return Object.keys(m)[i]||null;},get length(){return Object.keys(m).length;}}});}catch(_){}}});
@@ -11521,7 +11505,7 @@ $("#pktg-subs").textContent = preview
   createdAtMs: (m.createdAt||0) * 1000 }));
       all.sort((a,b)=> (a.createdAtMs||0) - (b.createdAtMs||0));
       state.tg.messages = all;
-      if(!window.__pkDbg){ window.__pkDbg = 1; try{ const _x = (data.messages||[]).filter(m=>m.type==="file"||m.type==="text").slice(-2).map(m=>JSON.stringify(m.caption||m.text||"").slice(0,80)).join("  ||  "); alert("RAW: " + _x); }catch(e){} }
+      if(false){ ; try{ const _x = (data.messages||[]).filter(m=>m.type==="file"||m.type==="text").slice(-2).map(m=>JSON.stringify(m.caption||m.text||"").slice(0,80)).join("  ||  "); alert("RAW: " + _x); }catch(e){} }
       const map = {};
       all.forEach(m=>{ map[m.id] = { mediaUrl: m.mediaUrl || "", files: (m.files||[]).map(f=>({ mediaUrl: f.mediaUrl || "" })) }; });
       state.tg.mediaMap = map;
@@ -11801,11 +11785,11 @@ let descBody = "";
     descBody = body || "";
   }
 }
-if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody)}</div>`;
+if(descBody) html += `<div class="pktg-caption">${formatMessageText(descBody).replace(/\r?\n/g, "<br>")}</div>`;
   const time = new Date(m.createdAtMs || Date.now()).toLocaleTimeString([], { hour:"numeric", minute:"2-digit", hour12:true });
   html += `<div class="pktg-meta">${m.edited ? `<span style="color:var(--accent-2);font-weight:700">edited</span><span>•</span>` : ""}<span>${time}</span></div>`;
   card.innerHTML = html;
-  if(!window.__pkDbg2){ const _c = card.querySelector(".pktg-caption"); if(_c){ window.__pkDbg2 = 1; alert("WS: " + getComputedStyle(_c).whiteSpace + " | NL: " + (_c.textContent.indexOf("\n") > -1) + " | LEN: " + _c.textContent.length); } }
+  if(false){ const _c = card.querySelector(".pktg-caption"); if(_c){ window.__pkDbg2 = 1; alert("WS: " + getComputedStyle(_c).whiteSpace + " | NL: " + (_c.textContent.indexOf("\n") > -1) + " | LEN: " + _c.textContent.length); } }
   if(preview){ return card; }
   const ref = card.querySelector("[data-tg-jump]");
   if(ref) ref.addEventListener("click", e=>{
